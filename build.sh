@@ -3,7 +3,7 @@
 
 echo "compiling gathering program"
 gcc -O3 gathering.c -o gathering -g -lm -lgd -lcrypto
+echo "compiling tiler program"
+gcc -O3 tiler.c -o tiler_hex_md5 -lgd -lm
 echo "compiling join program"
 gcc -O3 join.c -o join -lm -lgd -lcurl
-echo "compiling tiler program"
-gcc -O3 tiler.c -o tiler -lgd
