@@ -60,7 +60,7 @@ if(debug) fprintf(stderr, "init\n");
 		init_mosaik2_project_struct(&mp, argv[i], dest_filename);
 
 		if(debug)
-			fprintf(stderr,"mastertiledis:%s\n", mp.dest_mastertiledims_filename);
+			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,mastertiledis:%s\n", argv[i],dest_filename,mp.dest_mastertiledims_filename);
 
 		FILE *mastertiledims_file = fopen(mp.dest_mastertiledims_filename, "r");
 		if( mastertiledims_file == NULL) {

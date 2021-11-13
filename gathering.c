@@ -77,13 +77,11 @@ int main(int argc, char **argv) {
 		.master_tile_count = master_tile_count
 	};
 
-	strncpy(mp.dest_filename,dest_filename,strlen(dest_filename));
-	// INITIALIZE PROJECT META DATA
-	init_mosaik2_project_struct(&md, &mp);
+	init_mosaik2_project_struct(&mp, thumbs_db_name, dest_filename);
 
 	printf("analyze master image\n");
 
-	uint8_t debug = 0;
+	uint8_t debug = 1;
 	uint8_t debug1 = 0;
 	const uint8_t html = 0;
 	const uint8_t out = 0;
@@ -134,7 +132,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr,"image too small\n");
 		exit(EXIT_FAILURE);
 	} else {
-		printf("tile_count:%i\n", tile_count);
+		printf("tile_count:%i (one shorter side)\n", tile_count);
 	}
 	
 	uint32_t short_dim;//, long_dim;
@@ -604,7 +602,7 @@ int main(int argc, char **argv) {
 			for(uint8_t shift_y=0;shift_y<=shift_y_len;shift_y++) {
 				for(uint8_t shift_x=0;shift_x<=shift_x_len;shift_x++) {
 
-					if(debug1)fprintf(stderr,"1 shift:%i %i\n",shift_x,shift_y);
+					if(debug)fprintf(stderr,"1 shift:%i %i\n",shift_x,shift_y);
 
 					for(uint32_t master_y=0;master_y<master_tile_y_count;master_y++) {
 						for(uint32_t master_x=0;master_x<master_tile_x_count;master_x++) {
@@ -793,7 +791,6 @@ int main(int argc, char **argv) {
 									if(debug)
 										fprintf(stdout, "thumbs_db_idx:%lu master_tile_idx:%i insert pos found:%i\n", idx, master_tile_idx, insert_pos);
 
-									
 									if(candidates_len[master_tile_idx] <total_master_tile_count 
 										&& candidates_len[master_tile_idx] < max_candidates_len) {
 										// if there is any space left in the canidates list

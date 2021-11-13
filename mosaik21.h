@@ -94,29 +94,35 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncat( (*md).invalid_filename,"invalid.bin",11);
 
 	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
-	strncat( (*md).tilecount_filename,"/",1);
-	strncat( (*md).tilecount_filename,"tilecount.conf",14);
+	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
 
 }
 
-void init_mosaik2_project_struct(struct mosaik2_database_struct *md, struct mosaik2_project_struct *mp) {
-	size_t thumbs_db_name_len = strlen(md->thumbs_db_name);
-	size_t dest_filename_len = strlen(mp->dest_filename);
+void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename) {
+
+	fprintf(stderr,"header file: thumbs_db_name:%s, dest_filename:%s\n", thumbs_db_name, dest_filename);
+
+	size_t thumbs_db_name_len = strlen(thumbs_db_name);
+	size_t dest_filename_len = strlen(dest_filename);
+
+	strncpy(mp->dest_filename, dest_filename, dest_filename_len);
+	
 	char *thumbs_db_ending=".mastertiledims";
 	size_t thumbs_db_ending_len = strlen(thumbs_db_ending);
 
 	memset(mp->dest_mastertiledims_filename, 0, 256);
 	strncpy(mp->dest_mastertiledims_filename, mp->dest_filename, dest_filename_len);
 	strncat(mp->dest_mastertiledims_filename, ".", 1);
-	strncat(mp->dest_mastertiledims_filename, md->thumbs_db_name, thumbs_db_name_len);
+	strncat(mp->dest_mastertiledims_filename, thumbs_db_name, thumbs_db_name_len);
 	strncat(mp->dest_mastertiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
+	fprintf(stderr, "mastertiledims:%s\n", mp->dest_mastertiledims_filename);
  
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
 	thumbs_db_ending_len = strlen(thumbs_db_ending);
 	strncpy(mp->dest_result_filename, mp->dest_filename, dest_filename_len);
 	strncat(mp->dest_result_filename, ".", 1);
-	strncat(mp->dest_result_filename, md->thumbs_db_name, thumbs_db_name_len);
+	strncat(mp->dest_result_filename, thumbs_db_name, thumbs_db_name_len);
 	strncat(mp->dest_result_filename, thumbs_db_ending, thumbs_db_ending_len);
 
 	memset(mp->dest_html_filename, 0, 256);

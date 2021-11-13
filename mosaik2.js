@@ -85,7 +85,7 @@ function Mosaik2Job(ctx) {
 			//if(isUnique) {
 			const indexData = await this.indexResource(this.ctx,this.data,this.filehash,this.resource,name,this,stream);
 			//call synced
-			this.writeIndexToFile( indexData );
+			this.writeIndexToFile( this.ctx, indexData );
 
 			let idx = this.ctx.runningTasks.indexOf(this);
 			this.ctx.runningTasks.splice( idx, 1);
@@ -177,7 +177,7 @@ function Mosaik2Job(ctx) {
 
 
 	//sync function, to ensure to write only one at a time
-	this.writeIndexToFile = function(indexData) {
+	this.writeIndexToFile = function(ctx,indexData) {
 		this.state = this.WRITING_INDEX_STATE;
 		//console.log(this.count, "write index start", new Date());
 		let keys = Object.keys( indexData );
@@ -195,13 +195,13 @@ function Mosaik2Job(ctx) {
 */
 		let promises = [];
 		keys.forEach( key => {
-			let path = this.ctx.thumbsDbFiles[key];
+			let path = ctx.thumbsDbName+'/'+ctx.thumbsDbFiles[key];
 			promises.push( fs_promises.appendFile(path, indexData[key] ) );
-	//		console.log(new Date(), "starte appendFile", path);
+			//console.log(new Date(), "starte appendFile", path);
 		});
-//		console.log(new Date(), "wait for all ...");
+		//console.log(new Date(), "wait for all ...");
 		Promise.all(promises);
-//		console.log(new Date(), "wait for all finished");
+		//console.log(new Date(), "wait for all finished");
 
 
 		this.state = this.ENDING_STATE;
@@ -301,8 +301,8 @@ function Mosaik2Job(ctx) {
 					hashBuffer.writeUInt8( parseInt( hash.substr(28,2), 16 ),14 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(30,2), 16 ),15 );
 
-					let validBuffer = Buffer.alloc(1);
-					validBuffer.writeUInt8( 0, 0 );
+					let invalidBuffer = Buffer.alloc(1);
+					invalidBuffer.writeUInt8( 0, 0 );
 
 
 					var indexData = {
@@ -313,7 +313,7 @@ function Mosaik2Job(ctx) {
 						"tiledims": tileDimBuffer,
 						"imagecolors": colorsBuffer,
 						"imagestddev": stddevBuffer,
-						"valid": validBuffer
+						"invalid": invalidBuffer
 					};
 
 					thiz.ctx.pixel += width * height;
@@ -354,43 +354,55 @@ function Mosaik2Job(ctx) {
 }
 
 function initCtx(thumbsDbName, tileEdgeCount) {
+
+/*ls ../../mosaik2/mosaik2_test_database_2003
+conf.json       filenames.txt  imagecolors.bin  imagestddev.bin  tilecount.conf
+filehashes.bin  filesizes.bin  imagesdims.bin   invalid.bin      tiledims.bin
+*/
+
 	var ctx = {};
-	ctx.tileEdgeCount = tileEdgeCount?parseInt(tileEdgeCount,10):8;
-	ctx.thumbsDbName = thumbsDbName;
-	ctx.thumbsDbConf = thumbsDbName+'.conf.json';
+	if(!tileEdgeCount) {
+		tileEdgeCount = JSON.parse(fs.readFileSync(thumbsDbName+"/tilecount.txt"));
+		}
+	
+	ctx.tileEdgeCount = tileEdgeCount;
+	ctx.thumbsDbName = thumbsDbName; //name of directory
+//	ctx.thumbsDbConf = thumbsDbName+'.conf.json';
 	ctx.thumbsDbFiles = {
-		 "filesizes": thumbsDbName+'.db.filesizes',
-		 "filenames": thumbsDbName+'.db.filenames',
-		 "filehashes": thumbsDbName+'.db.filehashes',
-		 "imagedims": thumbsDbName+'.db.imagedims',
-		 "tiledims": thumbsDbName+'.db.tiledims',
+		 "filesizes": 'filesizes.bin',
+		 "filenames": 'filenames.txt',
+		 "filehashes": 'filehashes.bin',
+		 "imagedims": 'imagedims.bin',
+		 "tiledims": 'tiledims.bin',
+		 "imagecolors": 'imagecolors.bin',
+		 "imagestddev": 'imagestddev.bin',
+		 "version": 'dbversion.txt',
+		 'invalid': 'invalid.bin',
+		 'tilecount': 'tilecount.txt'
 		// "imagepixelpertile": thumbsDbName+'.db.imagepixelpertile',
-		 "imagecolors":  thumbsDbName+'.db.imagecolors',
-		 "imagestddev":  thumbsDbName+'.db.imagestddev',
-		 // "imagecolorcount":  thumbsDbName+'.db.imagecolorcount',
-	//	 "imagetileedgecount": thumbsDbName+'.db.imagetileedgecount'
+		// "imagecolorcount":  thumbsDbName+'.db.imagecolorcount',
+		// "imagetileedgecount": thumbsDbName+'.db.imagetileedgecount'
 	};
 	ctx.filehashAlreadyIndexedTime = 0;
 	ctx.filehashAlreadyIndexedCount = 0;
 	ctx.configNameRegexp = /^[a-zA-Z0-9]{1,100}$/
-
 	return ctx;
 }
 
 function loadCtx(thumbsDbName) {
 
-	var configFile = './'+thumbsDbName+'.conf.json';
-	if (!fs.existsSync(configFile)) {
-		console.error("loadCtx: conf-file does not exists, exit ");
-		process.exit(1);
-	}
+	//var configFile = './'+thumbsDbName+'.conf.json';
+	//if (!fs.existsSync(configFile)) {
+	//	console.error("loadCtx: conf-file does not exists, exit ");
+//		process.exit(1);
+//	}
 
 
-	let ctx = JSON.parse(fs.readFileSync(configFile));
+	let ctx = initCtx(thumbsDbName, undefined);//JSON.parse(fs.readFileSync(configFile));
 	CTX = ctx;
 	//check how many files have been processed in past calls
 	//it is for fs.createReadStream, because it does not release end event on empty files
-	ctx.initialCount = fs.statSync(ctx.thumbsDbFiles.filehashes).size/16;
+	ctx.initialCount = fs.statSync(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.filehashes).size/16;
 	ctx.count = ctx.initialCount;
 	ctx.pixel = 0;
 	ctx.loadavg = 0.0;
@@ -401,9 +413,9 @@ function loadCtx(thumbsDbName) {
 	ctx.mode = args[0];
 	ctx.pidFile = thumbsDbName+".pid";
 
-	var dbVersionFile = './'.thumbsDbName+'.db.version';
-	if(!fs.existsSync(configFile)) {
-		console.error("loadCtx: db.version-file does not exists, exit");
+	var dbVersionFile = thumbsDbName+'/'+ctx.thumbsDbFiles.version;
+	if(!fs.existsSync(dbVersionFile)) {
+		console.error("loadCtx: mosaik2 db version file does not exists, exit");
 		process.exit(1);
 	}
 
@@ -422,7 +434,7 @@ function printVersion() {
 }
 
 function printUsage() {
-	console.log("usage:\nnodejs mosaik2.js { init | clean | index } name_of_mosaik2_db_files [ options ]\nname_of_moasik2_db_files: is a text with the valid signs 0-9, a-z and A-Z, maximum length is 100\noptions init: edge_count_tiles # ( number ) smaller dimension of source image will split in analyzing process at least into this amount of square tiles on the smaller side, the longer side will may have more tiles\noptions index: max_tiler_processes max_loadavg # ( both params are grouped, they are optional; max_tiler_processes => integer, min 1, default cpu cores * 8; max_loadavg => float, min 1.0, default cpu cores * 2.0 - 1");
+	console.log("usage:\nnodejs mosaik2.js { init | clean | index } mosaik2_db_dir [ options ]\n_moasik2_db_dir: is a text with the valid signs 0-9, a-z and A-Z, maximum length is 100\noptions init: edge_count_tiles # ( number ) smaller dimension of source image will split in analyzing process at least into this amount of square tiles on the smaller side, the longer side will may have more tiles\noptions index: max_tiler_processes max_loadavg # ( both params are grouped, they are optional; max_tiler_processes => integer, min 1, default cpu cores * 8; max_loadavg => float, min 1.0, default cpu cores * 2.0 - 1");
 }
 
 
@@ -438,7 +450,7 @@ if(args[0] == "kill") {
 
 	try {
 		let ctx = loadCtx( args[1] );
-		let pid = JSON.parse( fs.readFileSync(ctx.pidFile, {encoding:"utf8"}) );
+		let pid = JSON.parse( fs.readFileSync(ctx.thumbsDbName+'/'+ctx.pidFile, {encoding:"utf8"}) );
 		console.log(pid, typeof pid);
 		process.kill( pid, 'SIGTERM');
 	} catch( e ) {
@@ -481,7 +493,6 @@ if(args[0] == "kill") {
 		process.exit(1);
 	}
 
-
 	var ctx = initCtx(args[1],args[2]);
 	if(! ctx.configNameRegexp.test(args[1]) || isNaN(args[2]) ) {
 		console.error("wrong parameter values, exit" );
@@ -489,32 +500,60 @@ if(args[0] == "kill") {
 		process.exit(1);
 	}
 
-	if (fs.existsSync( ctx.thumbsDbConf )) {
-		console.error("db file exists, exit");
+	if (fs.existsSync( ctx.thumbsDbName )) {
+		console.error("mosaik2 database directory already exists, exit");
 		process.exit(1);
 	}
 
+	fs.mkdirSync( ctx.thumbsDbName );
+	console.log( "mosaik2 database directory created" );
 
 	ctx.initialCount = 0;
 
-	fs.writeFile(ctx.thumbsDbConf, JSON.stringify(ctx), function(err) {if(err) {console.error("error writing file",err);process.exit(1);}});
+	//fs.writeFile(ctx.thumbsDbConf, JSON.stringify(ctx), function(err) {if(err) {console.error("error writing file",err);process.exit(1);}});
 
 	var thumbsDbFiles = Object.values(ctx.thumbsDbFiles);
 	for(var i=0;i<thumbsDbFiles.length;i++) {
 		console.log('creating db file', thumbsDbFiles[i]	);
-		fs.writeFile(thumbsDbFiles[i], '', function(err) {if(err) {console.error(err);process.exit(1);}});
+		fs.writeFile(ctx.thumbsDbName+'/'+thumbsDbFiles[i], '', function(err) {if(err) {console.error(err);process.exit(1);}});
 	}
-	fs.writeFile(args[1]+".conf.tilecount", ""+ctx.tileEdgeCount, function(err) {if(err) {console.error("error writing file", err);process.exit(1);}});
-		console.log('creating db file', args[1]+".conf.tilecount"	);
 
-	fs.writeFile(args[1]+".db.version", ""+DB_VERSION, function(err) {if(err) {console.error("error writing file", err);process.exit(1);}});
-		console.log('creating db file', args[1]+".db.version"	);
-	fs.writeFile(args[1]+".db.valid", "", function(err) {if(err) {console.error("error writing file", err);process.exit(1);}});
-		console.log('creating db.valid file', args[1]+".db.valid"	);
+	let readonlyFiles = [ctx.thumbsDbFiles.tilecount, ctx.thumbsDbFiles.version];
+	for(let i=0;i<readonlyFiles.length;i++) {
+//		fs.chmod(readonlyFiles[i], 444
+	}
 
+	fs.writeFile(
+		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount, ""+ctx.tileEdgeCount, {flag: 'a'}, function(err) {
+			if(err){
+				console.err("error writing file", err); process.exit(1);
+			}
+			console.log("saved tile count");
+		}
+	);
+	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount,0o444,(err)=>{
+		if(err) {
+			console.err("error while set readony the tile count file");
+		}
+	});
+	fs.writeFile(
+		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version, ""+DB_VERSION, {flag: 'a'}, function(err){
+			if(err){
+				console.err("error writing file", err); process.exit(1)
+			}
+			console.log("saved db version");
+		}
+	);
+	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version,0o444,(err)=>{
+		if(err) {
+			console.err("error while set readonly the db version file");
+		}
+	});
 
 } else if( args[0] == "index" ) {
+	
 	index(args);
+
 } else {
 	if(!args[0]) {
 		console.error("wrong parameter");
@@ -592,6 +631,7 @@ async function index(args) {
 		if(debug)console.log(" *** "+chunk);
 		executeNextLine(lines,0,c++);
 	});
+
 //TODO wird ggf häufiger aufgerufen sodass zuviele Abfragen stattfinden
 	function executeNextLine( lines, i, c ) {
 
