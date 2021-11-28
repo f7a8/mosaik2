@@ -24,8 +24,12 @@ mona lisa 33 2017 95%
 #include <limits.h>
 #include <time.h>
 #include <libgen.h>
+#include <stdio.h>
 
-#include "mosaik21.h"
+#include "mosaik22.h"
+	
+	
+	
 
 int main(int argc, char **argv) {
 	if(argc!=7) {
@@ -81,7 +85,7 @@ int main(int argc, char **argv) {
 
 	printf("analyze master image\n");
 
-	uint8_t debug = 1;
+	uint8_t debug = 0;
 	uint8_t debug1 = 0;
 	const uint8_t html = 0;
 	const uint8_t out = 0;
@@ -491,6 +495,12 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	FILE *duplicates_file = fopen(md.duplicates_filename, "rb");
+	if( duplicates_file == NULL ) {
+		fprintf(stderr, "mosaik2 database file for duplicate images (%s) could not be opened\n", md.duplicates_filename);
+		exit(EXIT_FAILURE);
+	}
+
 	
 
 	const uint32_t SIZE_64 = 65536;//64KB
@@ -501,6 +511,7 @@ int main(int argc, char **argv) {
 	unsigned char colors_buf[SIZE_64];
 	unsigned char stddev_buf[SIZE_64];
 	unsigned char invalid_buf[SIZE_64];
+	unsigned char duplicates_buf[SIZE_64];
 
 
 
@@ -527,6 +538,11 @@ int main(int argc, char **argv) {
 		uint32_t len = fread(invalid_buf,1,SIZE_64/2,thumbs_db_invalid);
 		if(len==0) {
 			fprintf(stderr,"there is no data to read from invalid file\n");
+			exit(EXIT_FAILURE);
+		}
+		len = fread(duplicates_buf,1,SIZE_64/2, duplicates_file);
+		if(len==0) {
+			fprintf(stderr, "could not read from duplicates file\n");
 			exit(EXIT_FAILURE);
 		}
 		len = fread(tile_dims_buf,1,SIZE_64,thumbs_db_tile_dims);
@@ -913,6 +929,7 @@ int main(int argc, char **argv) {
 	fclose(thumbs_db_image_colors);
 	fclose(thumbs_db_image_stddev);
 	fclose(thumbs_db_invalid);
+	fclose(duplicates_file);
 
 
 									if(debug) {

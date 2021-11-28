@@ -1,15 +1,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <gd.h>
 #include <inttypes.h>
-//#include <openssl/md5.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-
-#define DB_INVALID_FILENAME "invalid"
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
@@ -17,10 +16,14 @@ struct mosaik2_database_struct {
 	char imagecolors_filename[256];
 	char imagedims_filename[256];
 	char filenames_filename[256];
+	char filenames_index_filename[256];
 	char filehashes_filename[256];
+	char timestamps_filename[256];
 	char filesizes_filename[256];
 	char tiledims_filename[256];
 	char invalid_filename[256];
+	char duplicates_filename[256];
+	char temporary_duplicates_filename[256];
 	char tilecount_filename[256];
 };// = {NULL, "imagestddev.bin", "imagecolors.bin", "imagedims.bin", "filenames.txt", "filehashes.bin", "filesizes.bin", "tiledims.bin", "invalid.bin", "tilecount.conf"};
 
@@ -34,7 +37,6 @@ struct mosaik2_project_struct {
 	uint8_t master_tile_count;
 	char dest_html_filename[ 256 ]; 
 	char dest_src_filename[ 256 ];
-
 	struct mosaik2_database_struct *mds;
 	uint8_t mds_len;
 };
@@ -46,10 +48,14 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	memset( (*md).imagestddev_filename,0,256);
 	memset( (*md).imagedims_filename,0,256);
 	memset( (*md).filenames_filename,0,256);
+	memset( (*md).filenames_index_filename,0,256);
 	memset( (*md).filehashes_filename,0,256);
+	memset( (*md).timestamps_filename,0,256);
 	memset( (*md).filesizes_filename,0,256);
 	memset( (*md).tiledims_filename,0,256);
 	memset( (*md).invalid_filename,0,256);
+	memset( (*md).duplicates_filename,0,256);
+	memset( (*md).temporary_duplicates_filename,0,256);
 	memset( (*md).tilecount_filename,0,256);
 	memset( md->tilecount_filename, 0, 256);
 
@@ -57,8 +63,6 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
 
-	fprintf(stdout, "database_name:%s  %s  %s\n", thumbs_db_name, (*md).thumbs_db_name, md->thumbs_db_name); 
-	
 	strncpy( (*md).imagecolors_filename,thumbs_db_name,l);
 	strncat( (*md).imagecolors_filename,"/",1);
 	strncat( (*md).imagecolors_filename, "imagecolors.bin",15);
@@ -67,7 +71,7 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncat( (*md).imagestddev_filename,"/",1);
 	strncat( (*md).imagestddev_filename,"imagestddev.bin",15);
 
-	fprintf(stdout, "[%s]:%lu\n", "imagestddev.bin", strlen("imagestddev.bin"));
+	//fprintf(stdout, "[%s]:%lu\n", "imagestddev.bin", strlen("imagestddev.bin"));
 
 	strncpy( (*md).imagedims_filename,thumbs_db_name,l);
 	strncat( (*md).imagedims_filename,"/",1);
@@ -77,9 +81,15 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncat( (*md).filenames_filename,"/",1);
 	strncat( (*md).filenames_filename,"filenames.txt",13);
 
+	strncpy( (*md).filenames_index_filename,thumbs_db_name,l);
+	strncat( (*md).filenames_index_filename,"/filenames.idx",14);
+
 	strncpy( (*md).filehashes_filename,thumbs_db_name,l);
 	strncat( (*md).filehashes_filename,"/",1);
 	strncat( (*md).filehashes_filename,"filehashes.bin",14);
+
+	strncpy( (*md).timestamps_filename,thumbs_db_name,l);
+	strncat( (*md).timestamps_filename,"/timestamps.bin",15);
 
 	strncpy( (*md).filesizes_filename,thumbs_db_name,l);
 	strncat( (*md).filesizes_filename,"/",1);
@@ -92,15 +102,18 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncpy( (*md).invalid_filename,thumbs_db_name,l);
 	strncat( (*md).invalid_filename,"/",1);
 	strncat( (*md).invalid_filename,"invalid.bin",11);
+	
+	strncpy( (*md).duplicates_filename,thumbs_db_name,l);
+	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
+	strncpy( (*md).temporary_duplicates_filename,thumbs_db_name,l);
+	strncat( (*md).temporary_duplicates_filename,"/duplicates.tmp.XXXXXX",22);
+	
 	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
 	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
-
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename) {
-
-	fprintf(stderr,"header file: thumbs_db_name:%s, dest_filename:%s\n", thumbs_db_name, dest_filename);
 
 	size_t thumbs_db_name_len = strlen(thumbs_db_name);
 	size_t dest_filename_len = strlen(dest_filename);
@@ -115,7 +128,6 @@ void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs
 	strncat(mp->dest_mastertiledims_filename, ".", 1);
 	strncat(mp->dest_mastertiledims_filename, thumbs_db_name, thumbs_db_name_len);
 	strncat(mp->dest_mastertiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
-	fprintf(stderr, "mastertiledims:%s\n", mp->dest_mastertiledims_filename);
  
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
@@ -257,7 +269,10 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 
 off_t get_file_size(const char *filename) {
   struct stat st;
-  stat(filename, &st);
+  if( stat(filename, &st) != 0) {
+		fprintf(stderr, "error cannot gather file size from (%s)\n", filename);
+		exit(EXIT_FAILURE);
+	}
 	off_t size = st.st_size;
 	return size;
 }
@@ -374,6 +389,11 @@ void check_thumbs_db(struct mosaik2_database_struct *md) {
 		exit(EXIT_FAILURE);
 	}
 	
+	if( access( md->filenames_index_filename, F_OK ) != 0 ) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_index_filename);
+		exit(EXIT_FAILURE);
+	}
+	
 	if( access( md->filesizes_filename, F_OK ) != 0 ) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filesizes_filename);
 		exit(EXIT_FAILURE);
@@ -392,6 +412,10 @@ void check_thumbs_db(struct mosaik2_database_struct *md) {
 	if( access( md->invalid_filename, F_OK ) != 0 ) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->invalid_filename);
 		exit(EXIT_FAILURE);
+	}
+
+	if( access( md->duplicates_filename, F_OK ) != 0 ) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->duplicates_filename);
 	}
 
 	if( access( md->tilecount_filename, F_OK ) != 0 ) {
@@ -503,40 +527,6 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-gdImagePtr myLoadPng(char *filename, char *origin_name) {
-   FILE *in;
-   struct stat stat_buf;
-   gdImagePtr im;
-   in = fopen(filename, "rb");
-   if (in==NULL) {
-     fprintf(stderr,"image (%s) could not be loaded\n", filename);
-     exit(EXIT_FAILURE);
-   } 
-   if (fstat(fileno(in), &stat_buf) != 0) {
-     fprintf(stderr,"fstat error\n");
-     exit(EXIT_FAILURE);
-   } 
-   /* Read the entire thing into a buffer
-     that we allocate */
-   char *buffer = malloc(stat_buf.st_size);
-   if (!buffer) { 
-     fprintf(stderr,"could not allocate memory\n");
-     exit(EXIT_FAILURE);
-   } 
-   if (fread(buffer, 1, stat_buf.st_size, in)
-     != stat_buf.st_size) {
-     fprintf(stderr,"data could not be read\n");
-     exit(EXIT_FAILURE);
-   } 
-	 if(EndsWith(origin_name,"png")|| EndsWith(origin_name,"PNG")) {
-   	im = gdImageCreateFromPngPtr(    stat_buf.st_size, buffer);
-	 }else {
-   	im = gdImageCreateFromJpegPtr(    stat_buf.st_size, buffer);
-	 }
-   free(buffer);
-   fclose(in);
-   return im;
- } 
 int File_Copy(char FileSource[], char FileDestination[])
 {
     char    c[4096]; // or any other constant you like

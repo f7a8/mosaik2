@@ -17,7 +17,7 @@
 
 #include <curl/curl.h>
 
-#include "mosaik21.h"
+#include "mosaik22.h"
 #include <openssl/md5.h>
 
 int main(int argc, char **argv) {
@@ -74,7 +74,11 @@ if(debug) fprintf(stderr, "init\n");
 		char buf[st.st_size];
 		memset(buf, 0 , st.st_size);
 
-		fread(buf, 1, st.st_size, mastertiledims_file);
+		int freads_reads = fread(buf, 1, st.st_size, mastertiledims_file);
+		if(st.st_size != freads_reads) {
+			fprintf(stderr, "read data than it expected (%s)", mp.dest_mastertiledims_filename);
+			exit(EXIT_FAILURE);
+		}
 
 		uint8_t master_tile_x_count_local = 0;
 		uint8_t master_tile_y_count_local = 0;
@@ -147,7 +151,11 @@ if(debug) fprintf(stderr, "init\n");
 		char buf[st.st_size];
 		memset(buf, 0 , st.st_size);
 
-		fread(buf, 1, st.st_size, result_file);
+		size_t freads_read = fread(buf, 1, st.st_size, result_file);
+		if(st.st_size != freads_read) {
+			fprintf(stderr, "read data than it expected (%s)", mp.dest_result_filename);
+			exit(EXIT_FAILURE);
+		}
 	
 		uint32_t total_master_tile_count0 = master_tile_x_count * master_tile_y_count;
 		struct result *canidates0 = malloc( total_master_tile_count * sizeof(struct result));
@@ -265,7 +273,11 @@ if(debug) fprintf(stderr, "init\n");
 
 	//	memset(puffer,0,MAX_FILENAME_LEN);
 		for(uint64_t len=canidates[i].index;j<=len;j++) {
-			fgets(puffer, MAX_FILENAME_LEN, thumbs_db_file);
+			char *freads_read = fgets(puffer, MAX_FILENAME_LEN, thumbs_db_file);
+			if(freads_read == NULL) {
+				fprintf(stderr, "read less data than it expected");
+				exit(EXIT_FAILURE);
+			}
 		}
 		strncpy(canidates[i].thumbs_db_filenames,puffer,strlen(puffer));
 		if(strlen(puffer)>0)	canidates[i].thumbs_db_filenames[strlen(puffer)-1]=0;
@@ -274,7 +286,7 @@ if(debug) fprintf(stderr, "init\n");
 		fseek(thumbs_db_hash, MD5_DIGEST_LENGTH*canidates[i].index,SEEK_SET);
 		size_t read = fread(canidates[i].hash, 1, MD5_DIGEST_LENGTH, thumbs_db_hash);
 		if(read!=MD5_DIGEST_LENGTH) {
-			fprintf(stderr, "did not read enough hash data, expected %i at idx:%i position:%i but got %i\n",  MD5_DIGEST_LENGTH,canidates[i].index, MD5_DIGEST_LENGTH*canidates[i].index,read);
+			fprintf(stderr, "did not read enough hash data, expected %i at idx:%li position:%li but got %li\n",  MD5_DIGEST_LENGTH,canidates[i].index, MD5_DIGEST_LENGTH*canidates[i].index,read);
 			exit(EXIT_FAILURE);
 		}
 		char *buf;

@@ -8,6 +8,17 @@
 
 let fs = require('fs');
 let fs_promises = fs.promises;
+if(!fs_promises)
+	fs_promises = require("fs").promises;
+
+
+
+//require("fs/promises");
+if(!fs_promises )
+{
+	console.error("fs.promises could not be loaded");
+process.exit(1);
+}
 //let fs_promises = require('fs/promises');
 let https = require("https");
 const { finished } = require("stream"); //register broken http downloads during download
@@ -64,7 +75,7 @@ function Mosaik2Job(ctx) {
 			data = data.split("\t");
 			this.resource = data[0];
 			this.filesize = parseInt(data[1]);
-			this.timestamp = data[2];
+			this.timestamp = parseInt(data[2]);
 
 			let name = this.resource.split("/");
 			name = decodeURIComponent(    name[ name.length-1 ]    ).replace(this.replacer," ");
@@ -83,7 +94,7 @@ function Mosaik2Job(ctx) {
 
 			//const isUnique = await this.isResourceUnique(this.ctx,this.filehash);
 			//if(isUnique) {
-			const indexData = await this.indexResource(this.ctx,this.data,this.filehash,this.resource,name,this,stream);
+			const indexData = await this.indexResource(this.ctx,this.data,this.filehash,this.resource,name,this,stream,this.timestamp);
 			//call synced
 			this.writeIndexToFile( this.ctx, indexData );
 
@@ -196,8 +207,8 @@ function Mosaik2Job(ctx) {
 		let promises = [];
 		keys.forEach( key => {
 			let path = ctx.thumbsDbName+'/'+ctx.thumbsDbFiles[key];
+			if(debug)console.log(new Date(), "starte appendFile", path);
 			promises.push( fs_promises.appendFile(path, indexData[key] ) );
-			//console.log(new Date(), "starte appendFile", path);
 		});
 		//console.log(new Date(), "wait for all ...");
 		Promise.all(promises);
@@ -209,7 +220,7 @@ function Mosaik2Job(ctx) {
 	}
 
 
-	this.indexResource = function(ctx,data,filehash,filename,name,thiz,stream) {
+	this.indexResource = function(ctx,data,filehash,filename,name,thiz,stream,timestamp) {
 		return new Promise( (resolve, reject) => {
 			thiz.state = thiz.INDEXING_STATE;
 
@@ -231,11 +242,10 @@ function Mosaik2Job(ctx) {
 			child.on("close", function(code) {
 				if(code==0) {
 					//examine stdout
-					let filesizeBuffer = Buffer.alloc(4);
-					filesizeBuffer.writeUInt8((thiz.filesize>>24)&255 , 0);
-					filesizeBuffer.writeUInt8((thiz.filesize>>16)&255 , 1);
-					filesizeBuffer.writeUInt8((thiz.filesize>>8) &255 , 2);
-					filesizeBuffer.writeUInt8((thiz.filesize     &255), 3);
+
+					
+					let filesizesBuffer = Buffer.alloc(4);
+					filesizesBuffer.writeUInt32LE( thiz.filesize );
 
 					let stdoutSplit = stdout0.split(" ");
 					let width = parseInt(stdoutSplit[0], 16);
@@ -281,17 +291,12 @@ function Mosaik2Job(ctx) {
 					let hashBuffer = Buffer.alloc(16);
 					hashBuffer.writeUInt8( parseInt( hash.substr(0 ,2), 16 ),0 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(2 ,2), 16 ),1 );
-
 					hashBuffer.writeUInt8( parseInt( hash.substr(4 ,2), 16 ),2 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(6 ,2), 16 ),3 );
-
-
 					hashBuffer.writeUInt8( parseInt( hash.substr(8 ,2), 16 ),4 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(10,2), 16 ),5 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(12,2), 16 ),6 );
-
-
-					hashBuffer.writeUInt8( parseInt( hash.substr(14,2), 16 ), 7);
+					hashBuffer.writeUInt8( parseInt( hash.substr(14,2), 16 ),7 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(16,2), 16 ),8 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(18,2), 16 ),9 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(20,2), 16 ),10 );
@@ -300,20 +305,43 @@ function Mosaik2Job(ctx) {
 					hashBuffer.writeUInt8( parseInt( hash.substr(26,2), 16 ),13 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(28,2), 16 ),14 );
 					hashBuffer.writeUInt8( parseInt( hash.substr(30,2), 16 ),15 );
+					
+					let timestampsBuffer = Buffer.alloc(8);
+					try {
+					timestampsBuffer.writeUInt32LE( timestamp ); // TODO check binary format
+					} catch( e ) {
+						console.error( filename );
+						console.error( e );
+					}
+
+
+					let filesizeIndex = 
+						fs.statSync(  ctx.thumbsDbName +"/"+ctx.thumbsDbFiles.filenames  ,{bigint:true}).size;
+					console.log(filesizeIndex );
+					let filenamesIndexBuffer = Buffer.alloc(8);
+					filenamesIndexBuffer.writeBigUInt64LE(
+						filesizeIndex
+					);
 
 					let invalidBuffer = Buffer.alloc(1);
 					invalidBuffer.writeUInt8( 0, 0 );
 
+					let duplicatesBuffer = Buffer.alloc(1);
+					duplicatesBuffer.writeUInt8( 0, 0 );
+
 
 					var indexData = {
-						"filesizes": filesizeBuffer,
+						"filesizes": filesizesBuffer,
 						"filehashes": hashBuffer,
+						"timestamps": timestampsBuffer,
 						"filenames": filename+"\n",
+						"filenamesindex": filenamesIndexBuffer,
 						"imagedims": imageDimBuffer,
 						"tiledims": tileDimBuffer,
 						"imagecolors": colorsBuffer,
 						"imagestddev": stddevBuffer,
-						"invalid": invalidBuffer
+						"invalid": invalidBuffer,
+						"duplicates": duplicatesBuffer
 					};
 
 					thiz.ctx.pixel += width * height;
@@ -371,13 +399,16 @@ filehashes.bin  filesizes.bin  imagesdims.bin   invalid.bin      tiledims.bin
 	ctx.thumbsDbFiles = {
 		 "filesizes": 'filesizes.bin',
 		 "filenames": 'filenames.txt',
+		 "filenamesindex": 'filenames.idx',
 		 "filehashes": 'filehashes.bin',
+     "timestamps": "timestamps.bin",
 		 "imagedims": 'imagedims.bin',
 		 "tiledims": 'tiledims.bin',
 		 "imagecolors": 'imagecolors.bin',
 		 "imagestddev": 'imagestddev.bin',
 		 "version": 'dbversion.txt',
 		 'invalid': 'invalid.bin',
+     "duplicates": "duplicates.bin",
 		 'tilecount': 'tilecount.txt'
 		// "imagepixelpertile": thumbsDbName+'.db.imagepixelpertile',
 		// "imagecolorcount":  thumbsDbName+'.db.imagecolorcount',
@@ -526,27 +557,27 @@ if(args[0] == "kill") {
 	fs.writeFile(
 		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount, ""+ctx.tileEdgeCount, {flag: 'a'}, function(err) {
 			if(err){
-				console.err("error writing file", err); process.exit(1);
+				console.error("error writing file", err); process.exit(1);
 			}
 			console.log("saved tile count");
 		}
 	);
 	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount,0o444,(err)=>{
 		if(err) {
-			console.err("error while set readony the tile count file");
+			console.error("error while set readony the tile count file");
 		}
 	});
 	fs.writeFile(
 		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version, ""+DB_VERSION, {flag: 'a'}, function(err){
 			if(err){
-				console.err("error writing file", err); process.exit(1)
+				console.error("error writing file", err); process.exit(1)
 			}
 			console.log("saved db version");
 		}
 	);
 	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version,0o444,(err)=>{
 		if(err) {
-			console.err("error while set readonly the db version file");
+			console.error("error while set readonly the db version file");
 		}
 	});
 
