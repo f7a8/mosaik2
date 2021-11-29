@@ -317,7 +317,6 @@ function Mosaik2Job(ctx) {
 
 					let filesizeIndex = 
 						fs.statSync(  ctx.thumbsDbName +"/"+ctx.thumbsDbFiles.filenames  ,{bigint:true}).size;
-					console.log(filesizeIndex );
 					let filenamesIndexBuffer = Buffer.alloc(8);
 					filenamesIndexBuffer.writeBigUInt64LE(
 						filesizeIndex
