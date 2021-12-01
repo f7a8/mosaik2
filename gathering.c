@@ -213,17 +213,19 @@ int main(int argc, char **argv) {
 		fprintf(stdout, "max_candidates_len:%i, total_candidates_count:%i\n", max_candidates_len, total_candidates_count);
 
 	unsigned long      *canidates_index = malloc(total_candidates_count * sizeof(unsigned long));
+	if( canidates_index == NULL ) { fprintf(stderr, "could not allocate memory for candidates_index\n"); exit(EXIT_FAILURE); }
 	unsigned long long *canidates_score = malloc(total_candidates_count * sizeof(unsigned long long));
+	if( canidates_score == NULL ) { fprintf(stderr, "could not allocate memory for candidates_score\n"); exit(EXIT_FAILURE); }
 	unsigned char      *canidates_off_x = malloc(total_candidates_count * sizeof(unsigned char));
+	if( canidates_off_x == NULL ) { fprintf(stderr, "could not allocate memory for candidates_off_x\n"); exit(EXIT_FAILURE); }
 	unsigned char      *canidates_off_y = malloc(total_candidates_count * sizeof(unsigned char));
+	if( canidates_off_y == NULL ) { fprintf(stderr, "could not allocate memory for candidates_off_y\n"); exit(EXIT_FAILURE); }
 	unsigned int       *candidates_len  = malloc(total_master_tile_count * sizeof(unsigned int));
+	if( candidates_len == NULL ) { fprintf(stderr, "could not allocate memory for candidates_len\n"); exit(EXIT_FAILURE); }
 	unsigned int       *candidates_elect = malloc(total_master_tile_count * sizeof(unsigned int));
+	if( candidates_elect == NULL ) { fprintf(stderr, "could not allocate memory for candidates_elect\n"); exit(EXIT_FAILURE); }
 	unsigned int       *candidates_ins  = malloc(total_master_tile_count * sizeof(unsigned int));
-
-	if(canidates_index == NULL || canidates_score == NULL || canidates_off_x == NULL || canidates_off_y == NULL || candidates_len == NULL || candidates_elect == NULL || candidates_ins == NULL) {
-		fprintf(stderr, "error while allocating memory for candidates list\n");
-		exit(EXIT_FAILURE);
-	}
+	if( candidates_ins == NULL ) { fprintf(stderr, "could not allocate memory for candidates_ins\n"); exit(EXIT_FAILURE); }
 
 	//intialize with -1
 	for(uint32_t i=0;i<total_candidates_count;i++) {
@@ -257,26 +259,30 @@ int main(int argc, char **argv) {
 	if(out) printf("%04X %04X %02X %02X", width, height, tile_x_count, tile_y_count);
     
 	double *colors_red   = malloc(total_tile_count * sizeof(double));
+	if( colors_red == NULL ) { fprintf(stderr, "could not allocate memory for colors_red\n"); exit(EXIT_FAILURE); }
 	double *colors_green = malloc(total_tile_count * sizeof(double));
+	if( colors_green == NULL ) { fprintf(stderr, "could not allocate memory for colors_green\n"); exit(EXIT_FAILURE); }
 	double *colors_blue  = malloc(total_tile_count * sizeof(double));
+	if( colors_blue == NULL ) { fprintf(stderr, "could not allocate memory for colors_blue\n"); exit(EXIT_FAILURE); }
 	long double *colors_abw_red  = malloc(total_tile_count * sizeof(long double));
+	if( colors_abw_red == NULL ) { fprintf(stderr, "could not allocate memory for colors_abw_red\n"); exit(EXIT_FAILURE); }
 	long double *colors_abw_green= malloc(total_tile_count * sizeof(long double));
+	if( colors_abw_green == NULL ) { fprintf(stderr, "could not allocate memory for colors_abw_green\n"); exit(EXIT_FAILURE); }
 	long double *colors_abw_blue = malloc(total_tile_count * sizeof(long double));
+	if( colors_abw_blue == NULL ) { fprintf(stderr, "could not allocate memory for colors_abw_blue\n"); exit(EXIT_FAILURE); }
 
 	int *colors_red_int = malloc(total_tile_count * sizeof(int));
+	if( colors_red_int == NULL ) { fprintf(stderr, "could not allocate memory for colors_red_int\n"); exit(EXIT_FAILURE); }
 	int *colors_green_int = malloc(total_tile_count * sizeof(int));
+	if( colors_green_int == NULL ) { fprintf(stderr, "could not allocate memory for colors_green_int\n"); exit(EXIT_FAILURE); }
 	int *colors_blue_int = malloc(total_tile_count * sizeof(int));
+	if( colors_blue_int == NULL ) { fprintf(stderr, "could not allocate memory for colors_blue_int\n"); exit(EXIT_FAILURE); }
 	int *stddev_red_int = malloc(total_tile_count * sizeof(int));
+	if( stddev_red_int == NULL ) { fprintf(stderr, "could not allocate memory for stddev_red_int\n"); exit(EXIT_FAILURE); }
 	int *stddev_green_int = malloc(total_tile_count * sizeof(int));
+	if( stddev_green_int == NULL ) { fprintf(stderr, "could not allocate memory for stddev_green_int\n"); exit(EXIT_FAILURE); }
 	int *stddev_blue_int = malloc(total_tile_count * sizeof(int));
-
-	if(colors_red==NULL||colors_green==NULL||colors_blue==NULL
-			|| colors_abw_red==NULL||colors_abw_green==NULL||colors_abw_red==NULL
-			|| colors_red_int==NULL||colors_green_int==NULL||colors_blue_int==NULL
-			|| stddev_red_int==NULL||stddev_green_int==NULL||stddev_blue_int==NULL) {
-		fprintf(stderr,"failed to allocate memory for primary image tiles\n");
-	  exit(EXIT_FAILURE);
-  }
+	if( stddev_blue_int == NULL ) { fprintf(stderr, "could not allocate memory for stddev_blue_int\n"); exit(EXIT_FAILURE); }
 
 	for(int i=0;i<total_tile_count;i++) {
 		colors_red[i]=0.0;
