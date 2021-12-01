@@ -1,3 +1,11 @@
+Dependend software
+
+1. gcc
+2. nodejs in version >= 14.16
+3. libexif
+4. libgd
+5. libssl
+
 USAGE
 
 1. create file list (read README.file_list)
