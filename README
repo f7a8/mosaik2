@@ -34,7 +34,7 @@ Usage Description
   2. size in pixels of the individual tiles 
   3. name of the mosaic2 database
   4. other names of Mosaic2 databases (must have been indexed in the same resolution e.g. 16)
-
+  The home directory is determined by the HOME environment variable. 
 
 BUGS
 

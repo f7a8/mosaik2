@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
+#include <unistd.h> // for symlink
 
 #include <curl/curl.h>
 
@@ -21,22 +22,28 @@
 #include <openssl/md5.h>
 
 int main(int argc, char **argv) {
-	if(argc<=3) {
-		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per master tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => thumbs_db_name_1\n\t5 => thumbs_db_name_2, ...\n");
+	if(argc<=4) {
+		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per master tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links), 4 => thumbs_db_name_1\n\t5 => thumbs_db_name_2, ...\n");
 		exit(EXIT_FAILURE);
 	}
 
 	char *dest_filename = argv[1];
 	uint32_t dest_tile_width = atoi(argv[2]);
 	uint8_t unique_tile = atoi(argv[3]);
+	uint8_t local_cache = atoi(argv[4]);
 	char * home = getenv("HOME");
 
 	int ft = check_dest_filename( dest_filename );
 
+	if(local_cache<0||local_cache>1) {
+		fprintf(stderr, "local_cache must be 0 or 1. 0 creates symlinks and 1 copies the files into the home directory\n");
+		exit(EXIT_FAILURE);
+	}
+
 	int debug = 0;
 
 	
-	uint8_t argv_start_idx_thumbs_db_names = 4;	
+	uint8_t argv_start_idx_thumbs_db_names = 5;	
 	uint8_t argv_end_idx_thumbs_db_names = argc;	
 
 	uint8_t master_tile_x_count;// atoi(argv[2]);
@@ -343,9 +350,20 @@ if(debug) fprintf(stderr, "init\n");
 
 	if(is_file_local( canidates[i].thumbs_db_filenames )) {
 
+		//TODO
+		if(local_cache==1) {
 		fprintf(stderr,"%i/%i copy %s:%li %s", i,total_master_tile_count, canidates[i].thumbs_db_name,canidates[i].index,canidates[i].thumbs_db_filenames );
 		File_Copy( canidates[i].thumbs_db_filenames, canidates[i].temp_filename);
 		fprintf(stderr,".\n");
+		} else {
+			fprintf(stderr,"%i/%i symlink %s:%li %s", i,total_master_tile_count, canidates[i].thumbs_db_name,canidates[i].index,canidates[i].thumbs_db_filenames );
+			int simlink = symlink(canidates[i].thumbs_db_filenames, canidates[i].temp_filename);
+			if(simlink != 0) {
+				fprintf(stderr, "error creating symlink %s for %s\n", canidates[i].temp_filename, canidates[i].thumbs_db_filenames);
+				exit(EXIT_FAILURE);
+			}
+			fprintf(stderr,".\n");
+		}
 
 	} else {
 		printf("%i/%i downloading %s:%li %s\n", i,total_master_tile_count, canidates[i].thumbs_db_name,canidates[i].index,canidates[i].thumbs_db_filenames );
