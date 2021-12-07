@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
-#include <unistd.h> // for symlink
 
 #include <curl/curl.h>
 
@@ -23,7 +22,7 @@
 
 int main(int argc, char **argv) {
 	if(argc<=4) {
-		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per master tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links), 4 => thumbs_db_name_1\n\t5 => thumbs_db_name_2, ...\n");
+		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per master tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),\n\t5 => thumbs_db_name_1\n\t[ ... ]\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -35,17 +34,26 @@ int main(int argc, char **argv) {
 
 	int ft = check_dest_filename( dest_filename );
 
+	if(dest_tile_width<1) {
+		fprintf(stderr, "dest_tile_width should be greater 1\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if(local_cache<0||local_cache>1) {
 		fprintf(stderr, "local_cache must be 0 or 1. 0 creates symlinks and 1 copies the files into the home directory\n");
 		exit(EXIT_FAILURE);
 	}
+
+	if(unique_tile<0||unique_tile>1) {
+		fprintf(stderr, "unique_tile must be 0 or 1.\n");
+		exit(EXIT_FAILURE);
+	} 
 
 	int debug = 0;
 
 	
 	uint8_t argv_start_idx_thumbs_db_names = 5;	
 	uint8_t argv_end_idx_thumbs_db_names = argc;	
-
 	uint8_t master_tile_x_count;// atoi(argv[2]);
 	uint8_t master_tile_y_count;// = atoi(argv[3]);
 
@@ -390,10 +398,12 @@ if(debug) fprintf(stderr, "init\n");
 	}
 
 	}
-
  printf("join mosaik2 for real\n");
  gdImagePtr out_im = gdImageCreateTrueColor(dest_tile_width*master_tile_x_count,dest_tile_width*master_tile_y_count);
-
+	if(out_im == NULL) {
+		fprintf(stderr, "could not create image object\n");
+		exit(EXIT_FAILURE);
+	}
 	gdImageSetInterpolationMethod(out_im,	GD_GAUSSIAN );
 
   FILE *out = fopen(dest_filename, "wb");
@@ -406,12 +416,15 @@ if(debug) fprintf(stderr, "init\n");
 	}
  
 	fprintf(html_out, "<html><body><table>");
+	gdImagePtr im;
  for(int y=0;y<master_tile_y_count;y++) {
 		fprintf(html_out, "<tr>");
     for(int x=0;x<master_tile_x_count;x++) {
 			int master_tile_idx = y*master_tile_x_count+x;
-      printf("%i/%i %s from %s\n",master_tile_idx,total_master_tile_count,canidates[master_tile_idx].temp_filename,canidates[master_tile_idx].thumbs_db_filenames);
-      gdImagePtr im = myLoadPng(canidates[master_tile_idx].temp_filename, canidates[master_tile_idx].thumbs_db_filenames);
+      
+			printf("%i/%i %s from %s\n",master_tile_idx,total_master_tile_count,canidates[master_tile_idx].temp_filename,canidates[master_tile_idx].thumbs_db_filenames);
+			im = myLoadPng(canidates[master_tile_idx].temp_filename, canidates[master_tile_idx].thumbs_db_filenames);
+
 			fprintf(html_out, "<td");
 			if(im==NULL) {
 				fprintf(stderr,"continue\nEXIT\n");exit(99);
@@ -473,7 +486,7 @@ if(debug) fprintf(stderr, "init\n");
 			} else {
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url, dest_tile_width, dest_tile_width);
 				
-				fprintf(src_out,"%i: %s", master_tile_idx, url);
+				fprintf(src_out,"%i: %s\n", master_tile_idx, url);
 				if(x==master_tile_x_count-1) {
 					fprintf(src_out, "\n");
 				}
@@ -560,14 +573,16 @@ if(debug) fprintf(stderr, "init\n");
 		}
 			fprintf(html_out, "</tr>");
 	}
+
 	fprintf(html_out, "</table><p>total score:%li<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
 
 //	fprintf(stderr,"alpha blending flag:%i\n",out_im->alphaBlendingFlag);
 //	out_im->alphaBlendingFlag=0;
-
+	if(debug) fprintf(stderr,"writing file to disk %i %i \n", out_im==NULL, out==NULL);
   if(ft == FT_PNG) {
   	gdImagePng(out_im, out);
   } else if( ft == FT_JPEG ) {
+		
     gdImageJpeg(out_im, out, 100);
   }
 	fclose(html_out);
