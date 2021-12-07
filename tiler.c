@@ -1,13 +1,11 @@
 // dependency ubuntu => libssl-dev, gd-dev?
 
-//#include <time.h>
 
-#include "gd.h"
 #include <string.h>
 #include <math.h>
 
-#include "mosaik21.h"
-#include "md5.h"
+#include "mosaik22.h"
+#include <openssl/md5.h>
 
 int main(int argc, char **argv) {
 	if(argc!=3) {
@@ -68,8 +66,6 @@ int main(int argc, char **argv) {
 //  printf( "fread cpu time used: %f\n", ((double) (end-start)) / CLOCKS_PER_SEC );
 
 
-
-
   gdImagePtr im;
   if(file_type == FT_JPEG) 
 		im = gdImageCreateFromJpegPtrEx(file_size, buffer, 0);
@@ -85,6 +81,24 @@ int main(int argc, char **argv) {
 
 		fprintf(stderr,"image could not be instanciated\n");
 		exit(EXIT_FAILURE);
+	}
+
+  gdImagePtr im2;
+	uint8_t orientation = get_image_orientation(buffer, file_size);
+	if(orientation == ORIENTATION_BOTTOM_RIGHT) {
+		im2 = gdImageRotate180(im); 
+		gdImageDestroy(im);
+		im = im2;
+	} else if(orientation == ORIENTATION_RIGHT_TOP) { 
+		im2 = gdImageRotate270(im); // 270
+		gdImageDestroy(im);
+		im = im2;
+	//	case ORIENTATION_BOTTOM_RIGHT: im = gdImageRotate90(im,0); break;//180
+	//	case ORIENTATION_LEFT_BOTTOM: im = gdImageRotate90(im,0); break;
+	} else if( orientation == ORIENTATION_LEFT_BOTTOM) {
+		im2 = gdImageRotate90(im);
+		gdImageDestroy(im);
+		im = im2;
 	}
 
 	int width = gdImageSX(im);
@@ -126,17 +140,18 @@ int main(int argc, char **argv) {
 	}
 
 
-	//unsigned char digest[16];
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	memset(hash,0,MD5_DIGEST_LENGTH);
 	//for(int i=0;i<16;i++) digest[i]=0;
-	//MD5_CTX md5;
-	//MD5_Init (&md5);
-	//MD5_Update (&md5, buffer, file_size);
-	//MD5_Final ( digest, &md5);
+	MD5_CTX md5;
+	MD5_Init (&md5);
+	MD5_Update (&md5, buffer, file_size);
+	MD5_Final ( hash, &md5);
 	//
 //void md5_hash(const uint8_t message[], size_t len, uint32_t hash[static STATE_LEN]);
-	uint32_t hash[STATE_LEN] ={0};
-	md5_hash( buffer, file_size, hash );
-	if(debug1) fprintf(stderr, "state_len:%i\n",hash[0]);
+	//uint32_t hash[STATE_LEN] ={0};
+	//md5_hash( buffer, file_size, hash );
+	//if(debug1) fprintf(stderr, "state_len:%i\n",hash[0]);
 
 
 	//	if(out) printf(" %02X%02X%02X %02X%02X%02X",red,green,blue, (int)round(abw_red),(int)round(abw_green),(int)round(abw_blue));
@@ -286,11 +301,11 @@ int main(int argc, char **argv) {
 	gdImageDestroy(im);
 
 	if(out) printf(" %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-		hash[0]    &0xFF, hash[0]>> 8&0xFF, hash[0]>>16&0xFF, hash[0]>>24&0xFF,
-		hash[1]    &0xFF, hash[1]>> 8&0xFF, hash[1]>>16&0xFF, hash[1]>>24&0xFF,
-		hash[2]    &0xFF, hash[2]>> 8&0xFF, hash[2]>>16&0xFF, hash[2]>>24&0xFF,
-		hash[3]    &0xFF, hash[3]>> 8&0xFF, hash[3]>>16&0xFF, hash[3]>>24&0xFF );
+		hash[0]         , hash[1]         , hash[2]         , hash[3]         ,
+		hash[4]         , hash[5]         , hash[6]         , hash[7]         ,
+		hash[8]         , hash[9]         , hash[10]        , hash[11]        ,
+		hash[12]        , hash[13]        , hash[14]        , hash[15]        );
 
-
+	if(out) fflush(stdout);
 }
 
