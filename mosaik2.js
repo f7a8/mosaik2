@@ -561,11 +561,6 @@ if(args[0] == "kill") {
 			console.log("saved tile count");
 		}
 	);
-	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount,0o444,(err)=>{
-		if(err) {
-			console.error("error while set readony the tile count file");
-		}
-	});
 	fs.writeFile(
 		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version, ""+DB_VERSION, {flag: 'a'}, function(err){
 			if(err){
@@ -574,6 +569,19 @@ if(args[0] == "kill") {
 			console.log("saved db version");
 		}
 	);
+	fs.writeFile(
+		ctx.thumbsDbName+'/README.txt', "This is a mosaik2 database directory.\n", {flag: 'a'}, function(err){
+			if(err){
+				console.error("error writing file", err); process.exit(1)
+			}
+			console.log("saved README");
+		}
+	);
+	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount,0o444,(err)=>{
+		if(err) {
+			console.error("error while set readonly the tile count file");
+		}
+	});
 	fs.chmod(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version,0o444,(err)=>{
 		if(err) {
 			console.error("error while set readonly the db version file");
