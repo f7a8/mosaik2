@@ -3,3 +3,8 @@ gathering
 join
 duplicates
 invalid
+*.jpeg
+*.jpeg.html
+*.jpeg.src
+*.jpeg.*.mastertiledims
+*.jpeg.*.result
