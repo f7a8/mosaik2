@@ -102,11 +102,19 @@ int main(int argc, char **argv) {
 
   size_t bytes_read = fread(buffer, 1, file_size, stdin);
 
-  if(bytes_read < file_size) {
+	if(bytes_read != file_size) {
   	free( buffer );
     fprintf(stderr, "image could not be loaded bytes_should:%i, bytes_read:%li\n", file_size, bytes_read);
     exit(EXIT_FAILURE);
   }
+
+	char buf2[1];
+	if(fread(buf2, 1,1, stdin)>0) {
+		fprintf(stderr, "after file_size (%i) is at least one byte further more to read\n", file_size);
+		exit(EXIT_FAILURE);
+	}
+
+	fclose(stdin);
 
   gdImagePtr im;
 	int ft = get_file_type_from_buf( buffer, file_size);
