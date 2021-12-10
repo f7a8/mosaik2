@@ -36,6 +36,3 @@ Usage Description
   4. other names of Mosaic2 databases (must have been indexed in the same resolution e.g. 16)
   The home directory is determined by the HOME environment variable. 
 
-BUGS
-
-* The library gd does not analyze the exif image data. Rotated pictures by exif data will be shown as they were saved. For example Iphone photographs may be used as a flipped images. If you own the image data set, a possible workaround for this is to use the "exiftrans" program before and rotate the images.
