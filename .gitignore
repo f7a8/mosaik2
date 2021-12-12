@@ -1,8 +1,4 @@
-tiler_hex_md5
-gathering
-join
-duplicates
-invalid
+bin/*
 *.jpeg
 *.jpeg.html
 *.jpeg.src

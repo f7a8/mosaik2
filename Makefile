@@ -1,35 +1,23 @@
-#all: test
-#
-#test: test.o anotherTest.o
-#    gcc -Wall test.c anotherTest.c -o test -I.
-#
-#test.o: test.c
-#    gcc -Wall -c test.c -I.
-#
-#anotherTest.o: anothertest.c
-#    gcc -Wall -c anotherTest.c -I.
-#
-#clean:
-#    rm -rf *o test
-#
-#
 
-all: tiler gathering join duplicates invalid
+all: bin/tiler_hex_md5 bin/gathering bin/join bin/duplicates bin/invalid bin/mosaik2.js
 
-tiler: tiler.c
-	gcc -O3 tiler.c -o tiler_hex_md5 -lm -lgd -lcrypto -lexif
+bin/tiler_hex_md5: src/tiler.c src/mosaik22.h
+	gcc -O3 src/tiler.c -o bin/tiler_hex_md5 -lm -lgd -lcrypto -lexif
 
-gathering: gathering.c
-	gcc -O3 gathering.c -o gathering -lm -lgd -lcrypto -lexif
+bin/gathering: src/gathering.c src/mosaik22.h
+	gcc -O3 src/gathering.c -o bin/gathering -lm -lgd -lcrypto -lexif
 
-join: join.c
-	gcc -O3 join.c -o join -lm -lgd -lcurl -lexif
+bin/join: src/join.c src/mosaik22.h
+	gcc -O3 src/join.c -o bin/join -lm -lgd -lcurl -lexif
 
-duplicates: duplicates.c
-	gcc -O3 duplicates.c -o duplicates
+bin/duplicates: src/duplicates.c src/mosaik21.h
+	gcc -O3 src/duplicates.c -o bin/duplicates
 
-invalid: invalid.c
-	gcc -O3 invalid.c -o invalid -lcrypto
+bin/invalid: src/invalid.c src/mosaik21.h
+	gcc -O3 src/invalid.c -o bin/invalid -lcrypto
+
+bin/mosaik2.js: src/mosaik2.js
+	cp src/mosaik2.js bin/mosaik2.js
 
 clean:
-	rm -rf gathering tiler_hex_md5 join duplicates invalid
+	rm bin/tiler_hex_md5 bin/gathering bin/join bin/duplicates bin/invalid bin/mosaik2.js
