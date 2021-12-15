@@ -1,22 +1,12 @@
-// dependency ubuntu => libssl-dev, gd-dev?
 
+#include "mosaik21.h"
 
-#include <string.h>
-#include <math.h>
+#include <stdint.h>
 
-#include "mosaik22.h"
-#include <openssl/md5.h>
-
-int main(int argc, char **argv) {
-	if(argc!=3) {
-		fprintf(stderr,"wrong parameter. usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream\n");
-		exit(EXIT_FAILURE);
-	}
-	uint32_t tile_count = atoi(argv[1]);
-	uint32_t file_size = atoi(argv[2]);
+int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 
 	if(tile_count<1 || tile_count >= 256) {
-		fprintf(stderr, "illegal tile_count (%i): accepted range is 1 < tile_count < 256\n", tile_count);
+		fprintf(stderr, "illegal tile_count (%i): accepted range is 0 < tile_count < 256\n", tile_count);
 		exit(EXIT_FAILURE);
 	}
 	if(file_size < 40001) {
