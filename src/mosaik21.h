@@ -521,12 +521,6 @@ int cmpfunc_back(const void *a, const void *b) {
 	return 0;
 }
 
-//for curl writing
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
-  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
-  return written;
-}
-
 int File_Copy(char FileSource[], char FileDestination[])
 {
     char    c[4096]; // or any other constant you like

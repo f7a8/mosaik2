@@ -34,8 +34,8 @@ int main(int argc, char **argv) {
 
 	int debug=0;
 
-	uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
-	uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
+	//uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
+	//uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
 
 	FILE *filehashes_file0 = fopen(md0.filehashes_filename, "rb");
 	if( filehashes_file0 == NULL) {

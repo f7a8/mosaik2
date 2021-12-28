@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 	}
 
 	int short_dim = width<height?width:height;
-	int long_dim  = width<height?height:width;
+	//int long_dim  = width<height?height:width;
 
 	int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
 	double total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
 
 	if(debug1) fprintf(stderr,"tiling stddev data\n");
 
-	double total_tile_count_d = total_tile_count;
+	//double total_tile_count_d = total_tile_count;
 	for(int j=0,j1=offset_y;j1<ly;j++,j1++){
 		for(int i=0,i1=offset_x;i1<lx;i++,i1++){
 			//if(debug) printf("avg_blue0:%f i:%i i1:%i lx:%i\n", colors_blue[0],i ,i1, lx);        

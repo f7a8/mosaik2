@@ -37,9 +37,9 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 			} else if(strcmp(buf, "Left-Bottom")==0) {
 				return ORIENTATION_LEFT_BOTTOM;
 			}
-			return ORIENTATION_TOP_LEFT;
     }
 	}
+	return ORIENTATION_TOP_LEFT;
 }
 
 gdImagePtr myLoadPng(char *filename, char *origin_name) {
@@ -57,7 +57,7 @@ gdImagePtr myLoadPng(char *filename, char *origin_name) {
    } 
    /* Read the entire thing into a buffer
      that we allocate */
-   char *buffer = malloc(stat_buf.st_size);
+   unsigned char *buffer = malloc(stat_buf.st_size);
    if (!buffer) { 
      fprintf(stderr,"could not allocate memory\n");
      exit(EXIT_FAILURE);
@@ -115,38 +115,36 @@ static void trim_spaces(char *buf) {
 
 
 /* Show the tag name and contents if the tag exists */
+/*
 static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
 {
-    /* See if this tag exists */
     ExifEntry *entry = exif_content_get_entry(d->ifd[ifd],tag);
     if (entry) {
         char buf[1024];
 
-        /* Get the contents of the tag in human-readable form */
         exif_entry_get_value(entry, buf, sizeof(buf));
 
-        /* Don't bother printing it if it's entirely blank */
         trim_spaces(buf);
         if (*buf) {
             printf("%s\t%s\t%02X\n", exif_tag_get_name_in_ifd(tag,ifd), buf, entry->data[0]);
         }
     }
-}
+}*/
 
 /* Show the given MakerNote tag if it exists */
-static void show_mnote_tag(ExifData *d, unsigned tag)
+/* static void show_mnote_tag(ExifData *d, unsigned tag)
 {
     ExifMnoteData *mn = exif_data_get_mnote_data(d);
     if (mn) {
         int num = exif_mnote_data_count(mn);
         int i;
 
-        /* Loop through all MakerNote tags, searching for the desired one */
+        // Loop through all MakerNote tags, searching for the desired one 
         for (i=0; i < num; ++i) {
             char buf[1024];
             if (exif_mnote_data_get_id(mn, i) == tag) {
                 if (exif_mnote_data_get_value(mn, i, buf, sizeof(buf))) {
-                    /* Don't bother printing it if it's entirely blank */
+                    // Don't bother printing it if it's entirely blank 
                     trim_spaces(buf);
                     if (*buf) {
                         printf("%s: %s\n", exif_mnote_data_get_title(mn, i),
@@ -156,7 +154,7 @@ static void show_mnote_tag(ExifData *d, unsigned tag)
             }
         }
     }
-}
+} */
 
 /* Rotates an image by 90 degrees (counter clockwise) */
 gdImagePtr gdImageRotate90 (gdImagePtr src) {

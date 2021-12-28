@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 
 	int debug=0;
 	uint64_t mosaik2_database_elems = read_thumbs_db_count(&md);
-	uint64_t found_invalid=0;
+	//uint64_t found_invalid=0;
 	
 	FILE *filenames_file = fopen(md.filenames_filename, "r");
 	if( filenames_file == NULL ) {
@@ -229,7 +229,10 @@ int main(int argc, char **argv) {
 					unsigned char new_hash[MD5_DIGEST_LENGTH];
 					
 					MD5_CTX md5_ctx;
-					int x=MD5_Init(&md5_ctx);
+					if( MD5_Init(&md5_ctx) != 1) {
+						fprintf(stderr, "could not init md5 context\n");
+						exit(EXIT_FAILURE);
+					}
 					while ((bytes = fread (image_data, 1, 4096, image_file)) != 0) {
     				if( MD5_Update (&md5_ctx, image_data, bytes)  == 0 ) {
 							fprintf(stderr, "error md5_update for element %li\n", j);
