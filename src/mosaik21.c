@@ -1,5 +1,12 @@
 #include "mosaik21.h"
 
+const int FT_JPEG = 0;
+const int FT_PNG = 1;
+const int FT_ERR = -1;
+uint8_t ORIENTATION_TOP_LEFT=0;
+uint8_t ORIENTATION_RIGHT_TOP=1;
+uint8_t ORIENTATION_BOTTOM_RIGHT=2;
+uint8_t ORIENTATION_LEFT_BOTTOM=3;
 void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);

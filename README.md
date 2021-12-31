@@ -16,6 +16,7 @@ hosted at https://github.com/f7a8/mosaik2/
 4. libgd
 5. libssl
 
+
 ## USAGE
 
 1. create file list (read README.file_list)
@@ -46,3 +47,24 @@ hosted at https://github.com/f7a8/mosaik2/
   4. other names of mosaik2 databases (must have been indexed in the same resolution e.g. 16)
   The home directory is determined by the HOME environment variable. 
 
+## Build Instructions
+
+First, clone this repository and create a *bin/* directory in your Git repository directory:
+
+```bash
+$ git clone https://github.com/f7a8/mosaik2
+$ cd mosaik2
+$ mkdir bin
+```
+
+For Ubuntu, install requirements using this command:
+
+```bash
+$ sudo apt install -y libgd-dev libexif-dev
+```
+
+and then finally run:
+
+```bash
+$ make
+```

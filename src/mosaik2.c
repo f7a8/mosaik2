@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "mosaik2.h"
+#include "mosaik21.h"
 
 int main(int argc, char **argv) {
 

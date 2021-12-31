@@ -1,5 +1,3 @@
-#ifndef MOSAIK21_H
-#define MOSAIK21_H
 
 #include <inttypes.h>
 #include <math.h>
@@ -14,17 +12,19 @@
 #include <gd.h>
 #include <libexif/exif-data.h>
 
+#ifndef _MOSAIK21_H_
+#define _MOSAIK21_H_
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-const int FT_JPEG = 0;
-const int FT_PNG = 1;
-const int FT_ERR = -1;
+extern const int FT_JPEG;
+extern const int FT_PNG;
+extern const int FT_ERR;
 
-uint8_t ORIENTATION_TOP_LEFT=0;
-uint8_t ORIENTATION_RIGHT_TOP=1;
-uint8_t ORIENTATION_BOTTOM_RIGHT=2;
-uint8_t ORIENTATION_LEFT_BOTTOM=3;
+extern uint8_t ORIENTATION_TOP_LEFT;
+extern uint8_t ORIENTATION_RIGHT_TOP;
+extern uint8_t ORIENTATION_BOTTOM_RIGHT;
+extern uint8_t ORIENTATION_LEFT_BOTTOM;
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
@@ -70,43 +70,43 @@ struct result {
 	int size;
 };
 
-void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name);
-void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename);
-int EndsWith(const char *str, const char *suffix);
-int StartsWith(const char *pre, const char *str);
-int is_file_local( const char *filename );
-int is_file_wikimedia_commons( const char *filename );
-void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int dest_len);
-void get_wikimedia_file_url(const char *url, char *dest, int dest_len);
-off_t get_file_size(const char *filename);
- 
-int get_file_type(const char *dest_filename);
-int get_file_type_from_buf(uint8_t *buf, size_t len);
-uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md);
-uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md);
-void check_thumbs_db_name(char *thumbs_db_name);
-void check_thumbs_db(struct mosaik2_database_struct *md);
-int check_dest_filename(char *dest_filename);
-void check_thumbs_tile_count(uint32_t thumbs_tile_count);
-void remove_newline(char *str);
+ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name);
+ void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename);
+ int EndsWith(const char *str, const char *suffix);
+ int StartsWith(const char *pre, const char *str);
+ int is_file_local( const char *filename );
+ int is_file_wikimedia_commons( const char *filename );
+ void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int dest_len);
+ void get_wikimedia_file_url(const char *url, char *dest, int dest_len);
+ off_t get_file_size(const char *filename);
 
-int cmpfunc (const void * a, const void * b);
-int cmpfunc_back(const void *a, const void *b);
+ int get_file_type(const char *dest_filename);
+ int get_file_type_from_buf(uint8_t *buf, size_t len);
+ uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md);
+ uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md);
+ void check_thumbs_db_name(char *thumbs_db_name);
+ void check_thumbs_db(struct mosaik2_database_struct *md);
+ int check_dest_filename(char *dest_filename);
+ void check_thumbs_tile_count(uint32_t thumbs_tile_count);
+ void remove_newline(char *str);
+
+ int cmpfunc (const void * a, const void * b);
+ int cmpfunc_back(const void *a, const void *b);
 
 //for curl writing
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
-int File_Copy(char FileSource[], char FileDestination[]);
+ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
+ int File_Copy(char FileSource[], char FileDestination[]);
 
 
 
-uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
-gdImagePtr myLoadPng(char *filename, char *origin_name);
-static void trim_spaces(char *buf);
-static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
-static void show_mnote_tag(ExifData *d, unsigned tag);
+ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
+ gdImagePtr myLoadPng(char *filename, char *origin_name);
+ static void trim_spaces(char *buf);
+ static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
+ static void show_mnote_tag(ExifData *d, unsigned tag);
 
-gdImagePtr gdImageRotate90 (gdImagePtr src);
-gdImagePtr gdImageRotate180 (gdImagePtr src);
-gdImagePtr gdImageRotate270 (gdImagePtr src);
+ gdImagePtr gdImageRotate90 (gdImagePtr src);
+ gdImagePtr gdImageRotate180 (gdImagePtr src);
+ gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 #endif
