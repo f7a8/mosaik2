@@ -546,7 +546,7 @@ gdImagePtr myLoadPng(char *filename, char *origin_name) {
    } 
    /* Read the entire thing into a buffer
      that we allocate */
-   char *buffer = malloc(stat_buf.st_size);
+   unsigned char *buffer = malloc(stat_buf.st_size);
    if (!buffer) { 
      fprintf(stderr,"could not allocate memory\n");
      exit(EXIT_FAILURE);
