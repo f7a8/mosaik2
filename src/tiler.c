@@ -1,7 +1,6 @@
 
 #include "mosaik21.h"
 
-#include <stdint.h>
 
 int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 

@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 
 /* usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream */
 int mosaik2_tiler(uint32_t tile_count, uint32_t filesize);
@@ -21,7 +17,7 @@ int mosaik2_gathering(int master_tile_count, size_t filesize, char *dest_filenam
 	4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),
 	5 => thumbs_db_name_1
 */
-int mosaik2_join(char *dest_filename, int image_width, int unique_tiles, int local_cache, char *mosaik2_db_name);
+int mosaik2_join(char *dest_filename, int image_width, int unique_tiles, int local_cache, int argc, char **argv);
 
 /* 1=> mosaik2_db_dir, 2=> mosaik2_db_dir, 3=> dry_run (0 or 1) */
 int mosaik2_duplicates(char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run);

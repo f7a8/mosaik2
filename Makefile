@@ -1,27 +1,29 @@
 
+COMPILER=gcc
+
 all: bin/mosaik2 bin/mosaik2.js
 
 
-bin/mosaik2: bin/tiler.o src/mosaik2.c src/mosaik2.h
-	gcc -O3 src/mosaik2.c bin/tiler.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif	
+bin/mosaik2: bin/libmosaik2.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o
+	${COMPILER} -O3 src/mosaik2.c bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl
 
-bin/mosaik21.o: src/mosaik21.c
-	gcc -O3 -c src/mosaik21.c -o bin/mosaik21.o -lgd
+bin/libmosaik2.o:
+	${COMPILER} -O3 -c src/mosaik21.c -o bin/libmosaik2.o -lexif -lgd
 
-bin/tiler.o: src/tiler.c bin/mosaik21.o
-	gcc -O3 src/tiler.c bin/mosaik21.o -o bin/tiler.o -lm -lgd -lcrypto -lexif
+bin/tiler.o:
+	${COMPILER} -O3 -c src/tiler.c -o bin/tiler.o
 
-bin/gathering: src/gathering.c bin/mosaik21.o
-	gcc -O3 src/gathering.c bin/mosaik21.o -o bin/gathering -lm -lgd -lcrypto -lexif
+bin/gathering.o:
+	${COMPILER} -O3 -c src/gathering.c -o bin/gathering.o
 
-bin/join: src/join.c src/mosaik21.h
-	gcc -O3 src/join.c bin/mosaik21.o -o bin/join -lm -lgd -lcurl -lexif
+bin/join.o:
+	${COMPILER} -O3 -c src/join.c -o bin/join.o
 
-bin/duplicates: src/duplicates.c src/mosaik21.h
-	gcc -O3 src/duplicates.c bin/mosaik21.o -o bin/duplicates
+bin/duplicates.o:
+	${COMPILER} -O3 -c src/duplicates.c -o bin/duplicates.o
 
-bin/invalid: src/invalid.c src/mosaik21.h
-	gcc -O3 src/invalid.c bin/mosaik21.o -o bin/invalid -lcrypto
+bin/invalid.o:
+	${COMPILER} -O3 -c src/invalid.c -o bin/invalid.o
 
 bin/mosaik2.js: src/mosaik2.js
 	cp src/mosaik2.js bin/mosaik2.js

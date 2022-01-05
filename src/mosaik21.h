@@ -1,14 +1,20 @@
-#ifndef MOSAIK21_H
-#define MOSAIK21_H
 
+#ifndef _MOSAIK21_H_
+#define _MOSAIK21_H_
+
+#include <curl/curl.h>
 #include <inttypes.h>
+#include <libgen.h>
+#include <limits.h>
 #include <math.h>
 #include <openssl/md5.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <gd.h>
@@ -17,14 +23,14 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-const int FT_JPEG = 0;
-const int FT_PNG = 1;
-const int FT_ERR = -1;
+extern const int FT_JPEG;
+extern const int FT_PNG;
+extern const int FT_ERR;
 
-uint8_t ORIENTATION_TOP_LEFT=0;
-uint8_t ORIENTATION_RIGHT_TOP=1;
-uint8_t ORIENTATION_BOTTOM_RIGHT=2;
-uint8_t ORIENTATION_LEFT_BOTTOM=3;
+extern uint8_t ORIENTATION_TOP_LEFT;
+extern uint8_t ORIENTATION_RIGHT_TOP;
+extern uint8_t ORIENTATION_BOTTOM_RIGHT;
+extern uint8_t ORIENTATION_LEFT_BOTTOM;
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
@@ -79,7 +85,7 @@ int is_file_wikimedia_commons( const char *filename );
 void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int dest_len);
 void get_wikimedia_file_url(const char *url, char *dest, int dest_len);
 off_t get_file_size(const char *filename);
- 
+
 int get_file_type(const char *dest_filename);
 int get_file_type_from_buf(uint8_t *buf, size_t len);
 uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md);
@@ -94,7 +100,6 @@ int cmpfunc (const void * a, const void * b);
 int cmpfunc_back(const void *a, const void *b);
 
 //for curl writing
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 int File_Copy(char FileSource[], char FileDestination[]);
 
 

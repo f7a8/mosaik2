@@ -14,39 +14,13 @@ mona lisa 33 2020 96%
 mona lisa 33 2017 95%
 */
 
-
-
-#include <string.h>
-#include <math.h>
-#include <stdint.h>
-#include <float.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <time.h>
-#include <libgen.h>
-#include <stdio.h>
-
-#include "mosaik22.h"
+#include "mosaik21.h"
 	
 	
-	
-
-int main(int argc, char **argv) {
-	if(argc!=7) {
-		fprintf(stderr,"wrong parameter. usage param: \n\t1 => master_tile_count (only approx. depends on the input image, can be slightly more)\n\t2 => file_size in bytes\n\t3 => dest_filename (including jpeg or png suffix)\n\t4 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)\n\t5 => unique (0 or 1) use a tile at least one time\n\t6 => pathname to mosaik2_thumb_db\nImage data is only accepted via stdin stream.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	uint8_t master_tile_count = atoi(argv[1]);
-	uint32_t file_size=atoi(argv[2]);
-	char *dest_filename=argv[3];
-	uint8_t ratio = atoi(argv[4]);
-	uint8_t unique = atoi(argv[5]);
-	char *thumbs_db_name=basename(argv[6]);
-
+int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
 
 	struct mosaik2_database_struct md;
-	init_mosaik2_database_struct(&md, thumbs_db_name);
+	init_mosaik2_database_struct(&md, mosaik2_db_name);
 	
 	check_thumbs_db(&md);
 
@@ -81,7 +55,7 @@ int main(int argc, char **argv) {
 		.master_tile_count = master_tile_count
 	};
 
-	init_mosaik2_project_struct(&mp, thumbs_db_name, dest_filename);
+	init_mosaik2_project_struct(&mp, mosaik2_db_name, dest_filename);
 
 	printf("analyze master image\n");
 
@@ -91,7 +65,7 @@ int main(int argc, char **argv) {
 	const uint8_t out = 0;
 	//const uint8_t duplicates_allowed = 0;
 
-	if(debug) printf("master_tile_count:%i,thumbs_tile_count:%i,file_size:%i\n",master_tile_count,thumbs_tile_count,file_size);
+	if(debug) printf("master_tile_count:%i,thumbs_tile_count:%i,file_size:%li\n",master_tile_count,thumbs_tile_count,file_size);
 
   uint8_t *buffer = malloc(mp.file_size);
 
@@ -104,13 +78,13 @@ int main(int argc, char **argv) {
 
 	if(bytes_read != file_size) {
   	free( buffer );
-    fprintf(stderr, "image could not be loaded bytes_should:%i, bytes_read:%li\n", file_size, bytes_read);
+    fprintf(stderr, "image could not be loaded bytes_should:%li, bytes_read:%li\n", file_size, bytes_read);
     exit(EXIT_FAILURE);
   }
 
 	char buf2[1];
 	if(fread(buf2, 1,1, stdin)>0) {
-		fprintf(stderr, "after file_size (%i) is at least one byte further more to read\n", file_size);
+		fprintf(stderr, "after file_size (%li) is at least one byte further more to read\n", file_size);
 		exit(EXIT_FAILURE);
 	}
 

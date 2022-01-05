@@ -1,5 +1,12 @@
 #include "mosaik21.h"
 
+const int FT_JPEG = 0;
+const int FT_PNG = 1;
+const int FT_ERR = -1;
+uint8_t ORIENTATION_TOP_LEFT=0;
+uint8_t ORIENTATION_RIGHT_TOP=1;
+uint8_t ORIENTATION_BOTTOM_RIGHT=2;
+uint8_t ORIENTATION_LEFT_BOTTOM=3;
 void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);
@@ -461,12 +468,6 @@ int cmpfunc_back(const void *a, const void *b) {
 	if(a0->sortorder < b0->sortorder)
 		return -1;
 	return 0;
-}
-
-//for curl writing
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
-  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
-  return written;
 }
 
 int File_Copy(char FileSource[], char FileDestination[])
