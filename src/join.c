@@ -577,4 +577,5 @@ if(debug) fprintf(stderr, "init\n");
 	free(canidates);
 	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
 
+	return 0;
 }

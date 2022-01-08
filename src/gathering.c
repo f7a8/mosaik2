@@ -1030,6 +1030,7 @@ if(debug) {
 										sum_ins += candidates_ins[i];
 									}
 									fprintf(stdout,"sorting operations to create uniqueness:%llu\n",sum_ins);
+	return 0;
 }
 
 

@@ -296,5 +296,7 @@ int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 		hash[12]        , hash[13]        , hash[14]        , hash[15]        );
 
 	if(out) fflush(stdout);
+	return 0;
+
 }
 

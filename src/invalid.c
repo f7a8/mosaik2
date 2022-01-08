@@ -263,4 +263,5 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 	fclose(filenames_file);
 	fclose(timestamps_file);
 	fclose(filehashes_file);
+	return 0;
 }

@@ -218,4 +218,6 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	return 0;
 }
