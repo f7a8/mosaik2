@@ -15,7 +15,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int local_cache, char *mosaik2_db_name, int argc, char **argv) {
+int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int local_cache, int argc, char **argv) {
 	char * home = getenv("HOME");
 
 	int ft = check_dest_filename( dest_filename );
