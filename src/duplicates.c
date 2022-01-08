@@ -6,7 +6,7 @@
 */
 
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 //TODO very inefficient, better search the external sorted hashnumber
 

@@ -1,5 +1,5 @@
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 
 int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {

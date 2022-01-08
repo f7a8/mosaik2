@@ -7,7 +7,7 @@
 //	  _/ |/ _ \| || ' \
 //	 |__/ \___/|_||_||_|
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {

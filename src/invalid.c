@@ -5,7 +5,7 @@
   |_||_||_| \_/ \__/_||_||_|\__/_| (_) \__|
 
 */
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 uint8_t DRY_RUN = 0;
 
