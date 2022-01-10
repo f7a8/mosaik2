@@ -29,4 +29,14 @@ bin/mosaik2.js: src/mosaik2.js
 	cp src/mosaik2.js bin/mosaik2.js
 
 clean:
-	rm bin/*
+	rm -f bin/*
+	rm -rf test
+
+test:
+	mkdir -p test/flower
+	tar xfz flower_photos.tgz -C test/flower # <( wget -q0- "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz" -O test/flower/flower_photos.tgz )
+	~/Downloads/node-v14.16.0-linux-x64/bin/node bin/mosaik2.js init test/flower/flowerphotos16 16
+	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +40000c -fprintf  flower_photos.file_list "%p\t%s\t%T@\n" 
+	~/Downloads/node-v14.16.0-linux-x64/bin/node bin/mosaik2.js index test/flower/flowerphotos16 8 8 < flower_photos.file_list
+
+

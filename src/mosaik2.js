@@ -10,7 +10,7 @@ let fs = require('fs');
 let fs_promises = fs.promises;
 if(!fs_promises)
 	fs_promises = require("fs").promises;
-
+let path = require('path');
 
 
 //require("fs/promises");
@@ -524,7 +524,8 @@ if(args[0] == "kill") {
 	}
 
 	var ctx = initCtx(args[1],args[2]);
-	if(! ctx.configNameRegexp.test(args[1]) || isNaN(args[2]) ) {
+	
+	if(! ctx.configNameRegexp.test(path.basename(args[1])) || isNaN(args[2]) ) {
 		console.error("wrong parameter values, exit" );
 		printUsage();
 		process.exit(1);
