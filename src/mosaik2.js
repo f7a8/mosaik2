@@ -224,7 +224,7 @@ function Mosaik2Job(ctx) {
 		return new Promise( (resolve, reject) => {
 			thiz.state = thiz.INDEXING_STATE;
 
-			let command = "./tiler_hex_md5 "+ ctx.tileEdgeCount+ " " + thiz.filesize;
+			let command = __dirname+"/mosaik2 tiler "+ ctx.tileEdgeCount+ " " + thiz.filesize;
 			let stdout0 = undefined;
 			let stderr0 = undefined;
 			if(debug)console.error("calling ", command);

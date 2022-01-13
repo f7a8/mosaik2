@@ -1,25 +1,13 @@
 //TODO check is db older than the result file?
 //TODO unique_tiles 
 
-/*
-      _
-     (_)      _       
-     | | ___ (_) _ _  
-	  _/ |/ _ \| || ' \
-	 |__/ \___/|_||_||_|
-*/
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include <stdio.h>
-#include <math.h>
-#include <errno.h>
+//      _
+//     (_)      _       
+//     | | ___ (_) _ _  
+//	  _/ |/ _ \| || ' \
+//	 |__/ \___/|_||_||_|
 
-#include <curl/curl.h>
-
-#include "mosaik22.h"
-#include <openssl/md5.h>
+#include "libmosaik2.h"
 
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
@@ -27,17 +15,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-
-int main(int argc, char **argv) {
-	if(argc<=4) {
-		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per master tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),\n\t5 => thumbs_db_name_1\n\t[ ... ]\n");
-		exit(EXIT_FAILURE);
-	}
-
-	char *dest_filename = argv[1];
-	uint32_t dest_tile_width = atoi(argv[2]);
-	uint8_t unique_tile = atoi(argv[3]);
-	uint8_t local_cache = atoi(argv[4]);
+int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int local_cache, int argc, char **argv) {
 	char * home = getenv("HOME");
 
 	int ft = check_dest_filename( dest_filename );
@@ -60,7 +38,7 @@ int main(int argc, char **argv) {
 	int debug = 0;
 
 	
-	uint8_t argv_start_idx_thumbs_db_names = 5;	
+	uint8_t argv_start_idx_thumbs_db_names = 6;
 	uint8_t argv_end_idx_thumbs_db_names = argc;	
 	uint8_t master_tile_x_count=0;// atoi(argv[2]);
 	uint8_t master_tile_y_count=0;// = atoi(argv[3]);
@@ -87,7 +65,7 @@ if(debug) fprintf(stderr, "init\n");
 
 		FILE *mastertiledims_file = fopen(mp.dest_mastertiledims_filename, "r");
 		if( mastertiledims_file == NULL) {
-			fprintf(stderr, "master tile dims file (%s) could not be opened:%i,%s\n", mp.dest_mastertiledims_filename, errno, strerror(errno));
+			fprintf(stderr, "master tile dims file (%s) could not be opened\n", mp.dest_mastertiledims_filename);
 			exit(EXIT_FAILURE);
 		} else if(debug) {
 			fprintf(stderr, "mastertiledims file loaded\n");
@@ -599,4 +577,5 @@ if(debug) fprintf(stderr, "init\n");
 	free(canidates);
 	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
 
+	return 0;
 }

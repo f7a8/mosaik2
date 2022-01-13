@@ -5,11 +5,7 @@
   |_||_||_| \_/ \__/_||_||_|\__/_| (_) \__|
 
 */
-#include <stdio.h>
-#include <string.h>
-#include "mosaik21.h"
-#include <time.h>
-#include <openssl/md5.h>
+#include "libmosaik2.h"
 
 uint8_t DRY_RUN = 0;
 
@@ -46,17 +42,11 @@ void print_invalid_(char *filename) {
 	print_invalid(filename, filesize, last_modified);
 }
 
+int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run) {
 
-int main(int argc, char **argv) {
-	if(argc!=4) {
-		fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> ignore_old_ivalids ( 0 or 1; if 1 already as invalid marked files are not checked again ), 3=> dry_run (0 or 1; if 1, then nothing i save to the invalid file)\nThis program marks only new invalid files. It will print a filelist with the new valid informations to stdout, you can use this for creating a new mosaik2 database\n");
-		exit(EXIT_FAILURE);
-	}
 
 	struct mosaik2_database_struct md;
-	init_mosaik2_database_struct(&md, argv[1]);
-	uint8_t ignore_old_invalids = atoi(argv[2]);
-	uint8_t dry_run = atoi(argv[3]);
+	init_mosaik2_database_struct(&md, mosaik2_db_name);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
 		fprintf(stderr, "ingore_old_invalids must be 0 or 1\n");
@@ -276,4 +266,5 @@ int main(int argc, char **argv) {
 	fclose(filenames_file);
 	fclose(timestamps_file);
 	fclose(filehashes_file);
+	return 0;
 }

@@ -6,27 +6,19 @@
 */
 
 
-#include <stdio.h>
-#include <string.h>
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 //TODO very inefficient, better search the external sorted hashnumber
 
-int main(int argc, char **argv) {
-	if(argc!=4) {
-		fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> mosaik2_db_dir, 3=> dry_run (0 or 1)\n");
-		exit(EXIT_FAILURE);
-	}
+int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run) {
 
 	struct mosaik2_database_struct md0;
-	init_mosaik2_database_struct(&md0, argv[1]);
+	init_mosaik2_database_struct(&md0, mosaik2_db_name_1);
 	check_thumbs_db(&md0);
 
 	struct mosaik2_database_struct md1;
-	init_mosaik2_database_struct(&md1, argv[2]);
+	init_mosaik2_database_struct(&md1, mosaik2_db_name_2);
 	check_thumbs_db(&md1);
-
-	uint8_t dry_run = atoi(argv[3]);
 
 	if(dry_run < 0 || dry_run > 1) {
 		fprintf(stderr, "dry_run must be 0 or 1\n");
@@ -226,4 +218,6 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	return 0;
 }
