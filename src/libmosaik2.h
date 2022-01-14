@@ -1,6 +1,6 @@
 
-#ifndef _MOSAIK21_H_
-#define _MOSAIK21_H_
+#ifndef _LIBMOSAIK2_H_
+#define _LIBMOSAIK2_H_
 
 #include <curl/curl.h>
 #include <inttypes.h>

@@ -14,7 +14,7 @@ mona lisa 33 2020 96%
 mona lisa 33 2017 95%
 */
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 	
 	
 int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
@@ -1030,6 +1030,7 @@ if(debug) {
 										sum_ins += candidates_ins[i];
 									}
 									fprintf(stdout,"sorting operations to create uniqueness:%llu\n",sum_ins);
+	return 0;
 }
 
 

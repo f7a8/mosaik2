@@ -6,7 +6,7 @@
 */
 
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 //TODO very inefficient, better search the external sorted hashnumber
 
@@ -26,8 +26,8 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 
 	int debug=0;
 
-	uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
-	uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
+	//uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
+	//uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
 
 	FILE *filehashes_file0 = fopen(md0.filehashes_filename, "rb");
 	if( filehashes_file0 == NULL) {
@@ -218,4 +218,6 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	return 0;
 }

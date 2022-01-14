@@ -7,7 +7,7 @@
 //	  _/ |/ _ \| || ' \
 //	 |__/ \___/|_||_||_|
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
@@ -40,8 +40,8 @@ int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int 
 	
 	uint8_t argv_start_idx_thumbs_db_names = 6;
 	uint8_t argv_end_idx_thumbs_db_names = argc;	
-	uint8_t master_tile_x_count;// atoi(argv[2]);
-	uint8_t master_tile_y_count;// = atoi(argv[3]);
+	uint8_t master_tile_x_count=0;// atoi(argv[2]);
+	uint8_t master_tile_y_count=0;// = atoi(argv[3]);
 
 	
 	uint8_t tile_count = 0;
@@ -158,7 +158,7 @@ if(debug) fprintf(stderr, "init\n");
 			exit(EXIT_FAILURE);
 		}
 	
-		uint32_t total_master_tile_count0 = master_tile_x_count * master_tile_y_count;
+		//uint32_t total_master_tile_count0 = master_tile_x_count * master_tile_y_count;
 		struct result *canidates0 = malloc( total_master_tile_count * sizeof(struct result));
 		if(canidates0 == NULL) {
 			fprintf(stderr, "cannot allocate memory for temporary data structure\n");
@@ -240,7 +240,7 @@ if(debug) fprintf(stderr, "init\n");
 
 			int found = 0;
 			uint32_t i_=0;
-			struct mosaik2_database_struct_p *p;
+			//struct mosaik2_database_struct_p *p;
 			for(int i0=0;i0< argv_end_idx_thumbs_db_names - argv_start_idx_thumbs_db_names;i0++) {
 				if(strcmp(canidates[i].thumbs_db_name, mds[i0].thumbs_db_name)==0) {
 					found = 1;
@@ -488,7 +488,7 @@ if(debug) fprintf(stderr, "init\n");
 			uint32_t height = gdImageSY(im);
 			
 			int short_dim = width<height?width:height;
-			int long_dim  = width<height?height:width;
+			//int long_dim  = width<height?height:width;
 			 
 			int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
 			
@@ -506,8 +506,8 @@ if(debug) fprintf(stderr, "init\n");
 			int offset_x = ((width - tile_x_count * pixel_per_tile)/2);
  			int offset_y = ((height - tile_y_count * pixel_per_tile)/2);
 
- 			int lx = offset_x + pixel_per_tile * tile_x_count;
- 			int ly = offset_y + pixel_per_tile * tile_y_count;
+ 			//int lx = offset_x + pixel_per_tile * tile_x_count;
+ 			//int ly = offset_y + pixel_per_tile * tile_y_count;
 
 
 			/*dst	The destination image.
@@ -577,4 +577,5 @@ if(debug) fprintf(stderr, "init\n");
 	free(canidates);
 	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
 
+	return 0;
 }

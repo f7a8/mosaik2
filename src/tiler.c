@@ -1,5 +1,5 @@
 
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 
 int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
@@ -102,7 +102,7 @@ int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 	}
 
 	int short_dim = width<height?width:height;
-	int long_dim  = width<height?height:width;
+	//int long_dim  = width<height?height:width;
 
 	int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
 	double total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
@@ -210,7 +210,7 @@ int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 
 	if(debug1) fprintf(stderr,"tiling stddev data\n");
 
-	double total_tile_count_d = total_tile_count;
+	//double total_tile_count_d = total_tile_count;
 	for(int j=0,j1=offset_y;j1<ly;j++,j1++){
 		for(int i=0,i1=offset_x;i1<lx;i++,i1++){
 			//if(debug) printf("avg_blue0:%f i:%i i1:%i lx:%i\n", colors_blue[0],i ,i1, lx);        
@@ -296,5 +296,7 @@ int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 		hash[12]        , hash[13]        , hash[14]        , hash[15]        );
 
 	if(out) fflush(stdout);
+	return 0;
+
 }
 

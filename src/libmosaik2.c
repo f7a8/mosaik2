@@ -1,4 +1,4 @@
-#include "mosaik21.h"
+#include "libmosaik2.h"
 
 const int FT_JPEG = 0;
 const int FT_PNG = 1;
