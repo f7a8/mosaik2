@@ -21,6 +21,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 	struct mosaik2_database_struct md;
 	init_mosaik2_database_struct(&md, mosaik2_db_name);
+	read_database_id(&md);
 	
 	check_thumbs_db(&md);
 
@@ -55,7 +56,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 		.master_tile_count = master_tile_count
 	};
 
-	init_mosaik2_project_struct(&mp, mosaik2_db_name, dest_filename);
+	init_mosaik2_project_struct(&mp, md.id, dest_filename);
 
 	printf("analyze master image\n");
 

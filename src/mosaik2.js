@@ -408,15 +408,19 @@ filehashes.bin  filesizes.bin  imagesdims.bin   invalid.bin      tiledims.bin
 		 "version": 'dbversion.txt',
 		 'invalid': 'invalid.bin',
      "duplicates": "duplicates.bin",
-		 'tilecount': 'tilecount.txt'
+		 'tilecount': 'tilecount.txt',
+     'id': 'id.txt'
+
 		// "imagepixelpertile": thumbsDbName+'.db.imagepixelpertile',
 		// "imagecolorcount":  thumbsDbName+'.db.imagecolorcount',
 		// "imagetileedgecount": thumbsDbName+'.db.imagetileedgecount'
 	};
 	ctx.filehashAlreadyIndexedTime = 0;
 	ctx.filehashAlreadyIndexedCount = 0;
-	ctx.configNameRegexp = /^[a-zA-Z0-9]{1,100}$/
+	ctx.configNameRegexp = /^[a-zA-Z0-9]{1,100}$/;
+	ctx.id = Math.floor(new Date().getTime()*(10000*Math.random())).toString(16).padEnd(14,'2');
 	return ctx;
+		
 }
 
 function loadCtx(thumbsDbName) {
@@ -455,6 +459,7 @@ function loadCtx(thumbsDbName) {
 		process.exit(1);
 	}
 	ctx.dbVersion = dbVersion;
+	ctx.id = fs.readFileSync(thumbsDbName+'/'+ctx.thumbsDbFiles.id);
 
 	return ctx;
 }
@@ -554,20 +559,26 @@ if(args[0] == "kill") {
 //		fs.chmod(readonlyFiles[i], 444
 	}
 
+	fs.writeFile(ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.id, ctx.id, {flag: 'a'}, function(err){
+		if(err) {
+			console.error("error writing file", err); process.exit(1);
+		}
+		console.log("saved mosaik2 database id "+ctx.id);
+	});
+	fs.writeFile(
+		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version, ""+DB_VERSION, {flag: 'a'}, function(err){
+			if(err){
+				console.error("error writing file", err); process.exit(1)
+			}
+			console.log("saved mosaik2 database version "+DB_VERSION);
+		}
+	);
 	fs.writeFile(
 		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.tilecount, ""+ctx.tileEdgeCount, {flag: 'a'}, function(err) {
 			if(err){
 				console.error("error writing file", err); process.exit(1);
 			}
 			console.log("saved tile count");
-		}
-	);
-	fs.writeFile(
-		ctx.thumbsDbName+'/'+ctx.thumbsDbFiles.version, ""+DB_VERSION, {flag: 'a'}, function(err){
-			if(err){
-				console.error("error writing file", err); process.exit(1)
-			}
-			console.log("saved db version");
 		}
 	);
 	fs.writeFile(

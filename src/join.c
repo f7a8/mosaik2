@@ -56,9 +56,10 @@ if(debug) fprintf(stderr, "init\n");
 		if(debug) fprintf( stderr, "check %i %s\n", i, argv[i]);
 		
 		init_mosaik2_database_struct(&mds[i0], argv[i]);
+		read_database_id(&mds[i0]);
 		check_thumbs_db(&mds[i0]);
 
-		init_mosaik2_project_struct(&mp, argv[i], dest_filename);
+		init_mosaik2_project_struct(&mp, mds[i0].id, dest_filename);
 
 		if(debug)
 			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,mastertiledis:%s\n", argv[i],dest_filename,mp.dest_mastertiledims_filename);

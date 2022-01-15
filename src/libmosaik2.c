@@ -24,6 +24,10 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	memset( (*md).temporary_duplicates_filename,0,256);
 	memset( (*md).tilecount_filename,0,256);
 	memset( md->tilecount_filename, 0, 256);
+	memset( md->id_filename, 0, 256);
+	memset( md->id,0, 14);
+
+	
 
 
 	size_t l = strlen(thumbs_db_name);
@@ -77,11 +81,17 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	
 	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
 	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
+
+	strncpy( (*md).id_filename,thumbs_db_name,l);
+	strncat( (*md).id_filename,"/id.txt",7);
+
+	(*md).id_len = 14;
+
 }
 
-void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename) {
+void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
 
-	size_t thumbs_db_name_len = strlen(thumbs_db_name);
+	size_t mosaik2_database_id_len = strlen(mosaik2_database_id);
 	size_t dest_filename_len = strlen(dest_filename);
 
 	strncpy(mp->dest_filename, dest_filename, dest_filename_len);
@@ -92,7 +102,7 @@ void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs
 	memset(mp->dest_mastertiledims_filename, 0, 256);
 	strncpy(mp->dest_mastertiledims_filename, mp->dest_filename, dest_filename_len);
 	strncat(mp->dest_mastertiledims_filename, ".", 1);
-	strncat(mp->dest_mastertiledims_filename, thumbs_db_name, thumbs_db_name_len);
+	strncat(mp->dest_mastertiledims_filename, mosaik2_database_id, mosaik2_database_id_len);
 	strncat(mp->dest_mastertiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
  
  	memset(mp->dest_result_filename, 0, 256);
@@ -100,7 +110,7 @@ void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs
 	thumbs_db_ending_len = strlen(thumbs_db_ending);
 	strncpy(mp->dest_result_filename, mp->dest_filename, dest_filename_len);
 	strncat(mp->dest_result_filename, ".", 1);
-	strncat(mp->dest_result_filename, thumbs_db_name, thumbs_db_name_len);
+	strncat(mp->dest_result_filename, mosaik2_database_id, mosaik2_database_id_len);
 	strncat(mp->dest_result_filename, thumbs_db_ending, thumbs_db_ending_len);
 
 	memset(mp->dest_html_filename, 0, 256);
@@ -294,6 +304,23 @@ uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md) {
 		return thumbs_conf_tilecount;
 }
 
+void read_database_id(struct mosaik2_database_struct *md) {
+
+	FILE *id_file = fopen(md->id_filename,"r");
+	if(id_file == NULL ) {
+		fprintf(stderr, "mosaik2 database file with id (%s) could not be opened\n", md->id_filename);
+		exit(EXIT_FAILURE);
+	}
+	char *rbuf = fgets( md->id, md->id_len, id_file);
+	if(rbuf == NULL ) {
+		fprintf(stderr, "mosaik2 datbase file with id (%s) could not be read correctly\n", md->id_filename);
+		fclose(id_file);
+		exit(EXIT_FAILURE);
+	}
+
+	fclose( id_file );
+}
+/**
 void check_thumbs_db_name(char *thumbs_db_name) {
 
 	uint32_t thumbs_db_name_len = strlen( thumbs_db_name );
@@ -320,15 +347,15 @@ void check_thumbs_db_name(char *thumbs_db_name) {
 		}
 	}	
 
-}
+} */
 
 void check_thumbs_db(struct mosaik2_database_struct *md) {
 
-	check_thumbs_db_name( md->thumbs_db_name );
+	//check_thumbs_db_name( md->thumbs_db_name );
 
 	
 	if( access( md->thumbs_db_name, F_OK ) != 0 ) {
-		fprintf(stderr, "thumbs directory (%s) is not accessable\n", md->thumbs_db_name);
+		fprintf(stderr, "mosaik2 database directory (%s) is not accessable\n", md->thumbs_db_name);
 		exit(EXIT_FAILURE);
 	}
 
@@ -398,7 +425,7 @@ int check_dest_filename(char *dest_filename) {
 		fprintf(stderr, "dest_filename (%s) must not start with a dot\n", dest_filename);
 		exit(EXIT_FAILURE);
 	}
-
+/*
 	char valid_signs[] = {"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-."};
 	uint8_t valid_signs_count = strlen( valid_signs );
 	uint8_t valid = 0;
@@ -417,7 +444,7 @@ int check_dest_filename(char *dest_filename) {
 			exit(EXIT_FAILURE);
 		}
 	}
-
+*/
 	int ft;
 	if( (ft = get_file_type(dest_filename)) == FT_ERR) {
 		fprintf(stderr, "illegal file type for destination file\n");

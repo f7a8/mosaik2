@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 		char *dest_filename=argv[4];
 		uint8_t ratio = atoi(argv[5]);
 		uint8_t unique = atoi(argv[6]);
-		char *mosaik2_db_name=basename(argv[7]);
+		char *mosaik2_db_name=argv[7];
 
 		return mosaik2_gathering(master_tile_count, file_size, dest_filename, ratio, unique, mosaik2_db_name);
 	} else if(strncmp( argv[1], join, strlen(join)) == 0) {

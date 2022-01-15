@@ -47,6 +47,9 @@ struct mosaik2_database_struct {
 	char duplicates_filename[256];
 	char temporary_duplicates_filename[256];
 	char tilecount_filename[256];
+	char id_filename[256];
+	char id[14];
+	size_t id_len;
 };// = {NULL, "imagestddev.bin", "imagecolors.bin", "imagedims.bin", "filenames.txt", "filehashes.bin", "filesizes.bin", "tiledims.bin", "invalid.bin", "tilecount.conf"};
 
 struct mosaik2_project_struct {
@@ -90,6 +93,7 @@ int get_file_type(const char *dest_filename);
 int get_file_type_from_buf(uint8_t *buf, size_t len);
 uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md);
 uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md);
+void read_database_id(struct mosaik2_database_struct *md);
 void check_thumbs_db_name(char *thumbs_db_name);
 void check_thumbs_db(struct mosaik2_database_struct *md);
 int check_dest_filename(char *dest_filename);

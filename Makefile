@@ -38,8 +38,8 @@ test:
 	~/Downloads/node-v14.16.0-linux-x64/bin/node bin/mosaik2.js init test/flower/flowerphotos16 16
 	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +40000c -fprintf  flower_photos.file_list "%p\t%s\t%T@\n" 
 	~/Downloads/node-v14.16.0-linux-x64/bin/node bin/mosaik2.js index test/flower/flowerphotos16 8 8 < flower_photos.file_list
-	wget "https://upload.wikimedia.org/wikipedia/commons/5/52/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg"
-	bin/mosaik2 gathering 30 5868357  Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos16 < 2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
-	bin/mosaik2 join Wiesen-Schaumkraut.jpeg 100 0 1 test/flower/flowerphotos16
+	wget "https://upload.wikimedia.org/wikipedia/commons/5/52/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg" -nd # -O 2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 gathering 30 5868357  test/flower/Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos16 < 2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 join test/flower/Wiesen-Schaumkraut.jpeg 100 0 1 test/flower/flowerphotos16
 
 
