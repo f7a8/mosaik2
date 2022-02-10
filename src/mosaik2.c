@@ -13,12 +13,20 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	const char init [] = { "init" };
 	const char tiler [] = { "tiler" };
 	const char gathering [] = { "gathering" };
 	const char join [] = { "join" };
 	const char invalid [] = { "invalid" };
 	const char duplicates [] = { "duplicates" };
 	
+	if(strncmp( argv[1], init, strlen(init)) == 0) {
+		if(argc!=4) {
+			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => resolution (uint8_t)\n");
+			exit(EXIT_FAILURE);
+		}
+		return mosaik2_init(argv[2],atoi(argv[3]));
+	}
 	if(strncmp(	argv[1], tiler, strlen(tiler)) == 0) {
 	
 		if(argc!=4) {

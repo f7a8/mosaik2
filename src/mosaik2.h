@@ -1,3 +1,6 @@
+int mosaik2_init(char *mosaik2_database_name, uint32_t resolution);
+int mosaik2_clean(char *mosaik2_database_name);
+int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, uint32_t max_loadavg);
 
 /* usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream */
 int mosaik2_tiler(uint32_t tile_count, uint32_t filesize);

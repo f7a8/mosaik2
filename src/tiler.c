@@ -4,10 +4,8 @@
 
 int mosaik2_tiler(uint32_t tile_count, uint32_t file_size) {
 
-	if(tile_count<1 || tile_count >= 256) {
-		fprintf(stderr, "illegal tile_count (%i): accepted range is 0 < tile_count < 256\n", tile_count);
-		exit(EXIT_FAILURE);
-	}
+	check_resolution(tile_count);
+
 	if(file_size < 10001) {
 		fprintf(stderr, "image file_size (%i) must be at least 40001 bytes\n", file_size);
 		exit(EXIT_FAILURE);
