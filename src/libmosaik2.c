@@ -87,6 +87,22 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 
 	(*md).id_len = 14;
 
+	md->all_filenames = {
+		md->duplicates_filename,
+		md->filehashes_filename,
+		md->filenames_index_filename,
+		md->filenames_filename,
+		md->filesizes_filename,
+		md->id_filename,
+		md->imagecolors_filename,
+		md->imagedims_filename,
+		md->imagestddev_filename,
+		md->invalid_filename,
+		md->temporary_duplicates_filename,
+		md->tilecount_filename,
+		md->timestamps_filename
+	};
+
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -734,3 +750,10 @@ gdImagePtr gdImageRotate270 (gdImagePtr src) {
 	}
 	return dst;
 }	
+
+void check_resolution(uint32_t resolution) {
+	if(resolution<1 || resolution >= 256) {
+		fprintf(stderr, "illegal resolution (%i): accepted range is 0 < resolution < 256\n", resolution);
+		exit(EXIT_FAILURE);
+	}
+}

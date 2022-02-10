@@ -47,6 +47,8 @@ struct mosaik2_database_struct {
 	char duplicates_filename[256];
 	char temporary_duplicates_filename[256];
 	char tilecount_filename[256];
+	char all_filenames = NULL;
+	size_t all_filenames_len;
 	char id_filename[256];
 	char id[14];
 	size_t id_len;
@@ -98,6 +100,7 @@ void check_thumbs_db_name(char *thumbs_db_name);
 void check_thumbs_db(struct mosaik2_database_struct *md);
 int check_dest_filename(char *dest_filename);
 void check_thumbs_tile_count(uint32_t thumbs_tile_count);
+void check_resolution(uint32_t resolution);
 void remove_newline(char *str);
 
 int cmpfunc (const void * a, const void * b);
