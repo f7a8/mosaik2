@@ -26,9 +26,8 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	memset( md->tilecount_filename, 0, 256);
 	memset( md->id_filename, 0, 256);
 	memset( md->id,0, 14);
-
-	
-
+	memset( md->version_filename, 0, 256);
+	memset( md->readme_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -87,22 +86,11 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 
 	(*md).id_len = 14;
 
-	md->all_filenames = {
-		md->duplicates_filename,
-		md->filehashes_filename,
-		md->filenames_index_filename,
-		md->filenames_filename,
-		md->filesizes_filename,
-		md->id_filename,
-		md->imagecolors_filename,
-		md->imagedims_filename,
-		md->imagestddev_filename,
-		md->invalid_filename,
-		md->temporary_duplicates_filename,
-		md->tilecount_filename,
-		md->timestamps_filename
-	};
+	strncpy( md->version_filename,thumbs_db_name,l);
+	strncat( md->version_filename,"/dbversion.txt",14);
 
+	strncpy( md->readme_filename,thumbs_db_name,l);
+	strncat( md->readme_filename,"/README.txt",11);
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
