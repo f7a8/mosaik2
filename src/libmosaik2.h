@@ -3,6 +3,7 @@
 #define _LIBMOSAIK2_H_
 
 #include <curl/curl.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
@@ -22,6 +23,8 @@
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
+
+#define MOSAIK2_DATABASE_FORMAT_VERSION 4
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
@@ -47,12 +50,12 @@ struct mosaik2_database_struct {
 	char duplicates_filename[256];
 	char temporary_duplicates_filename[256];
 	char tilecount_filename[256];
-	char all_filenames = NULL;
-	size_t all_filenames_len;
 	char id_filename[256];
 	char id[14];
 	size_t id_len;
-};// = {NULL, "imagestddev.bin", "imagecolors.bin", "imagedims.bin", "filenames.txt", "filehashes.bin", "filesizes.bin", "tiledims.bin", "invalid.bin", "tilecount.conf"};
+	char version_filename[256];
+	char readme_filename[256];
+};
 
 struct mosaik2_project_struct {
 	char dest_filename[256];
