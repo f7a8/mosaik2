@@ -28,6 +28,7 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	memset( md->id,0, 14);
 	memset( md->version_filename, 0, 256);
 	memset( md->readme_filename, 0, 256);
+	memset( md->pid_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -91,6 +92,9 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 
 	strncpy( md->readme_filename,thumbs_db_name,l);
 	strncat( md->readme_filename,"/README.txt",11);
+
+	strncpy( md->pid_filename,thumbs_db_name,l);
+	strncat( md->pid_filename,"/pid.txt",11);
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {

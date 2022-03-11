@@ -55,6 +55,7 @@ struct mosaik2_database_struct {
 	size_t id_len;
 	char version_filename[256];
 	char readme_filename[256];
+	char pid_filename[256];
 };
 
 struct mosaik2_project_struct {
