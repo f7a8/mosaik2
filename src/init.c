@@ -133,6 +133,7 @@ int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount) {
 	create_mosaik2_database_file(md.imagecolors_filename, 1, 1);
 	create_mosaik2_database_file(md.imagestddev_filename, 1, 1);
 	create_mosaik2_database_file(md.invalid_filename, 1, 1);
+	create_mosaik2_database_file(md.duplicates_filename, 1, 1);
 	create_mosaik2_database_file(md.tilecount_filename, 1, 1);
 
 	create_mosaik2_database_file_id(md.id_filename);
