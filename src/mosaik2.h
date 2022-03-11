@@ -1,4 +1,4 @@
-int mosaik2_init(char *mosaik2_database_name, uint32_t resolution);
+int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount);
 int mosaik2_clean(char *mosaik2_database_name);
 int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, uint32_t max_loadavg);
 

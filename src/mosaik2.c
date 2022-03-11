@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
 	}
 
 	const char init [] = { "init" };
+	const char index [] = { "index" };
 	const char tiler [] = { "tiler" };
 	const char gathering [] = { "gathering" };
 	const char join [] = { "join" };
@@ -22,12 +23,17 @@ int main(int argc, char **argv) {
 	
 	if(strncmp( argv[1], init, strlen(init)) == 0) {
 		if(argc!=4) {
-			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => resolution (uint8_t)\n");
+			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => tilecont (uint8_t)\n");
 			exit(EXIT_FAILURE);
 		}
 		return mosaik2_init(argv[2],atoi(argv[3]));
-	}
-	if(strncmp(	argv[1], tiler, strlen(tiler)) == 0) {
+	} else if(strncmp( argv[1], index, strlen(index)) == 0) {
+		if(argc!=5) {
+			fprintf(stderr, "wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => max_tiler_process (uint8_t), 3 => max_load_avg (uint32_t)\n");
+			exit(EXIT_FAILURE);
+		}
+		return mosaik2_index(argv[2], atoi(argv[3]), atoi(argv[4]));
+	} else if(strncmp(	argv[1], tiler, strlen(tiler)) == 0) {
 	
 		if(argc!=4) {
 			fprintf(stderr,"wrong parameter. usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream\n");
