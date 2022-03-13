@@ -94,7 +94,7 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncat( md->readme_filename,"/README.txt",11);
 
 	strncpy( md->pid_filename,thumbs_db_name,l);
-	strncat( md->pid_filename,"/pid.txt",11);
+	strncat( md->pid_filename,"/mosaik2.pid",12);
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
