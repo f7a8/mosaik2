@@ -20,8 +20,8 @@ USAGE
 
 1. create file list (read README.file_list)
 
-2. node mosaik2.js init first_mosaik2 16
-3. node mosaik2.js index first_mosaik2 4 10 < first_mosaik2.file_list
+2. bin/mosaik2 init first_mosaik2 16
+3. bin/mosaik2 index first_mosaik2 4 10 < first_mosaik2.file_list
 4. bin/mosaik2 gathering 40 6353080 my_first_mosaik2.jpeg 100 first_mosaik2 < source_image.jpeg
 5. bin/mosaik2 join my_first_mosaik2.jpeg 150 0 1 first_mosaik2
 
