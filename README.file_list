@@ -1,11 +1,11 @@
-If you want to index a bunch of images its is needed to create an input stream 
-to mosaik2 in the format
+If you want to index images with mosaik2, you must specify them as 
+a text stream using the stdin in the following format
 
 file_link{TABULATOR}file_size{TABULATOR}timestamp{LINEBREAK}
 ...
 
 * file_link means an absolute or relative filepath on your local machine or an 
-  url.
+  url. These filepaths should still be accessible in the join phase.
 * file_size means the file size in bytes.
 * timestamp is a unix timestamp (integer format, floating points will be floored),
   which is used to check via invalid program if a file has changed. 
