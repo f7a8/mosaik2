@@ -9,18 +9,20 @@
 int main(int argc, char **argv) {
 
 	if(argc==1) {
-		fprintf(stderr,"wrong parameter. append an action.\n");
+		fprintf(stderr,"mosaik2 - creates real photo mosaics\n\n");
+		fprintf(stderr,"mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.\n");
+		fprintf(stderr,"website at https://f7a8.github.io/mosaik2/\n\n\nwrong parameter. append an action.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	const char init [] = { "init" };
-	const char index [] = { "index" };
-	const char tiler [] = { "tiler" };
-	const char gathering [] = { "gathering" };
-	const char join [] = { "join" };
-	const char invalid [] = { "invalid" };
-	const char duplicates [] = { "duplicates" };
-	
+	const char *init = "init";
+	const char *index = "index";
+	const char *tiler = "tiler";
+	const char *gathering = "gathering";
+	const char *join = "join";
+	const char *invalid = "invalid";
+	const char *duplicates = "duplicates";
+
 	if(strncmp( argv[1], init, strlen(init)) == 0) {
 		if(argc!=4) {
 			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => tilecont (uint8_t)\n");
@@ -83,7 +85,7 @@ int main(int argc, char **argv) {
 		}
 		return mosaik2_duplicates(argv[2],argv[3],atoi(argv[4]));
 	} else {
-		fprintf(stderr, "invalid action, valid actions: {gathering,join,tiler,invalid,duplicates}\n");
+		fprintf(stderr, "invalid action, valid actions: {init,index,gathering,join,tiler,invalid,duplicates}\n");
 		exit(EXIT_FAILURE);
 	}
 	return 0;
