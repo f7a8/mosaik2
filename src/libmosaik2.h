@@ -4,11 +4,13 @@
 
 #include <curl/curl.h>
 #include <errno.h>
+#include <err.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
 #include <math.h>
 #include <openssl/md5.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +36,27 @@ extern uint8_t ORIENTATION_TOP_LEFT;
 extern uint8_t ORIENTATION_RIGHT_TOP;
 extern uint8_t ORIENTATION_BOTTOM_RIGHT;
 extern uint8_t ORIENTATION_LEFT_BOTTOM;
+
+struct mosaik2_context_struct {
+	uint8_t debug;
+	uint8_t exiting;
+	uint32_t max_tiler_processes;
+	uint32_t max_load_avg;
+};
+
+typedef struct mosaik2_context_struct mosaik2_context;
+
+typedef enum {  INITIAL, LOADING, INDEXING, WRITING_INDEX, ENDING } TASK_STATE;
+
+typedef struct mosaik2_indextask_struct {
+	time_t start;
+	time_t end;
+	TASK_STATE state;
+	uint64_t idx;
+	char filename[1024]; // trade off, dont want to malloc that much. hoping it fits
+	size_t filesize;
+	time_t lastmodified;
+} mosaik2_indextask;
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
@@ -85,6 +108,7 @@ struct result {
 	int size;
 };
 
+void init_mosaik2_context(mosaik2_context *);
 void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name);
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename);
 int EndsWith(const char *str, const char *suffix);
