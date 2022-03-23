@@ -11,10 +11,9 @@ hosted at https://github.com/f7a8/mosaik2/
 Dependend software
 
 1. gcc
-2. nodejs in version >= 14.16
-3. libexif
-4. libgd
-5. libssl
+2. libexif
+3. libgd
+4. libssl
 
 USAGE
 
