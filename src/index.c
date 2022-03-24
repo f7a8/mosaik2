@@ -104,32 +104,30 @@ void process_next_line(mosaik2_context *ctx, struct mosaik2_database_struct *md,
 		fprintf(stdout, "stdin is not resumed, EXITing because of SIGTERM.");
 
 	mosaik2_indextask task;
+//	memset(&task, 0, sizeof(task));
 
-	size_t tabstops[] = {0,0};
-	tabstops[0] = strcspn(line, "\t");
-	tabstops[1] = strcspn(line+tabstops[0]+1, "\t")+tabstops[0];
-	if(tabstops[0] == 0) {
-		errx(EINVAL, "filename is empty");
+	char *token0 = strtok(line, "\t");
+	char *token1 = strtok(NULL, "\t");
+	char *token2 = strtok(NULL, "\t");
+	if(token0 == NULL || token1 == NULL || token2 == NULL ) {
+		errx(EINVAL, "could not split line by tabstop into three token filename is empty. (linenumber:%li, line:%s)\n",i, line);
 	}
-	if(tabstops[0]>=sizeof(task.filename)) {
+
+	if(strlen(token0)>=sizeof(task.filename)) {
 		errx(EINVAL, "ups, this filename is to long. sorry you have to remove or rename anything, that exceeds %li characters\n", sizeof(task.filename));
 	}
-	if(tabstops[1]<=tabstops[0]) {
-		errx(EINVAL, "invalid data format, have a look at README.filelist");
-	}
 
-	strncpy(task.filename, line, tabstops[0]);
-	task.filename[tabstops[0]] = '\0';
+	strncpy(task.filename, token0, strlen(token0)+1);
 
-	task.filesize = strtol(line+tabstops[0]+1, NULL, 10);
+	task.filesize = strtol(token1, NULL, 10);
 	if(errno)
 		errx(errno, "error converting file size");
 
-	task.lastmodified = strtoll(line+tabstops[1]+1, NULL, 10);
+	task.lastmodified = strtoll(token2, NULL, 10);
 	if(errno)
 		errx(errno, "error converting input unix timestamp");
 
-	fopen(task.filename, "r");
+//	fopen(task.filename, "r");
 	//process the data in serial and compare duration to old variant	
 	return;
 }
