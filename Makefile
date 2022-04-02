@@ -1,6 +1,6 @@
 
 COMPILER=gcc
-CFLAGS=-O3
+CFLAGS=-O3 -march=native -mtune=native
 
 all: bin/mosaik2
 
@@ -14,7 +14,7 @@ bin/libmosaik2.o: src/libmosaik2.c src/libmosaik2.h
 bin/init.o: src/init.c
 	${COMPILER} ${CFLAGS} -c src/init.c -o bin/init.o
 
-bin/index.o: src/index.c src/index.h
+bin/index.o: src/index.c 
 	${COMPILER} ${CFLAGS} -c src/index.c -o bin/index.o
 
 bin/tiler.o: src/tiler.c
