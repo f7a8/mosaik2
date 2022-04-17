@@ -9,7 +9,12 @@ uint8_t ORIENTATION_BOTTOM_RIGHT=2;
 uint8_t ORIENTATION_LEFT_BOTTOM=3;
 
 void init_mosaik2_context(mosaik2_context *ctx) {
-	ctx->debug = strncmp("1", getenv("MOSAIK2_DEBUG"), 1) == 0;
+	memset(ctx, 0, sizeof(ctx));
+	memset(ctx->pids, 0, 1024*sizeof(pid_t));
+	char *env_mosaik2_debug = getenv("MOSAIK2_DEBUG");
+	if(env_mosaik2_debug != NULL) {
+		ctx->debug = strncmp("1", getenv("MOSAIK2_DEBUG"), 1) == 0;
+	}
 }
 
 void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name) {
@@ -34,6 +39,7 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	memset( md->version_filename, 0, 256);
 	memset( md->readme_filename, 0, 256);
 	memset( md->pid_filename, 0, 256);
+	memset( md->lock_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -45,7 +51,6 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncpy( (*md).imagestddev_filename,thumbs_db_name,l);
 	strncat( (*md).imagestddev_filename,"/",1);
 	strncat( (*md).imagestddev_filename,"imagestddev.bin",15);
-
 	//fprintf(stdout, "[%s]:%lu\n", "imagestddev.bin", strlen("imagestddev.bin"));
 
 	strncpy( (*md).imagedims_filename,thumbs_db_name,l);
@@ -100,6 +105,9 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 
 	strncpy( md->pid_filename,thumbs_db_name,l);
 	strncat( md->pid_filename,"/mosaik2.pid",12);
+
+	strncpy( md->lock_filename, thumbs_db_name, l);
+	strncat( md->lock_filename, "/.lock", 6);
 }
 
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -690,7 +698,6 @@ static void show_mnote_tag(ExifData *d, unsigned tag)
 
 /* Rotates an image by 90 degrees (counter clockwise) */
 gdImagePtr gdImageRotate90 (gdImagePtr src) {
-	fprintf(stderr,"gdImageRotate90\n");
 	int uY, uX;
 	int c;
 	gdImagePtr dst;
@@ -709,7 +716,6 @@ gdImagePtr gdImageRotate90 (gdImagePtr src) {
 }
 /* Rotates an image by 180 degrees (counter clockwise) */
 gdImagePtr gdImageRotate180 (gdImagePtr src) {
-	fprintf(stderr,"rotate 180\n");
 	int uY, uX;
 	int c;
 	gdImagePtr dst;
@@ -729,7 +735,6 @@ gdImagePtr gdImageRotate180 (gdImagePtr src) {
 }	
 /* Rotates an image by 90 degrees (counter clockwise) */
 gdImagePtr gdImageRotate270 (gdImagePtr src) {
-	fprintf(stderr,"rotate 270\n");
 	int uY, uX;
 	int c;
 	gdImagePtr dst;
@@ -754,3 +759,49 @@ void check_resolution(uint32_t resolution) {
 		exit(EXIT_FAILURE);
 	}
 }
+
+int mosaik2_indextask_read_image(mosaik2_indextask *task) {
+	if(is_file_local( task->filename )) {
+		FILE *file = fopen( task->filename, "rb");
+		if(file==NULL) {
+			fprintf(stderr, "could not open file (%s)\n", task->filename);
+			return errno;
+		}
+		char *buf = malloc(task->filesize);
+		if(buf == NULL) {
+			fprintf(stderr, "could not allocate memory for image data\n");
+			fclose(file);
+			return errno;
+		}
+		size_t read = fread(buf,1,task->filesize,file);
+		if(read != task->filesize) {
+			fprintf(stderr,"could not read (%li) the expected (%li) amount of data\n", read, task->filesize);
+			fclose(file);
+			free(buf);
+			return EINVAL;
+		}
+		
+		task->image_data = buf;
+		fclose(file);
+		
+	} else {
+		fprintf(stderr, "only reading of local files is currently implemented\n");
+		exit(1);
+	}
+	return 0;
+}
+void mosai2_indextask_deconst(mosaik2_indextask *task) {
+	
+}
+
+
+void print_usage(char *m) {
+    struct rusage resuage;
+      int usage = getrusage( RUSAGE_SELF, &resuage);
+    fprintf(stderr, "%i %-10s usert:%li.%06li syst:%li.%06li  max:%6li ix:%li, id:%li, is:%li\n",
+      getpid(), m, resuage.ru_utime.tv_sec, resuage.ru_utime.tv_usec,
+      resuage.ru_stime.tv_sec, resuage.ru_stime.tv_usec,
+      resuage.ru_maxrss, resuage.ru_ixrss, resuage.ru_idrss, resuage.ru_isrss
+  );
+}
+
