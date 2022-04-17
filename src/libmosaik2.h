@@ -15,13 +15,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
 #include <gd.h>
 #include <libexif/exif-data.h>
+
+#include "mosaik2.h"
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
@@ -37,8 +40,12 @@ extern uint8_t ORIENTATION_RIGHT_TOP;
 extern uint8_t ORIENTATION_BOTTOM_RIGHT;
 extern uint8_t ORIENTATION_LEFT_BOTTOM;
 
-struct mosaik2_context_struct {
-	uint8_t debug;
+/*struct mosaik2_context_struct {
+	int debug;
+	int debug1;
+	int html;
+	int out;
+
 	uint8_t exiting;
 	uint32_t max_tiler_processes;
 	uint32_t max_load_avg;
@@ -48,7 +55,7 @@ typedef struct mosaik2_context_struct mosaik2_context;
 
 typedef enum {  INITIAL, LOADING, INDEXING, WRITING_INDEX, ENDING } TASK_STATE;
 
-typedef struct mosaik2_indextask_struct {
+struct mosaik2_indextask_struct {
 	time_t start;
 	time_t end;
 	TASK_STATE state;
@@ -56,7 +63,11 @@ typedef struct mosaik2_indextask_struct {
 	char filename[1024]; // trade off, dont want to malloc that much. hoping it fits
 	size_t filesize;
 	time_t lastmodified;
-} mosaik2_indextask;
+	uint32_t tile_count;
+	unsigned char *image_data;
+};
+
+typedef struct mosaik2_indextask_struct mosaik2_indextask;
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
@@ -106,11 +117,14 @@ struct result {
 	char thumbs_db_filenames[MAX_FILENAME_LEN];
 	char temp_filename[MAX_TEMP_FILENAME_LEN];
 	int size;
-};
+}; */
 
 void init_mosaik2_context(mosaik2_context *);
 void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name);
 void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *thumbs_db_name, char *dest_filename);
+
+int mosaik2_indextask_read_image(mosaik2_indextask *);
+
 int EndsWith(const char *str, const char *suffix);
 int StartsWith(const char *pre, const char *str);
 int is_file_local( const char *filename );
@@ -150,3 +164,5 @@ gdImagePtr gdImageRotate180 (gdImagePtr src);
 gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 #endif
+
+void print_usage(char *);
