@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
 	if(strncmp( argv[1], init, strlen(init)) == 0) {
 		if(argc!=4) {
-			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => tilecont (uint8_t)\n");
+			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => tilecount\n");
 			exit(EXIT_FAILURE);
 		}
 		return mosaik2_init(argv[2],atoi(argv[3]));
