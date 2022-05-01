@@ -119,7 +119,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 		fprintf(stderr,"image too small\n");
 		exit(EXIT_FAILURE);
 	} else {
-		printf("tile_count:%i (one shorter side)\n", tile_count);
+		printf("tile_count:%i (on shorter side)\n", tile_count);
 	}
 	
 	uint32_t short_dim;//, long_dim;
