@@ -117,7 +117,7 @@ void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik
 
 	strncpy(mp->dest_filename, dest_filename, dest_filename_len);
 	
-	char *thumbs_db_ending=".mastertiledims";
+	char *thumbs_db_ending=".mtileres";
 	size_t thumbs_db_ending_len = strlen(thumbs_db_ending);
 
 	memset(mp->dest_mastertiledims_filename, 0, 256);
@@ -302,7 +302,7 @@ uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md) {
 		return 0;
 	// the *.db.filesizes is a binary file that includes the original 
 	// filesizes of the indexed images and its saved as 4 byte integers
-	return db_filesizes_size / 4;
+	return db_filesizes_size / sizeof(size_t);
 }
 
 uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md) {
@@ -794,12 +794,15 @@ void mosai2_indextask_deconst(mosaik2_indextask *task) {
 	
 }
 
-
+#include <sys/timeb.h>
 void print_usage(char *m) {
+	struct timeb tb;
+	ftime(&tb);
     struct rusage resuage;
       int usage = getrusage( RUSAGE_SELF, &resuage);
-    fprintf(stderr, "%i %-10s usert:%li.%06li syst:%li.%06li  max:%6li ix:%li, id:%li, is:%li\n",
-      getpid(), m, resuage.ru_utime.tv_sec, resuage.ru_utime.tv_usec,
+    fprintf(stderr, "%i %i.%03i %-10s usert:%li.%06li syst:%li.%06li  max:%6li ix:%li, id:%li, is:%li\n",
+      getpid(), tb.time, tb.millitm,
+			m, resuage.ru_utime.tv_sec, resuage.ru_utime.tv_usec,
       resuage.ru_stime.tv_sec, resuage.ru_stime.tv_usec,
       resuage.ru_maxrss, resuage.ru_ixrss, resuage.ru_idrss, resuage.ru_isrss
   );
