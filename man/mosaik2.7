@@ -1,0 +1,162 @@
+.TH "mosaik2" "7" "2022" "mosaik2 0.2" "mosaik2 Documentation"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+
+.SH "NAME"
+mosaik2 \- creates real photo mosaics
+.SH "SYNOPSIS"
+.PP
+\fBmosaik2\fR init \fImosaik2db\fR \fItile-resolution\fR
+.br
+\fBmosaik2\fR index \fImosaik2db\fR \fImax-tiler\fR \fImax-load\fR < \fIfile-list\fR
+.PP
+\fBmosaik2\fR gathering \fImosaik2db\fR tile-resoution file-size dest-name color-stddev-ratio unique mosaik2db < src-file
+.br
+\fBmosaik2\fR join dest-name pixel-per-tile unique-tiles local-cache mosaik2db0 [, mosaik2db1, ...]
+.PP
+\fBmosaik2\fR duplicates \fImosaik2db-src\fR mosaik2db-dest dry-run
+.br
+\fBmosaik2\fR invalid \fImosaik2db\fR
+.SH "DESCRIPTION"
+.PP
+mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.
+.PP
+\fBinit\fR mode creates a new mosaik2 database directory with all necessary (mostly empty) files. It may be useful to create several database directories to reduce the amount of data per database using a suitable sorting criteria. Suitable can be for example the year, or a directory path. This brings you in the position to run severeal indexing and gathering processes in parallel.
+.PP
+While \fBindex\fR mode fills the mosaik2 database with all image data with the processes from the file list. The first digit parameter is the maximum count of prallel subprocesses to compute the images. It may be a good starting value to use as much subprocesses as your computer has CPU cores.
+.PP
+If your indexing gets stuck due to any imponderables, you can safely cancel the process by pressing Ctrl+C. The program will terminate only after all started tiler processes are finished. The error message or the number of lines in the mosaik2db/filenames.txt betrays the line offset, which can be selected at a indexing restart. The offset of the file list can be easily achieved with the process substitution, instead of "< file_list" type "< <(tail -n +K \fIfile_list\fR)" where K is the line offset.
+.br
+If hanging index subprocesses were not able to safe their results, you can reduce the line_offset by \fImax-tiler\fR. Images which may be indexed twice can be later invalidated in \fBduplicates\fR mode.
+.PP
+After your mosaik2 database(s) have been created, you can start to work on your individually mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. If you mix several mosaik2 database different \fItile-resolutions\fR can be chosen here.
+.PP
+The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases and will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
+.PP
+In \fBduplicates\fR mode you can indentify images, that appear multiple time in your image collection under different names, and mark them mark all but the first occurance as invalid. This mode prints the invlidated files to stdout.
+.PP
+Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
+.br
+You may want to take a look at the \fBFILE LIST\fR section how to identify the difference between the last state of the mosaik2 database to append it to the old database or to create a new one.
+.SH "OPTIONS"
+.PP
+\fImosaik2db\fR
+.RS 4
+The path of the directory, that points to a mosaik2 database. During the \fBinit\fR part, the directory must not exist and will be created. 
+.RE
+.PP
+\fItile-resolution\fR
+.RS 4
+Each image is reduced to \fItile-resolution\fR pixels at its smaller dimension. The aspect ratio is obtained. Images that exceed a reduced resolution of 256 in width or height are ignored. The larger this resolution number, the more exactly image candidates will fit in the mosaic, the longer the computation time. If a resolution of 16 is chosen, the maximum aspect ratio is 16:256 => 1:16, which should match most panorama images. If a resolution of 128 is chosen, the maximum aspect ratio is 128:256 => 1:2, which will process most common image formats, but all panoramas will be ignored.
+.br
+In an existing mosaik2 database the \fItile-resolution\fR cannot be changed.
+.PP
+Example of an expected database size: from 2003 to 2019, there are about 53 million JPEG images in Wikimedia Commons, occupying a storage size of about 165 TB. At a resolution of 16, the resulting mosaik2 database size was 130 GB .
+.RE
+.PP
+\fImax-tiler\fR
+.RS 4
+The number of tiler processes, which (down)load and reduce the resolution in parallel. A good start value may be the numbers of availble cpu cores.
+.RE
+.PP
+\fImax-load\fR
+.RS 4
+The maximum load value before temporarily reducing the number of concurrent tiler processes to 1 to limit the system load.
+.RE
+.PP
+\fIfile-list\fR
+.RS 4
+text data, which contains filename, filesize and timestamp of all images which should be indexed. How to create a list in the right format is decribed in the section \fBFILE LIST\fR.
+.RE
+.PP
+.SH "FILE LIST"
+If you want to index a bunch of images its is needed to create an input stream 
+to mosaik2 in the format
+
+file_link{TABULATOR}file_size{TABULATOR}timestamp{LINEBREAK}
+.br
+\.\.\.
+.PP
+.RS 4
+* file_link means an absolute or relative filepath on your local machine or an url.
+.br
+* file_size means the file size in bytes.
+.br
+* timestamp is a unix timestamp (integer format, floating points will be floored), which is used to check via invalid program if a file has changed.
+.RE
+.PP
+You can either write your own program to create that list on the fly and pipe 
+it to the index process or you can use the find program to create a static file
+on disk, which you take as stdin to the index process. The file list can be 
+created like this:
+.PP
+find /root_dir -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
+.PP
+
+.SH "EXIT STATUS"
+.PP
+In case of an error the exit code is always 1, 0 otherwise. The program tries to exit fast with an appropriate stderr message.
+.SH "FILES"
+.PP
+mosaik2 database files are
+.RS 4
+mosaik2db/dbversion.txt
+.br
+mosaik2db/duplicates.bin
+.br
+mosaik2db/filehashes.bin
+.br
+mosaik2db/filenames.idx
+.br
+mosaik2db/filenames.txt
+.br
+mosaik2db/filesizes.bin
+.br
+mosaik2db/id.txt
+.br
+mosaik2db/imagecolors.bin
+.br
+mosaik2db/imagedims.bin
+.br
+mosaik2db/imagestddev.bin
+.br
+mosaik2db/invalid.bin
+.br
+mosaik2db/README.txt
+.br
+mosaik2db/tilecount.txt
+.br
+mosaik2db/tiledims.bin
+.br
+mosaik2db/timestamps.bin
+.RE
+.PP
+mosaik2 project files (here for the my_first_mosaik2.jpeg) are
+.RS 4
+my_first_mosaik2.jpeg
+.br
+my_first_mosaik2.jpeg.src
+.br
+my_first_mosaik2.jpeg.html
+.br
+my_first_mosaik2.jpeg.result
+.br
+my_first_mosaik2.jpeg.mtileres
+.RE
+
+.SH "EXAMPLE"
+.PP
+find ~/Pictures -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
+.br
+mosaik2 init first_mosaik2_db 16
+.br
+mosaik2 index first_mosaik2_db 4 10 < first_mosaik2.file_list
+.br
+mosaik2 duplicates mosaik2_db
+.br
+mosaik2 gathering 40 6353080 my_first_mosaik2.jpeg 100 first_mosaik2_db < source_image.jpeg
+.br
+mosaik2 join my_first_mosaik2.jpeg 150 0 1 first_mosaik2_db
+.SH "NOTE"
+.PP
+website at https://f7a8.github.io/mosaik2/
