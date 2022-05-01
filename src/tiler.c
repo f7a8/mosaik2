@@ -14,8 +14,14 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 	uint32_t file_size = task->filesize;
 	check_resolution(tile_count);
 
-	if(file_size < 10001) {
-		fprintf(stderr, "image file_size (%i) must be at least 40001 bytes\n", file_size);
+	int min_file_size = 10000;
+	int max_file_size = 100000000; 
+	if(file_size < min_file_size) {
+		fprintf(stderr, "image file_size (%i) must be at least %i bytes\n", file_size, min_file_size);
+		exit(EXIT_FAILURE);
+	}
+	if(file_size > max_file_size) {
+		fprintf(stderr, "image file_size (%i) must be below %i bytes\n", file_size, max_file_size);
 		exit(EXIT_FAILURE);
 	}
 
@@ -44,7 +50,7 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 
 	if(im == NULL ) {
   	free(buffer);
-		
+
 		fprintf(stderr,"image could not be instanciated\n");
 		exit(EXIT_FAILURE);
 	}
@@ -75,12 +81,10 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 	task->width = width;
 	task->height = height;
 
-	
-
 	if(width < tile_count || height < tile_count) {
   	free(buffer);
 		gdImageDestroy(im);
-	
+
 		fprintf(stderr,"image is too small, at least one dimension is smaller than the tile_count\n");
 		exit(EXIT_FAILURE);
 	}
@@ -121,6 +125,8 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 	MD5_Update (&md5, buffer, file_size);
 	MD5_Final ( task->hash, &md5);
 
+	//check if already indexed TODO
+
 	//print_usage("t_diggest");
 
 
@@ -140,25 +146,31 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 	if(out) printf("%04X %04X %02X %02X", width, height, tile_x_count, tile_y_count);
 	if(debug1) fprintf(stderr,"gathering imagedata\n");
   
-// void *calloc(size_t nmemb, size_t size);
 	double colors_red[total_tile_count];
 	double colors_green[total_tile_count];
 	double colors_blue[total_tile_count];
 	double colors_stddev_red[total_tile_count];
 	double colors_stddev_green[total_tile_count];
 	double colors_stddev_blue[total_tile_count];
-	//print_usage("t_stackmem");
+
+	memset(&colors_red,   0, total_tile_count*sizeof(double));
+	memset(&colors_green, 0, total_tile_count*sizeof(double));
+	memset(&colors_blue,  0, total_tile_count*sizeof(double));
+	memset(&colors_stddev_red,   0, total_tile_count*sizeof(double));
+	memset(&colors_stddev_green, 0, total_tile_count*sizeof(double));
+	memset(&colors_stddev_blue,  0, total_tile_count*sizeof(double));
+
 
 	task->colors = calloc(3*total_tile_count, sizeof(uint8_t));
 	if(task->colors==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors\n"); exit(1); }
 	task->colors_stddev = calloc(3*total_tile_count, sizeof(uint8_t));
 	if(task->colors_stddev==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors_stddev\n"); exit(1); }
-	//print_usage("t_calloc");
 
 	int red0, green0, blue0;
 		for(int j=0,j1=offset_y;j1<ly;j++,j1++){    
            //printf("%i\n",i1); 
 			for(int i=0,i1=offset_x;i1<lx;i++,i1++){
+
 			//i and j are running from zero to the length of the cropped area
 			//i1 and j1 are dealing with the corrected offset, so they are pointig to the valid pixels
 
@@ -182,6 +194,7 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 			colors_blue[tile_idx] +=  blue0  / (total_pixel_per_tile);
 		}
 	}
+			
     
 //	print_usage("t_colors");
 	if(debug1) printf("avg_blue0:%f \n", colors_blue[0]);        
@@ -240,9 +253,10 @@ int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
 
 			if(debug) printf("avg_blue0:%f ", colors_blue[i]);
 
-			red0 = (int) round(colors_red[i]);
-			green0 = (int) round(colors_green[i]);
-			blue0 = (int)round(colors_blue[i]);
+			red0 =   (int)round(colors_red[i]);
+			green0 = (int)round(colors_green[i]);
+			blue0 =  (int)round(colors_blue[i]);
+
 
 			task->colors[i*3] = red0;
 			task->colors[i*3+1] = green0;
