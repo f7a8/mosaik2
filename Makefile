@@ -44,10 +44,10 @@ test:
 	wget -N "https://upload.wikimedia.org/wikipedia/commons/5/52/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg" --directory-prefix=test/flower
 	tar xfz test/flower/flower_photos.tgz -C test/flower 
 	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +10000c -fprintf  flower_photos.file_list "%p\t%s\t%T@\n" 
-	node bin/mosaik2.js init test/flower/flowerphotos16 16
-	node bin/mosaik2.js index test/flower/flowerphotos16 8 8 < flower_photos.file_list
-	node bin/mosaik2.js init test/flower/flowerphotos32 32
-	node bin/mosaik2.js index test/flower/flowerphotos32 8 8 < flower_photos.file_list
+	bin/mosaik2 init test/flower/flowerphotos16 16
+	bin/mosaik2 index test/flower/flowerphotos16 8 8 < flower_photos.file_list
+	bin/mosaik2 init test/flower/flowerphotos32 32
+	bin/mosaik2 index test/flower/flowerphotos32 8 8 < flower_photos.file_list
 	bin/mosaik2 gathering 30 5868357  test/flower/Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos16 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
 	bin/mosaik2 gathering 30 5868357  test/flower/Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos32 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
 	bin/mosaik2 join test/flower/Wiesen-Schaumkraut.jpeg 100 0 1 test/flower/flowerphotos16
