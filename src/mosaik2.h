@@ -24,10 +24,12 @@ struct mosaik2_context_struct {
 
 	uint8_t exiting;
 	uint32_t max_tiler_processes;
-	uint32_t max_load_avg;
+	double max_load_avg;
 	
 	uint32_t current_tiler_processes;
 	pid_t pids[1024];
+
+	time_t start_t;
 };
 
 typedef struct mosaik2_context_struct mosaik2_context;
