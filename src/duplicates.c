@@ -10,14 +10,14 @@
 
 //TODO very inefficient, better search the external sorted hashnumber
 
-int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run) {
+int mosaik2_duplicates(char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run) {
 
-	struct mosaik2_database_struct md0;
-	init_mosaik2_database_struct(&md0, mosaik2_db_name_1);
+	mosaik2_database md0;
+	init_mosaik2_database(&md0, mosaik2_db_name_1);
 	check_thumbs_db(&md0);
 
-	struct mosaik2_database_struct md1;
-	init_mosaik2_database_struct(&md1, mosaik2_db_name_2);
+	mosaik2_database md1;
+	init_mosaik2_database(&md1, mosaik2_db_name_2);
 	check_thumbs_db(&md1);
 
 	if(dry_run < 0 || dry_run > 1) {
@@ -82,8 +82,8 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 			exit(EXIT_FAILURE);
 		}
 		size_t bytes;
-		uint8_t buf[65536];
-		while ((bytes = fread(&buf, 1, 65536, duplicates_file1)) != 0) {
+		uint8_t buf[BUFSIZ];
+		while ((bytes = fread(&buf, 1, BUFSIZ, duplicates_file1)) != 0) {
 			size_t elems = fwrite(&buf, 1, bytes, tmp_file);
 			if(elems != bytes) {
 				fprintf(stderr, "an unexpected size of data was read\n");
@@ -95,7 +95,7 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 		//close both files and reopen the temporary one in rw mode
 		if( fclose(tmp_file)!= 0 || fclose(duplicates_file1) != 0 ) {
 			fprintf(stderr, "error closing duplicates file\n");
-			exit(EXIT_FAILURE);
+			
 		}
 		//opens again the temporary file as rw, cusor at the beginning
 		duplicates_file1 = fopen(md1.temporary_duplicates_filename, "r+"); 
@@ -105,15 +105,14 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 		}
 	}
 		
-	size_t hash_size=16;
-	uint8_t filehash0[hash_size]; // current hash to compare with rest
-	uint8_t filehash1[hash_size]; // contains part of the rest
+	uint8_t filehash0[MD5_DIGEST_LENGTH]; // current hash to compare with rest
+	uint8_t filehash1[MD5_DIGEST_LENGTH]; // contains part of the rest
 	
   size_t size_read0, size_read1;
 	uint64_t i0=0, j0=0;
 	uint8_t duplicates_data=1;
 	uint8_t compare_same_file=strncmp(md0.filehashes_filename, md1.filehashes_filename, strlen(md0.filehashes_filename)) == 0;
-	while( ( size_read0 = fread(filehash0, hash_size, 1, filehashes_file0) ) == 1 ) {
+	while( ( size_read0 = fread(filehash0, MD5_DIGEST_LENGTH, 1, filehashes_file0) ) == 1 ) {
 			// is current element already marked as duplicate? => ignore
 			size_t bytes=fread(&duplicates_data,1,1,duplicates_file0);
 			if(bytes !=1) {
@@ -131,8 +130,8 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 		if(debug)fprintf(stdout,   "read0 i:%li\n",i0);
 
 			if(compare_same_file) {
-				if(debug)fprintf(stdout,"set snd filehashes ptr to byte offset %li\n", i0*hash_size+hash_size);
-				if(fseek(filehashes_file1, i0*hash_size+hash_size, SEEK_SET)!=0) {
+				if(debug)fprintf(stdout,"set snd filehashes ptr to byte offset %li\n", i0*MD5_DIGEST_LENGTH+MD5_DIGEST_LENGTH);
+				if(fseek(filehashes_file1, i0*MD5_DIGEST_LENGTH+MD5_DIGEST_LENGTH, SEEK_SET)!=0) {
 					fprintf(stderr,"comparing the same data: could not seek off by one element in the second compare file\n");
 					exit(EXIT_FAILURE);
 				};// if same file start at one hash after i0
@@ -142,7 +141,7 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 				rewind(filehashes_file1);// another file must be compared entirely
 				j0 = 0;
 			}
-			while( ( size_read1 = fread(filehash1, hash_size, 1, filehashes_file1) ) == 1 ) {
+			while( ( size_read1 = fread(filehash1, MD5_DIGEST_LENGTH, 1, filehashes_file1) ) == 1 ) {
 
 				//if compare buddy is already duplicated skip it
 				// TODO is this faster, than check all compare bodies?
@@ -161,7 +160,7 @@ int mosaik2_duplicates( char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dr
 						continue;
 					}	
 
-				if(memcmp(filehash0, filehash1, hash_size) == 0) {
+				if(memcmp(filehash0, filehash1, MD5_DIGEST_LENGTH) == 0) {
 						//if(debug) {fprintf(stdout, "duplicates found!! test exit \n%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n", filehash0[0], filehash0[1], filehash0[2], filehash0[3],filehash0[4],filehash0[5],filehash0[6],filehash0[7],filehash0[8],filehash0[9],filehash0[10],filehash0[11],filehash0[12],filehash0[13],filehash0[14],filehash0[15],filehash1[0], filehash1[1], filehash1[2], filehash1[3], filehash1[4], filehash1[5], filehash1[6], filehash1[7], filehash1[8], filehash1[9], filehash1[10], filehash1[11], filehash1[12], filehash1[13], filehash1[14], filehash1[15]); exit(0);}
 						if(debug)	fprintf(stdout, "mark byte %li as duplicates", j0);
 						fseek(duplicates_file1, j0, SEEK_SET);	
