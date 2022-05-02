@@ -48,18 +48,18 @@ int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int 
 
 	// init
 if(debug) fprintf(stderr, "init\n");
-	struct mosaik2_project_struct mp;
-	struct mosaik2_database_struct mds[argv_end_idx_thumbs_db_names - argv_start_idx_thumbs_db_names];
+	mosaik2_project mp;
+	mosaik2_database mds[argv_end_idx_thumbs_db_names - argv_start_idx_thumbs_db_names];
 
 	//read master tile n count from file
 	for(uint32_t i=argv_start_idx_thumbs_db_names, i0=0; i<argv_end_idx_thumbs_db_names; i++,i0++) {
 		if(debug) fprintf( stderr, "check %i %s\n", i, argv[i]);
 		
-		init_mosaik2_database_struct(&mds[i0], argv[i]);
+		init_mosaik2_database(&mds[i0], argv[i]);
 		read_database_id(&mds[i0]);
 		check_thumbs_db(&mds[i0]);
 
-		init_mosaik2_project_struct(&mp, mds[i0].id, dest_filename);
+		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
 		if(debug)
 			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,mastertiledis:%s\n", argv[i],dest_filename,mp.dest_mastertiledims_filename);
@@ -241,7 +241,6 @@ if(debug) fprintf(stderr, "init\n");
 
 			int found = 0;
 			uint32_t i_=0;
-			//struct mosaik2_database_struct_p *p;
 			for(int i0=0;i0< argv_end_idx_thumbs_db_names - argv_start_idx_thumbs_db_names;i0++) {
 				if(strcmp(candidates[i].thumbs_db_name, mds[i0].thumbs_db_name)==0) {
 					found = 1;
@@ -251,7 +250,7 @@ if(debug) fprintf(stderr, "init\n");
 			}
 			if( found == 0) {
 				//should not happen
-				fprintf(stderr,"unable to refind mosaik2_database_structure for %s\n", candidates[i].thumbs_db_name);
+				fprintf(stderr,"unable to refind mosaik2_database for %s\n", candidates[i].thumbs_db_name);
 				exit(EXIT_FAILURE);
 			}
 

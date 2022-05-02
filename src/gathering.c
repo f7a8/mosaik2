@@ -19,8 +19,8 @@ mona lisa 33 2017 95%
 	
 int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
 
-	struct mosaik2_database_struct md;
-	init_mosaik2_database_struct(&md, mosaik2_db_name);
+	mosaik2_database md;
+	init_mosaik2_database(&md, mosaik2_db_name);
 	read_database_id(&md);
 	
 	check_thumbs_db(&md);
@@ -49,14 +49,14 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 	float stddev_ratio = 1.0 - image_ratio;
 
 
-	struct mosaik2_project_struct mp = {
+	mosaik2_project mp = {
 		.ratio = ratio,
 		.unique = unique,
 		.file_size = file_size,
 		.master_tile_count = master_tile_count
 	};
 
-	init_mosaik2_project_struct(&mp, md.id, dest_filename);
+	init_mosaik2_project(&mp, md.id, dest_filename);
 
 	printf("analyze master image\n");
 

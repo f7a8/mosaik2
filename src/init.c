@@ -112,8 +112,8 @@ int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount) {
 	
 	int debug=0;
 
-	struct mosaik2_database_struct md;
-	init_mosaik2_database_struct(&md, mosaik2_database_name);
+	mosaik2_database md;
+	init_mosaik2_database(&md, mosaik2_database_name);
 
 	check_resolution(tilecount);
 

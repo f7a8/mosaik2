@@ -45,8 +45,8 @@ void print_invalid_(char *filename) {
 int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run) {
 
 
-	struct mosaik2_database_struct md;
-	init_mosaik2_database_struct(&md, mosaik2_db_name);
+	mosaik2_database md;
+	init_mosaik2_database(&md, mosaik2_db_name);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
 		fprintf(stderr, "ingore_old_invalids must be 0 or 1\n");

@@ -87,6 +87,7 @@ struct mosaik2_database_struct {
 
 	uint8_t tilecount;
 };
+typedef struct mosaik2_database_struct mosaik2_database;
 
 struct mosaik2_project_struct {
 	char dest_filename[256];
@@ -98,9 +99,10 @@ struct mosaik2_project_struct {
 	uint8_t master_tile_count;
 	char dest_html_filename[ 256 ]; 
 	char dest_src_filename[ 256 ];
-	struct mosaik2_database_struct *mds;
+	mosaik2_database *mds;
 	uint8_t mds_len;
 };
+typedef struct mosaik2_project_struct mosaik2_project;
 
 struct result {
 	uint32_t sortorder;
@@ -121,8 +123,8 @@ int mosaik2_clean(char *mosaik2_database_name);
 int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, uint32_t max_loadavg);
 
 /* usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream */
-int mosaik2_tiler(struct mosaik2_database_struct *, mosaik2_indextask *);
-void mosaik2_index_write_to_disk(struct mosaik2_database_struct *, mosaik2_indextask *);
+int mosaik2_tiler(mosaik2_database *, mosaik2_indextask *);
+void mosaik2_index_write_to_disk(mosaik2_database *, mosaik2_indextask *);
 
 /**  	1 => master_tile_count (only approx. depends on the input image, can be slightly more)
 	2 => file_size in bytes

@@ -2,7 +2,7 @@
 #include "libmosaik2.h"
 
 
-int mosaik2_tiler(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
+int mosaik2_tiler(mosaik2_database *md, mosaik2_indextask *task) {
 //	print_usage("t read0");
 	if( mosaik2_indextask_read_image(task) ) {
 		fprintf(stderr, "could not read image\n");

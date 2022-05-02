@@ -110,7 +110,7 @@ void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thum
 	strncat( md->lock_filename, "/.lock", 6);
 }
 
-void init_mosaik2_project_struct(struct mosaik2_project_struct *mp, char *mosaik2_database_id, char *dest_filename) {
+void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
 
 	size_t mosaik2_database_id_len = strlen(mosaik2_database_id);
 	size_t dest_filename_len = strlen(dest_filename);
@@ -295,7 +295,7 @@ int get_file_type_from_buf(uint8_t *buf, size_t len) {
 	return FT_ERR;
 }
 
-uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md) {
+uint64_t read_thumbs_db_count(mosaik2_database *md) {
 
 	off_t db_filesizes_size = get_file_size(md->filesizes_filename);
 	if(db_filesizes_size == 0)
@@ -305,7 +305,7 @@ uint64_t read_thumbs_db_count(struct mosaik2_database_struct *md) {
 	return db_filesizes_size / sizeof(size_t);
 }
 
-uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md) {
+uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
 
     FILE *thumbs_conf_tilecount_file = fopen(md->tilecount_filename, "rb");
     if( thumbs_conf_tilecount_file == NULL) {
@@ -325,7 +325,7 @@ uint8_t read_thumbs_conf_tilecount(struct mosaik2_database_struct *md) {
 		return thumbs_conf_tilecount;
 }
 
-void read_database_id(struct mosaik2_database_struct *md) {
+void read_database_id(mosaik2_database *md) {
 
 	FILE *id_file = fopen(md->id_filename,"r");
 	if(id_file == NULL ) {
@@ -370,7 +370,7 @@ void check_thumbs_db_name(char *thumbs_db_name) {
 
 } */
 
-void check_thumbs_db(struct mosaik2_database_struct *md) {
+void check_thumbs_db(mosaik2_database *md) {
 
 	//check_thumbs_db_name( md->thumbs_db_name );
 

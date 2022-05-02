@@ -7,11 +7,11 @@ static void sigHandler(int sig);
 uint32_t get_max_tiler_processes(uint32_t max_tiler_processes);
 double get_max_load_avg(uint32_t max_load_avg);
 double read_system_load();
-void check_pid_file(struct mosaik2_database_struct *md);
-void write_pid_file(struct mosaik2_database_struct *md);
-void remove_pid_file(struct mosaik2_database_struct *md);
-void process_input_data(mosaik2_context *ctx, struct mosaik2_database_struct *md);
-void process_next_line(mosaik2_context *ctx, struct mosaik2_database_struct *md, char *line, ssize_t i,FILE *);
+void check_pid_file(mosaik2_database *md);
+void write_pid_file(mosaik2_database *md);
+void remove_pid_file(mosaik2_database *md);
+void process_input_data(mosaik2_context *ctx, mosaik2_database *md);
+void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i,FILE *);
 //void signal_handler(int signal);
 void mosaik2_index_add_tiler_pid(mosaik2_context *, pid_t);
 void mosaik2_index_clean_tiler_pids(mosaik2_context *);
@@ -59,9 +59,9 @@ int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, ui
 	ctx.max_load_avg = get_max_load_avg(max_load_avg);
 	fprintf(stderr, "max_load_avg %i %f\n", ctx.max_load_avg, ctx.max_load_avg);
 
-	struct mosaik2_database_struct md;
+	mosaik2_database md;
 	
-	init_mosaik2_database_struct(&md, mosaik2_database_name);
+	init_mosaik2_database(&md, mosaik2_database_name);
 	check_thumbs_db(&md);
 	read_database_id(&md);
 	check_pid_file(&md);
@@ -117,14 +117,14 @@ double read_system_load() {
 	return atof(token0);
 }
 
-void check_pid_file(struct mosaik2_database_struct *md) {
+void check_pid_file(mosaik2_database *md) {
 	if( access(md->pid_filename, F_OK) == 0) {
 		fprintf(stderr, "The pid file (%s) exists, either an indexing process is running or the program did not exit correctly. In the first case, the pid file can be deleted.\n", md->pid_filename);
 		exit(EXIT_FAILURE);
 	}
 }
 
-void write_pid_file(struct mosaik2_database_struct *md) {
+void write_pid_file(mosaik2_database *md) {
 	FILE *f =	fopen(md->pid_filename,"w");
 	if( f == NULL ) { fprintf( stderr, "could not create mosaik2 database file (%s)\n", md->pid_filename); exit(EXIT_FAILURE); }
 	fprintf(f, "%i", getpid());
@@ -133,7 +133,7 @@ void write_pid_file(struct mosaik2_database_struct *md) {
 	}
 }
 
-void remove_pid_file(struct mosaik2_database_struct *md) {
+void remove_pid_file(mosaik2_database *md) {
 	 if((remove(md->pid_filename)) < 0) {
       fprintf(stderr, "could not remove active pid file (%s)", md->pid_filename);
       exit(EXIT_FAILURE);
@@ -141,7 +141,7 @@ void remove_pid_file(struct mosaik2_database_struct *md) {
 }
 
 
-void process_input_data(mosaik2_context *ctx, struct mosaik2_database_struct *md) {
+void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	
 	mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
@@ -170,7 +170,7 @@ void process_input_data(mosaik2_context *ctx, struct mosaik2_database_struct *md
 	fprintf(stderr, "waited %i\n", wstatus);
 }
 
-void process_next_line(mosaik2_context *ctx, struct mosaik2_database_struct *md, char *line, ssize_t i, FILE *file) {
+void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i, FILE *file) {
 	
 
   if(ctx->exiting)
@@ -229,7 +229,7 @@ void process_next_line(mosaik2_context *ctx, struct mosaik2_database_struct *md,
 	return;
 }
 
-void mosaik2_index_write_to_disk(struct mosaik2_database_struct *md, mosaik2_indextask *task) {
+void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) {
 	// duration 0.2 ms
 	// lock the lockfile to make all other forked processes wait this process finishp
 
