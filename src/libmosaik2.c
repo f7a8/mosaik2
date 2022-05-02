@@ -17,7 +17,7 @@ void init_mosaik2_context(mosaik2_context *ctx) {
 	}
 }
 
-void init_mosaik2_database_struct(struct mosaik2_database_struct *md, char *thumbs_db_name) {
+void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);
 	memset( (*md).imagecolors_filename,0,256);
