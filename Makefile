@@ -7,7 +7,7 @@ all: directory bin/mosaik2
 directory:
 	mkdir -p bin/
 
-bin/mosaik2: src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o
+bin/mosaik2: src/mosaik2.h src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o
 	${COMPILER} ${CFLAGS} src/mosaik2.c bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl
 
 bin/libmosaik2.o: src/libmosaik2.c src/libmosaik2.h
