@@ -2,9 +2,9 @@
 COMPILER=gcc
 CFLAGS=-O3 -march=native -mtune=native
 
-all: directory bin/mosaik2
+all: bin/ bin/mosaik2
 
-directory:
+bin/:
 	mkdir -p bin/
 
 bin/mosaik2: src/mosaik2.h src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o
@@ -35,7 +35,7 @@ bin/invalid.o: src/invalid.c
 	${COMPILER} ${CFLAGS} -c src/invalid.c -o bin/invalid.o
 
 clean:
-	rm -f bin/*
+	rm -rf bin
 	rm -rf test
 
 test:
