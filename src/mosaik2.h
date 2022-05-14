@@ -3,7 +3,7 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-#define MOSAIK2_DATABASE_FORMAT_VERSION 4
+#define MOSAIK2_DATABASE_FORMAT_VERSION 5
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
@@ -67,15 +67,16 @@ struct mosaik2_database_struct {
 	char imagestddev_filename[256];
 	char imagecolors_filename[256];
 	char imagedims_filename[256];
+	char image_index_filename[256];
 	char filenames_filename[256];
 	char filenames_index_filename[256];
 	char filehashes_filename[256];
+	char filehashes_index_filename[256];
 	char timestamps_filename[256];
 	char filesizes_filename[256];
 	char tiledims_filename[256];
 	char invalid_filename[256];
 	char duplicates_filename[256];
-	char temporary_duplicates_filename[256];
 	char tilecount_filename[256];
 	char id_filename[256];
 	char id[14];
@@ -84,6 +85,7 @@ struct mosaik2_database_struct {
 	char readme_filename[256];
 	char pid_filename[256];
 	char lock_filename[256];
+	char lastmodified_filename[256];
 
 	uint8_t tilecount;
 };
