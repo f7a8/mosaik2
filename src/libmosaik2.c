@@ -23,15 +23,16 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( (*md).imagecolors_filename,0,256);
 	memset( (*md).imagestddev_filename,0,256);
 	memset( (*md).imagedims_filename,0,256);
+	memset( md->image_index_filename,0,256);
 	memset( (*md).filenames_filename,0,256);
 	memset( (*md).filenames_index_filename,0,256);
 	memset( (*md).filehashes_filename,0,256);
+	memset( (*md).filehashes_index_filename,0,256);
 	memset( (*md).timestamps_filename,0,256);
 	memset( (*md).filesizes_filename,0,256);
 	memset( (*md).tiledims_filename,0,256);
 	memset( (*md).invalid_filename,0,256);
 	memset( (*md).duplicates_filename,0,256);
-	memset( (*md).temporary_duplicates_filename,0,256);
 	memset( (*md).tilecount_filename,0,256);
 	memset( md->tilecount_filename, 0, 256);
 	memset( md->id_filename, 0, 256);
@@ -40,33 +41,34 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( md->readme_filename, 0, 256);
 	memset( md->pid_filename, 0, 256);
 	memset( md->lock_filename, 0, 256);
+	memset( md->lastmodified_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
 
 	strncpy( (*md).imagecolors_filename,thumbs_db_name,l);
-	strncat( (*md).imagecolors_filename,"/",1);
-	strncat( (*md).imagecolors_filename, "imagecolors.bin",15);
+	strncat( (*md).imagecolors_filename, "/imagecolors.bin",16);
 
 	strncpy( (*md).imagestddev_filename,thumbs_db_name,l);
-	strncat( (*md).imagestddev_filename,"/",1);
-	strncat( (*md).imagestddev_filename,"imagestddev.bin",15);
-	//fprintf(stdout, "[%s]:%lu\n", "imagestddev.bin", strlen("imagestddev.bin"));
+	strncat( (*md).imagestddev_filename,"/imagestddev.bin",16);
 
 	strncpy( (*md).imagedims_filename,thumbs_db_name,l);
-	strncat( (*md).imagedims_filename,"/",1);
-	strncat( (*md).imagedims_filename,"imagedims.bin",13);
+	strncat( (*md).imagedims_filename,"/imagedims.bin",14);
+
+	strncpy( (*md).image_index_filename,thumbs_db_name,l);
+	strncat( (*md).image_index_filename,"/image.idx",10);
 
 	strncpy( (*md).filenames_filename,thumbs_db_name,l);
-	strncat( (*md).filenames_filename,"/",1);
-	strncat( (*md).filenames_filename,"filenames.txt",13);
+	strncat( (*md).filenames_filename,"/filenames.txt",14);
 
 	strncpy( (*md).filenames_index_filename,thumbs_db_name,l);
 	strncat( (*md).filenames_index_filename,"/filenames.idx",14);
 
 	strncpy( (*md).filehashes_filename,thumbs_db_name,l);
-	strncat( (*md).filehashes_filename,"/",1);
-	strncat( (*md).filehashes_filename,"filehashes.bin",14);
+	strncat( (*md).filehashes_filename,"/filehashes.bin",15);
+
+	strncpy( (*md).filehashes_index_filename,thumbs_db_name,l);
+	strncat( (*md).filehashes_index_filename,"/filehashes.idx",15);
 
 	strncpy( (*md).timestamps_filename,thumbs_db_name,l);
 	strncat( (*md).timestamps_filename,"/timestamps.bin",15);
@@ -86,9 +88,6 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( (*md).duplicates_filename,thumbs_db_name,l);
 	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
-	strncpy( (*md).temporary_duplicates_filename,thumbs_db_name,l);
-	strncat( (*md).temporary_duplicates_filename,"/duplicates.tmp.XXXXXX",22);
-	
 	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
 	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
 
@@ -108,6 +107,9 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 
 	strncpy( md->lock_filename, thumbs_db_name, l);
 	strncat( md->lock_filename, "/.lock", 6);
+
+	strncpy( md->lastmodified_filename, thumbs_db_name, l);
+	strncat( md->lastmodified_filename, "/.lastmodified", 14); 
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -394,6 +396,12 @@ void check_thumbs_db(mosaik2_database *md) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagedims_filename);
 		exit(EXIT_FAILURE);
 	}
+
+	if( access( md->image_index_filename, F_OK ) != 0 ) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->image_index_filename);
+		exit(EXIT_FAILURE);
+	}
+
 	if( access( md->filenames_filename, F_OK ) != 0 ) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_filename);
 		exit(EXIT_FAILURE);
@@ -411,6 +419,11 @@ void check_thumbs_db(mosaik2_database *md) {
 	
 	if( access( md->filehashes_filename, F_OK ) != 0 ) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_filename);
+		exit(EXIT_FAILURE);
+	}
+	
+	if( access( md->filehashes_index_filename, F_OK ) != 0 ) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_index_filename);
 		exit(EXIT_FAILURE);
 	}
 	
@@ -432,6 +445,31 @@ void check_thumbs_db(mosaik2_database *md) {
 		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->tilecount_filename);
 		exit(EXIT_FAILURE);
 	}
+
+	if( access( md->lock_filename, F_OK ) != 0) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lock_filename);
+		exit(EXIT_FAILURE);
+	}
+
+	if( access( md->lastmodified_filename, F_OK ) != 0) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lastmodified_filename);
+		exit(EXIT_FAILURE);
+	}
+
+	// TODO make more plause checks
+	uint64_t element_count = read_thumbs_db_count(md);
+	if( get_file_size(md->filenames_index_filename) != element_count*sizeof(long)) {
+		fprintf(stderr, "mosaik2 database file (%s) has not the expected size\n", md->filenames_index_filename);
+		exit(EXIT_FAILURE);
+	}
+
+	if( get_file_size(md->image_index_filename) != element_count*sizeof(long)) {
+		fprintf(stderr, "mosaik2 database file (%s) has not the expected size:%i\n", md->image_index_filename, element_count*sizeof(long));
+		exit(EXIT_FAILURE);
+	}
+
+
+	
 }
 
 int check_dest_filename(char *dest_filename) {
