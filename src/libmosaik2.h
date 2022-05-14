@@ -79,9 +79,9 @@ int File_Copy(char FileSource[], char FileDestination[]);
 
 uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
 gdImagePtr myLoadPng(char *filename, char *origin_name);
-static void trim_spaces(char *buf);
-static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
-static void show_mnote_tag(ExifData *d, unsigned tag);
+void trim_spaces(char *buf);
+void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
+void show_mnote_tag(ExifData *d, unsigned tag);
 
 gdImagePtr gdImageRotate90 (gdImagePtr src);
 gdImagePtr gdImageRotate180 (gdImagePtr src);

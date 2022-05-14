@@ -1,6 +1,7 @@
 
 COMPILER=gcc
-CFLAGS=-O3 -march=native -mtune=native
+CFLAGS=-O3 -Wall -march=native -mtune=native
+#CFLAGS=-g
 
 all: bin/ bin/mosaik2
 
@@ -44,13 +45,13 @@ test:
 	wget -N "https://upload.wikimedia.org/wikipedia/commons/5/52/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg" --directory-prefix=test/flower
 	tar xfz test/flower/flower_photos.tgz -C test/flower 
 	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +10000c -fprintf  flower_photos.file_list "%p\t%s\t%T@\n" 
+	bin/mosaik2 init test/flower/flowerphotos8 8
+	bin/mosaik2 index test/flower/flowerphotos8 8 0 < flower_photos.file_list
 	bin/mosaik2 init test/flower/flowerphotos16 16
-	bin/mosaik2 index test/flower/flowerphotos16 8 8 < flower_photos.file_list
-	bin/mosaik2 init test/flower/flowerphotos32 32
-	bin/mosaik2 index test/flower/flowerphotos32 8 8 < flower_photos.file_list
-	bin/mosaik2 gathering 30 5868357  test/flower/Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos16 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
-	bin/mosaik2 gathering 30 5868357  test/flower/Wiesen-Schaumkraut.jpeg 100 1 test/flower/flowerphotos32 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
-	bin/mosaik2 join test/flower/Wiesen-Schaumkraut.jpeg 100 0 1 test/flower/flowerphotos16
-	bin/mosaik2 join test/flower/Wiesen-Schaumkraut.jpeg 100 0 1 test/flower/flowerphotos32
-
-
+	bin/mosaik2 index test/flower/flowerphotos16 8 0 < flower_photos.file_list
+	bin/mosaik2 gathering 15 5868357  test/flower/Wiesen-Schaumkraut8.jpeg 100 1 test/flower/flowerphotos8 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 gathering 15 5868357  test/flower/Wiesen-Schaumkraut16.jpeg 100 1 test/flower/flowerphotos16 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 join test/flower/Wiesen-Schaumkraut8.jpeg 100 0 1 test/flower/flowerphotos8
+	bin/mosaik2 join test/flower/Wiesen-Schaumkraut16.jpeg 100 0 1 test/flower/flowerphotos16
+	diff misc/test/Wiesen-Schaumkraut8.jpeg test/flower/Wiesen-Schaumkraut8.jpeg
+	diff misc/test/Wiesen-Schaumkraut16.jpeg test/flower/Wiesen-Schaumkraut16.jpeg

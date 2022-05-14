@@ -1,11 +1,13 @@
 //TODO check is db older than the result file?
 //TODO unique_tiles 
 
-//      _
-//     (_)      _       
-//     | | ___ (_) _ _  
-//	  _/ |/ _ \| || ' \
-//	 |__/ \___/|_||_||_|
+/*
+      _
+     (_)      _       
+     | | ___ (_) _ _  
+	  _/ |/ _ \| || ' \
+	 |__/ \___/|_||_||_|
+*/
 
 #include "libmosaik2.h"
 

@@ -9,7 +9,7 @@ uint8_t ORIENTATION_BOTTOM_RIGHT=2;
 uint8_t ORIENTATION_LEFT_BOTTOM=3;
 
 void init_mosaik2_context(mosaik2_context *ctx) {
-	memset(ctx, 0, sizeof(ctx));
+	memset(ctx, 0, sizeof(mosaik2_context));
 	memset(ctx->pids, 0, 1024*sizeof(pid_t));
 	char *env_mosaik2_debug = getenv("MOSAIK2_DEBUG");
 	if(env_mosaik2_debug != NULL) {
@@ -464,7 +464,7 @@ void check_thumbs_db(mosaik2_database *md) {
 	}
 
 	if( get_file_size(md->image_index_filename) != element_count*sizeof(long)) {
-		fprintf(stderr, "mosaik2 database file (%s) has not the expected size:%i\n", md->image_index_filename, element_count*sizeof(long));
+		fprintf(stderr, "mosaik2 database file (%s) has not the expected size:%li\n", md->image_index_filename, element_count*sizeof(long));
 		exit(EXIT_FAILURE);
 	}
 
@@ -613,9 +613,9 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 			} else if(strcmp(buf, "Left-Bottom")==0) {
 				return ORIENTATION_LEFT_BOTTOM;
 			}
-			return ORIENTATION_TOP_LEFT;
     }
 	}
+	return ORIENTATION_TOP_LEFT;
 }
 
 gdImagePtr myLoadPng(char *filename, char *origin_name) {
@@ -679,7 +679,8 @@ gdImagePtr myLoadPng(char *filename, char *origin_name) {
    return im;
  } 
 /* Remove spaces on the right of the string */
-static void trim_spaces(char *buf) {
+//static void trim_spaces(char *buf) {
+void trim_spaces(char *buf) {
     char *s = buf-1;
     for (; *buf; ++buf) {
         if (*buf != ' ')
@@ -691,7 +692,7 @@ static void trim_spaces(char *buf) {
 
 
 /* Show the tag name and contents if the tag exists */
-static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
+void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
 {
     /* See if this tag exists */
     ExifEntry *entry = exif_content_get_entry(d->ifd[ifd],tag);
@@ -710,7 +711,7 @@ static void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
 }
 
 /* Show the given MakerNote tag if it exists */
-static void show_mnote_tag(ExifData *d, unsigned tag)
+void show_mnote_tag(ExifData *d, unsigned tag)
 {
     ExifMnoteData *mn = exif_data_get_mnote_data(d);
     if (mn) {
@@ -805,7 +806,7 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 			fprintf(stderr, "could not open file (%s)\n", task->filename);
 			return errno;
 		}
-		char *buf = malloc(task->filesize);
+		unsigned char *buf = malloc(task->filesize);
 		if(buf == NULL) {
 			fprintf(stderr, "could not allocate memory for image data\n");
 			fclose(file);
@@ -837,8 +838,8 @@ void print_usage(char *m) {
 	struct timeb tb;
 	ftime(&tb);
     struct rusage resuage;
-      int usage = getrusage( RUSAGE_SELF, &resuage);
-    fprintf(stderr, "%i %i.%03i %-10s usert:%li.%06li syst:%li.%06li  max:%6li ix:%li, id:%li, is:%li\n",
+      getrusage( RUSAGE_SELF, &resuage);
+    fprintf(stderr, "%i %li.%03i %-10s usert:%li.%06li syst:%li.%06li  max:%6li ix:%li, id:%li, is:%li\n",
       getpid(), tb.time, tb.millitm,
 			m, resuage.ru_utime.tv_sec, resuage.ru_utime.tv_usec,
       resuage.ru_stime.tv_sec, resuage.ru_stime.tv_usec,

@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
 	const char *init = "init";
 	const char *index = "index";
-	const char *tiler = "tiler";
+	//const char *tiler = "tiler";
 	const char *gathering = "gathering";
 	const char *join = "join";
 	const char *invalid = "invalid";

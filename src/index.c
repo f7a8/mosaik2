@@ -57,7 +57,7 @@ int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, ui
 	init_mosaik2_context(&ctx);
 	ctx.max_tiler_processes = get_max_tiler_processes(max_tiler_processes);
 	ctx.max_load_avg = get_max_load_avg(max_load_avg);
-	fprintf(stderr, "max_load_avg %i %f\n", ctx.max_load_avg, ctx.max_load_avg);
+//	fprintf(stderr, "max_load_avg %f\n", ctx.max_load_avg, ctx.max_load_avg);
 
 	mosaik2_database md;
 	
@@ -143,11 +143,11 @@ void remove_pid_file(mosaik2_database *md) {
 
 void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	
-	mosaik2_indextask task_list[ctx->max_tiler_processes];
+	//mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
 	md->tilecount = read_thumbs_conf_tilecount(md);
-	size_t i=0;
-	size_t maxmemb=-1;maxmemb;
+	size_t i=read_thumbs_db_count(md);
+	size_t maxmemb=-1;
 	size_t len = 0;
 	char *lineptr = NULL;
 
@@ -162,21 +162,18 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 		process_next_line(ctx, md, lineptr, i++,stdin0);
 	}
 	if(exiting == 1) {
-		fprintf(stderr, "received SIGINT, exiting after %i lines\n", i);
+		fprintf(stderr, "received SIGINT, exiting after %li lines\n", i);
 	}
 	if(i>=maxmemb) {
-		fprintf(stderr, "exiting after %i lines, maximum lines (%i) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
+		fprintf(stderr, "exiting after maximum lines (%li) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
 	}
 		
 
-	fprintf(stderr, "wait for subprocesses\n");
 	int wstatus=0;
-	wait(&wstatus);
-	fprintf(stderr, "waited %i\n", wstatus);
+	wait(&wstatus); //TODO doesnt work always
 }
 
 void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i, FILE *file) {
-	
 
   if(ctx->exiting)
 		fprintf(stdout, "input data is not resumed, EXITing because of SIGTERM.");
@@ -249,7 +246,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	}
 	if (flock(lockfile_fd, LOCK_EX) == -1) {
 	  if (errno == EWOULDBLOCK) {
-			fprintf(stderr,"lockfile is already locked\n", (long) getpid());
+			fprintf(stderr,"lockfile is already locked\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -363,7 +360,7 @@ void mosaik2_index_add_tiler_pid(mosaik2_context *ctx, pid_t pid) {
 
 void mosaik2_index_clean_tiler_pids(mosaik2_context *ctx) {
 	//print_usage("clean0");
-		int usleep_rc = usleep(10000);
+		usleep(10000);
 	//print_usage("clean1");
 	
 	for(int i=0;i<10; i++) {

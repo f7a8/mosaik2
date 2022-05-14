@@ -29,7 +29,6 @@ int mosaik2_tiler(mosaik2_database *md, mosaik2_indextask *task) {
 	int debug1=0;
 	int html = 0;
 	int out  = 0;
-	int ii=0;
   unsigned char *buffer = task->image_data;
 
 	int file_type = get_file_type_from_buf(buffer,file_size);

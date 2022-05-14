@@ -343,7 +343,7 @@ void build_filehashes_index(mosaik2_database *md) {
 	
 	unsigned char *buf = malloc(chunk_nmemb[0] * (dataset_len));
 	if(buf==NULL) {
-		fprintf(stderr, "could not malloc buffer (size:%lli) for external sort\n", chunk_nmemb[0] * (MD5_DIGEST_LENGTH+sizeof(size_t)));
+		fprintf(stderr, "could not malloc buffer (size:%li) for external sort\n", chunk_nmemb[0] * (MD5_DIGEST_LENGTH+sizeof(size_t)));
 		exit(EXIT_FAILURE);
 	}
 
@@ -364,7 +364,7 @@ void build_filehashes_index(mosaik2_database *md) {
 	for(size_t i=0;i<loop_size;i++) {
 		size_t read_nmemb = fread(buf, MD5_DIGEST_LENGTH, chunk_nmemb[i], filehashes_file);
 		if(read_nmemb != chunk_nmemb[i]) {
-			fprintf(stderr, "read unexpected data legngth. should %lix%li, bit %li elements were read\n", MD5_DIGEST_LENGTH, chunk_nmemb[i], read_nmemb);
+			fprintf(stderr, "read unexpected data length. should %ix%li, but %li elements were read\n", MD5_DIGEST_LENGTH, chunk_nmemb[i], read_nmemb);
 			exit(EXIT_FAILURE);
 		}
 
@@ -516,7 +516,7 @@ int qsort_(const void *p0, const void *p1) {
 void read_filenames_index(FILE *filenames_index_file, long element_no, long *filenames_offset) {
 	
 	if(fseeko(filenames_index_file, element_no*sizeof(long), SEEK_SET) != 0) {
-		fprintf(stderr, "could not seek to element_no %li in filenames_idx\n");
+		fprintf(stderr, "could not seek to element_no %li in filenames_idx\n", element_no);
 		exit(EXIT_FAILURE);
 	}
 	if( fread(filenames_offset, sizeof(long), 1, filenames_index_file) != 1 ) {

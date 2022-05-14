@@ -58,7 +58,7 @@ void create_mosaik2_database_file_id(char *filename) {
 	memset( buf, 0, 8 );
 	memset( buf2, 0, 17);
 	if( 8 == fread(buf, 1, 8, rand_file) ) {
-		unsigned char *hexbuf = phex( buf, 8);
+		char *hexbuf = phex( buf, 8);
 		if(16 != fwrite(hexbuf, 1, 16, file)) {
 			free(hexbuf);
 			
@@ -110,7 +110,6 @@ void create_mosaik2_database_file_readme(char *filename) {
 
 int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount) {
 	
-	int debug=0;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);
