@@ -127,15 +127,18 @@ int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount) {
 	create_mosaik2_database_file(md.filenames_filename, 1, 1);
 	create_mosaik2_database_file(md.filenames_index_filename, 1, 1);
 	create_mosaik2_database_file(md.filehashes_filename, 1, 1);
+	create_mosaik2_database_file(md.filehashes_index_filename, 1, 1);
 	create_mosaik2_database_file(md.timestamps_filename, 1, 1);
 	create_mosaik2_database_file(md.imagedims_filename, 1, 1);
 	create_mosaik2_database_file(md.tiledims_filename, 1, 1);
 	create_mosaik2_database_file(md.imagecolors_filename, 1, 1);
 	create_mosaik2_database_file(md.imagestddev_filename, 1, 1);
+	create_mosaik2_database_file(md.image_index_filename, 1, 1);
 	create_mosaik2_database_file(md.invalid_filename, 1, 1);
 	create_mosaik2_database_file(md.duplicates_filename, 1, 1);
 	create_mosaik2_database_file(md.tilecount_filename, 1, 1);
 	create_mosaik2_database_file(md.lock_filename, 1, 1);
+	create_mosaik2_database_file(md.lastmodified_filename, 1, 1);
 
 	create_mosaik2_database_file_id(md.id_filename);
 	create_mosaik2_database_file_version(md.version_filename);
