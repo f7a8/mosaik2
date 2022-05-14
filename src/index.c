@@ -146,7 +146,8 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
 	md->tilecount = read_thumbs_conf_tilecount(md);
-	ssize_t i=0;
+	size_t i=0;
+	size_t maxmemb=-1;maxmemb;
 	size_t len = 0;
 	char *lineptr = NULL;
 
@@ -157,12 +158,16 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 		exit(1);
 	}
 	ctx->start_t = time(NULL);
-	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0) {
+	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0 && i < maxmemb) {
 		process_next_line(ctx, md, lineptr, i++,stdin0);
 	}
 	if(exiting == 1) {
 		fprintf(stderr, "received SIGINT, exiting after %i lines\n", i);
 	}
+	if(i>=maxmemb) {
+		fprintf(stderr, "exiting after %i lines, maximum lines (%i) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
+	}
+		
 
 	fprintf(stderr, "wait for subprocesses\n");
 	int wstatus=0;
@@ -255,8 +260,12 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	if(imagestddev_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->imagestddev_filename);
 	FILE *imagedims_file = fopen( md->imagedims_filename, "a");
 	if(imagedims_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->imagedims_filename);
+	FILE *image_index_file = fopen( md->image_index_filename, "a");
+	if(image_index_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->image_index_filename);
 	FILE *filenames_file = fopen( md->filenames_filename, "a");
 	if(filenames_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->filenames_filename);
+	FILE *filenames_index_file = fopen( md->filenames_index_filename, "a");
+	if(filenames_index_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->filenames_index_filename);
 	FILE *filehashes_file = fopen( md->filehashes_filename, "a");
 	if(filehashes_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->filehashes_filename);
 	FILE *timestamps_file = fopen( md->timestamps_filename, "a");
@@ -269,18 +278,26 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	if(invalid_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->invalid_filename);
 	FILE *duplicates_file = fopen( md->duplicates_filename, "a");
 	if(duplicates_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->duplicates_filename);
+	FILE *lastmodified_file = fopen( md->lastmodified_filename, "w");
+	if(lastmodified_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->lastmodified_filename);
+
 
 
   //size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 	char null_value='\0';
 	char new_line='\n';
-	
+
+	//TODO check if everything is written to disk
+	long image_offset = ftell(imagecolors_file);
+	fwrite(&image_offset, sizeof(long), 1, image_index_file);
 	fwrite(task->colors, 3, task->total_tile_count, imagecolors_file);
 	fwrite(task->colors_stddev, 3, task->total_tile_count, imagestddev_file);
 
 	fwrite(&task->width, sizeof(int), 1, imagedims_file);
 	fwrite(&task->height, sizeof(int), 1, imagedims_file);
 
+	long filenames_offset = ftell(filenames_file);
+	fwrite(&filenames_offset, sizeof(long), 1, filenames_index_file);
 	fwrite(task->filename, strlen(task->filename), 1, filenames_file);
 	fwrite(&new_line, 1, 1, filenames_file);
 
@@ -297,17 +314,23 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 
 	fwrite(&null_value, 1, 1, duplicates_file);
 
+	// the content is just written for updating ".lastmodified"s modified timestamp
+	fwrite(&task->lastmodified, sizeof(time_t), 1, lastmodified_file);
+
 
 	if( fclose( imagecolors_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagecolors_filename);
 	if( fclose( imagestddev_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagestddev_filename);
 	if( fclose( imagedims_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagedims_filename);  
+	if( fclose( image_index_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagedims_filename);
 	if( fclose( filenames_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->filenames_filename);  
+	if( fclose( filenames_index_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->filenames_index_filename);
 	if( fclose( filehashes_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->filehashes_filename); 
 	if( fclose( timestamps_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->timestamps_filename);
 	if( fclose( filesizes_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->filesizes_filename);
 	if( fclose( tiledims_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->tiledims_filename);
 	if( fclose( invalid_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->invalid_filename);
 	if( fclose( duplicates_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->duplicates_filename);
+	if( fclose( lastmodified_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->lastmodified_filename);
 
 
 	//print_usage("unflock");
