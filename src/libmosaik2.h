@@ -18,6 +18,7 @@
 #include <sys/file.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h> // for meminfo external sort in duplicates
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -32,8 +33,6 @@
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
-
-#define MOSAIK2_DATABASE_FORMAT_VERSION 4
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
