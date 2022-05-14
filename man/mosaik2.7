@@ -23,17 +23,19 @@ mosaik2 is a Command Line Interface program for Linux, especially designed for l
 .PP
 \fBinit\fR mode creates a new mosaik2 database directory with all necessary (mostly empty) files. It may be useful to create several database directories to reduce the amount of data per database using a suitable sorting criteria. Suitable can be for example the year, or a directory path. This brings you in the position to run severeal indexing and gathering processes in parallel.
 .PP
-While \fBindex\fR mode fills the mosaik2 database with all image data with the processes from the file list. The first digit parameter is the maximum count of prallel subprocesses to compute the images. It may be a good starting value to use as much subprocesses as your computer has CPU cores.
+While \fBindex\fR mode fills the mosaik2 database with all image data with the processes from the file list. The first digit parameter is the maximum count of parallel subprocesses to compute the images. It may be a good starting value to use as much subprocesses as your computer has CPU cores.
 .PP
 If your indexing gets stuck due to any imponderables, you can safely cancel the process by pressing Ctrl+C. The program will terminate only after all started tiler processes are finished. The error message or the number of lines in the mosaik2db/filenames.txt betrays the line offset, which can be selected at a indexing restart. The offset of the file list can be easily achieved with the process substitution, instead of "< file_list" type "< <(tail -n +K \fIfile_list\fR)" where K is the line offset.
+.br
+For now a single database can have size_t-1 entries. The indexing will stop after reaching this limit and give you an appropiate message.
 .br
 If hanging index subprocesses were not able to safe their results, you can reduce the line_offset by \fImax-tiler\fR. Images which may be indexed twice can be later invalidated in \fBduplicates\fR mode.
 .PP
 After your mosaik2 database(s) have been created, you can start to work on your individually mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. If you mix several mosaik2 database different \fItile-resolutions\fR can be chosen here.
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases and will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
-.PP
-In \fBduplicates\fR mode you can indentify images, that appear multiple time in your image collection under different names, and mark them mark all but the first occurance as invalid. This mode prints the invlidated files to stdout.
+
+In \fBduplicates\fR mode you can indentify images, that appear multiple times in your image collection, and mark all but the first occurance as invalid. This mode prints the invlidated files to stdout. Option dry-run set to 1 make no modification to the mosaik2 database, otherwise 0 will do. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination.
 .PP
 Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
 .br
@@ -98,7 +100,9 @@ find /root_dir -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosai
 In case of an error the exit code is always 1, 0 otherwise. The program tries to exit fast with an appropriate stderr message.
 .SH "FILES"
 .PP
-mosaik2 database files are
+mosaik2 database files are:
+.PP
+NOTE: all element entries in the following files are ordered as their result was available during the index operation, except .idx files may have special orders.
 .RS 4
 mosaik2db/dbversion.txt
 .br
@@ -106,9 +110,16 @@ mosaik2db/duplicates.bin
 .br
 mosaik2db/filehashes.bin
 .br
-mosaik2db/filenames.idx
+mosaik2db/filehashes.idx
+sorted filehashes.bin for faster duplication lookup
 .br
 mosaik2db/filenames.txt
+.RS 6
+all processed image filenames with their original path in the order their indexing processes. New line seperates the entries.
+.RE
+.br
+mosaik2db/filenames.idx
+long integers containing the byte offset if their corresponding filename entries in filenames.txt.
 .br
 mosaik2db/filesizes.bin
 .br
@@ -119,6 +130,11 @@ mosaik2db/imagecolors.bin
 mosaik2db/imagedims.bin
 .br
 mosaik2db/imagestddev.bin
+.br
+mosaik2db/image.idx
+.RS 6
+long integers containing the byte offset for their relational partner element in imagecolors.bin and imagestddev.bin. Without this information you have to compute the correct data frame through multiply all tile dimensione (tiledims.bin) of all elements before.
+.RE
 .br
 mosaik2db/invalid.bin
 .br
