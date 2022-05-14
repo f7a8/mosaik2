@@ -284,7 +284,7 @@ if(debug) fprintf(stderr, "init\n");
 		if(strlen(puffer)>0)	candidates[i].thumbs_db_filenames[strlen(puffer)-1]=0;
 		
 		
-		fseek(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
+		fseeko(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
 		size_t read = fread(candidates[i].hash, 1, MD5_DIGEST_LENGTH, thumbs_db_hash);
 		if(read!=MD5_DIGEST_LENGTH) {
 			fprintf(stderr, "did not read enough hash data, expected %i at idx:%li position:%li but got %li\n",  MD5_DIGEST_LENGTH,candidates[i].index, MD5_DIGEST_LENGTH*candidates[i].index,read);

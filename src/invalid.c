@@ -14,7 +14,7 @@ void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
 	if(DRY_RUN == 1) 
 		return;
 	// need to be an opend file	
-	if( fseek(invalid_file,nmemb*1,SEEK_SET) == -1 ) {
+	if( fseeko(invalid_file,nmemb*1,SEEK_SET) == -1 ) {
 		fprintf(stderr, "error while setting file cursor to %li in invalid file\n", nmemb );
 		exit(EXIT_FAILURE);
 	}
@@ -111,7 +111,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 		if(debug)fprintf(stderr,"filename:%s\n", buf);
 
 		// IS THIS ELEMENT ALREADY INVALID? THAN SKIP IT
-		if( fseek(invalid_file,j*1,SEEK_SET) == -1 ) {
+		if( fseeko(invalid_file,j*1,SEEK_SET) == -1 ) {
 			fprintf(stderr, "error while setting file cursor to %li in invalid file\n", j );
 			exit(EXIT_FAILURE);
 		}
@@ -146,7 +146,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 				if(debug) fprintf(stderr, "check timestamp\n");
 				// lets first do a timestamp comparison (should be faster, than hash cmp)
 				time_t old_timestamp;
-				if(fseek(timestamps_file,j*sizeof(time_t),SEEK_SET) == -1) {
+				if(fseeko(timestamps_file,j*sizeof(time_t),SEEK_SET) == -1) {
 					fprintf(stderr, "error setting file cursor to nmemb %li in timestamps file\n", j);
 					exit(EXIT_FAILURE);
 				}
@@ -174,7 +174,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 				}
 				
 				uint32_t old_filesize = 0;
-				if(fseek(filesizes_file,j*sizeof(uint32_t),SEEK_SET) == -1) {
+				if(fseeko(filesizes_file,j*sizeof(uint32_t),SEEK_SET) == -1) {
 					fprintf(stderr, "error setting file cursor to nmemb %li in timestamps file\n", j);
 					exit(EXIT_FAILURE);
 				}
@@ -198,7 +198,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 					//MAKE A HASH COMPARE
 						
 					uint8_t old_hash[MD5_DIGEST_LENGTH];
-					if( fseek(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET) == -1 ) {
+					if( fseeko(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET) == -1 ) {
 						fprintf(stderr, "error while setting filehashes cursor position %li\n",j);
 						exit(EXIT_FAILURE);
 					}

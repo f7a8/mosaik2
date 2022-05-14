@@ -563,8 +563,8 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 				fprintf(stderr,"thumb (%lu) is marked as invalid, will be skipped\n", idx);
 
 				// in case of invalid entries move the file pointers without reading the colors data
-				fseek(thumbs_db_image_colors,thumbs_db_total_tile_count*3,SEEK_CUR);
-				fseek(thumbs_db_image_stddev,thumbs_db_total_tile_count*3,SEEK_CUR);
+				fseeko(thumbs_db_image_colors,thumbs_db_total_tile_count*3,SEEK_CUR);
+				fseeko(thumbs_db_image_stddev,thumbs_db_total_tile_count*3,SEEK_CUR);
 
 				continue;
 			} 
