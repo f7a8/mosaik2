@@ -601,10 +601,13 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	}
 
 	entry = exif_content_get_entry(ed->ifd[EXIF_IFD_0], EXIF_TAG_ORIENTATION);
+	exif_data_free(ed);
 	if (entry) {
 		char buf[64];
 		if (exif_entry_get_value(entry, buf, sizeof(buf))) {
     	trim_spaces(buf);
+
+			exif_entry_free(entry);
 
       if (strcmp(buf, "Right-top")==0) {
 				return ORIENTATION_RIGHT_TOP;
@@ -615,6 +618,7 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 			}
     }
 	}
+	exif_entry_free(entry);
 	return ORIENTATION_TOP_LEFT;
 }
 
