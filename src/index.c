@@ -161,6 +161,7 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0 && i < maxmemb) {
 		process_next_line(ctx, md, lineptr, i++,stdin0);
 	}
+	free(lineptr);
 	if(exiting == 1) {
 		fprintf(stderr, "received SIGINT, exiting after %li lines\n", i);
 	}
@@ -168,7 +169,6 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 		fprintf(stderr, "exiting after maximum lines (%li) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
 	}
 		
-
 	int wstatus=0;
 	wait(&wstatus); //TODO doesnt work always
 }
@@ -335,6 +335,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 		fprintf(stderr,"flock error");
 		exit(EXIT_FAILURE);
 	}
+	if( fclose( lockfile_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->lock_filename);
 
 }
 
