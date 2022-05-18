@@ -290,6 +290,9 @@ int mosaik2_tiler(mosaik2_database *md, mosaik2_indextask *task) {
 
 	mosaik2_index_write_to_disk(md, task);
 
+	free(task->colors);
+	free(task->colors_stddev);
+
 	return 0;
 
 }
