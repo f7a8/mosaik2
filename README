@@ -6,14 +6,20 @@ website at https://f7a8.github.io/mosaik2/
 hosted at https://github.com/f7a8/mosaik2/
 
 
+Dependend software		Debian package
 
+1. make								make
+2. gcc								gcc
+3. curl dev						libcurl4-gnutls-dev
+4. libssl							libssl-dev
+5. libgd							libgd-dev
+6. libexif						libexif-dev
 
-Dependend software
+Build
 
-1. gcc
-2. libexif
-3. libgd
-4. libssl
+1. enter in the directory
+2. run `make`
+
 
 USAGE
 
