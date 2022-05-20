@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 		}
 		return mosaik2_duplicates(argv[2],argv[3],atoi(argv[4]));
 	} else {
-		fprintf(stderr, "invalid action, valid actions: {init,index,gathering,join,tiler,invalid,duplicates}\n");
+		fprintf(stderr, "invalid action, valid actions: {init,index,gathering,join,invalid,duplicates}\n");
 		exit(EXIT_FAILURE);
 	}
 	return 0;
