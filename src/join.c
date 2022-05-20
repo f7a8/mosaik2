@@ -232,7 +232,7 @@ if(debug) fprintf(stderr, "init\n");
 
 	uint64_t j=0;
 	uint64_t total_score = 0;
-	char puffer[MAX_FILENAME_LEN];
+	char buffer[MAX_FILENAME_LEN];
 	
 	for(uint32_t i=0;i<total_master_tile_count;i++) {
 		if(strcmp(candidates[i].thumbs_db_name, thumbs_db_name)!=0) {
@@ -274,16 +274,15 @@ if(debug) fprintf(stderr, "init\n");
 		}
 
 
-	//	memset(puffer,0,MAX_FILENAME_LEN);
 		for(uint64_t len=candidates[i].index;j<=len;j++) {
-			char *freads_read = fgets(puffer, MAX_FILENAME_LEN, thumbs_db_file);
+			char *freads_read = fgets(buffer, MAX_FILENAME_LEN, thumbs_db_file);
 			if(freads_read == NULL) {
 				fprintf(stderr, "read less data than it expected");
 				exit(EXIT_FAILURE);
 			}
 		}
-		strncpy(candidates[i].thumbs_db_filenames,puffer,strlen(puffer));
-		if(strlen(puffer)>0)	candidates[i].thumbs_db_filenames[strlen(puffer)-1]=0;
+		strncpy(candidates[i].thumbs_db_filenames,buffer,strlen(buffer));
+		if(strlen(buffer)>0)	candidates[i].thumbs_db_filenames[strlen(buffer)-1]=0;
 		
 		
 		fseeko(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
