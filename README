@@ -6,7 +6,7 @@ website at https://f7a8.github.io/mosaik2/
 hosted at https://github.com/f7a8/mosaik2/
 
 
-Dependend software    Debian package
+Dependend software    Debian packages
 for building 
 
 1. make               make
@@ -24,38 +24,65 @@ Build
 
 USAGE
 
-1. create file list (read README.file_list)
+I.   create file list (read README.file_list)
 
-2. bin/mosaik2 init first_mosaik2 16
-3. bin/mosaik2 index first_mosaik2 4 10 < first_mosaik2.file_list
-4. bin/mosaik2 gathering 40 6353080 my_first_mosaik2.jpeg 100 first_mosaik2 < source_image.jpeg
-5. bin/mosaik2 join my_first_mosaik2.jpeg 150 0 1 first_mosaik2
+II.  bin/mosaik2 init mosaik2db 16
+III. bin/mosaik2 index mosaik2db 4 10 < first_mosaik2.file_list
+IV.  bin/mosaik2 gathering 40 6353080 mosaik2.jpg 100 mosaik2db < src.jpg
+V.   bin/mosaik2 join mosaik2.jpg 150 0 1 mosaik2db
 
 Usage Description
 
-2. initialize a mosaik2 database named first_mosaik2. You can create multiple mosaik2 databases to handle a large volume of images by processing them in parallel.
-   16 can be understood here as reduced resolution of the indexed images. Each image is reduced to n*16 or 16*n pixels in the same aspect ratio. Images with aspect ratios more extreme than 16 to 256 are ignored. The larger this resolution number, the more exactly will fit canidata images in the mosaic, the longer the computation time. Example: with a resolution of 16 for all JPEG images from Wikimedia Commons (53 million images ~ 165 terabytes), the mosaik2 database occupies about 130 gigabytes.
+II.  initialize a mosaik2 database named first_mosaik2. You can create multiple
+     mosaik2 databases to handle a large volume of images by processing them in
+     parallel.
+  1. the directory name, of the newly created mosaik2 database.
+  2. 16 can be understood here as reduced resolution of the indexed images.
+     Each image is reduced to n*16 or 16*n pixels in the same aspect ratio.
+     Images with aspect ratios more extreme than 16 to 256 are ignored with an
+     error message. The larger this resolution number, the more exactly will
+     fit candidate images in the mosaic, the longer the computation time.
+     Example: at a resolution of 16 for all JPEG images from Wikimedia Commons
+              from 2003-2020 (53 million images ~ 165 terabytes), the mosaik2
+              database occupies about 130 gigabytes.
 
-3. The actual indexing process. Here, for the mosaik2 database "first_mosaik2", all files from the "first_mosaik2.file_list" are indexed. 
+III. The actual indexing process. Here, for the mosaik2 database
+     "first_mosaik2", all files from the "first_mosaik2.file_list" are indexed.
   1. The mosaik2 database name
-  2. The parameter with the value 4 means that 4 indexing processes (download + color analysis) run in parallel.
-  3. The parameter with the value 10 means that at a system load avg > 10 the indexing is reduced until the value is fallen below.
+  2. The parameter with the value 4 means that 4 indexing processes (download +
+     color analysis) run in parallel.
+  3. The parameter with the value 10 means that at a system load avg > 10 the
+     indexing is reduced until the value is fallen below.
 
-4. Only here we are talking about the actual image from which to create a mosaic. Explanation of the parameters:
-  1. number of tiles of the narrower side in which small photos are to be inserted.
+IV.  Just here we are talking about the actual image from which to create a
+     mosaic. Explanation of the parameters:
+  1. number of tiles of the narrower side in which small photos are to be
+     inserted.
   2. size of the actual image in bytes.
   3. name of the target file.
-  4. ratio between color deviations and color values. 100 means evaluate color values only, 0 means evaluate color deviations only. (use 100, less will generate not explainable mosaics)
-  5. eager unique enabled by 1, disabled by 0: images are only used on time at the best position, otherwise images can be used n times if its the best matching image for that region
+  4. ratio between color deviations and color values. 100 means evaluate color
+     values only, 0 means evaluate color deviations only. (use 100, less will
+     generate not explainable mosaics)
+  5. eager unique enabled by 1, disabled by 0: images are only used one time at
+     the best position, otherwise images can be used n times if its the best
+     matching image for that region. Making huge mosaics with unique images,
+     will lead into a longer processing and shifting of canidates, but the
+     result will look better.
   6. name of the mosaik2 database.
   as STDIN the actual image from which a mosaic is to be created.
 
-5. The results of (multiple) gatherings are merged here and the final candidate images are copied or linked into ~/.mosaik2 and loaded. Then it gets assembled into the final mosaic image and stored in the target image. The parameters mean:
+V.   The results of (multiple) gatherings are merged here and the final
+     candidate images are copied or linked into ~/.mosaik2 and loaded. Then it
+     gets assembled into the final mosaic image and stored in the target image.
+     The parameters mean:
   1. target filename (same as in step before)
-  2. size in pixels of the individual tiles 
-  3. lazy unique enable with 1, disabled by 0: it removes n duplicates (not all) as much as there are mosaik2 databases used
-  4. local_cache enabled with 1, disabled by 0: if enable, all files are copied to HOME/.mosaik2/ directory, otherwise symbolic links are created, if possible
+  2. size in pixels of the individual tiles
+  3. lazy unique enable with 1, disabled by 0: it removes n duplicates (not
+     all) as much as there are mosaik2 databases used
+  4. local_cache enabled with 1, disabled by 0: if enable, all files are copied
+     to $HOME/.mosaik2/ directory, otherwise symbolic links are created, if
+     possible
   5. name of the mosaik2 database
-  6. other names of mosaik2 databases (must have been indexed in the same resolution e.g. 16)
-  The home directory is determined by the HOME environment variable.
-
+  6. other names of mosaik2 databases (must have been indexed in the same
+     resolution e.g. 16)
+     The home directory is determined by the HOME environment variable.
