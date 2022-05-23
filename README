@@ -28,7 +28,7 @@ I.   create file list (read README.file_list)
 
 II.  bin/mosaik2 init mosaik2db 16
 III. bin/mosaik2 index mosaik2db 4 10 < first_mosaik2.file_list
-IV.  bin/mosaik2 gathering 40 6353080 mosaik2.jpg 100 mosaik2db < src.jpg
+IV.  bin/mosaik2 gathering 40 6353080 mosaik2.jpg 100 1 mosaik2db < src.jpg
 V.   bin/mosaik2 join mosaik2.jpg 150 0 1 mosaik2db
 
 Usage Description
