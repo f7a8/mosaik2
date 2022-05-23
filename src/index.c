@@ -220,7 +220,7 @@ void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, s
 
 		int jobs = ctx->current_tiler_processes + 1;
 		double img_per_min = 60.*i/(time(NULL)-ctx->start_t);
-		fprintf(stdout, "job #%li, jobs:%i img/min:%f load:%f\n", i, jobs, img_per_min, load);
+		fprintf(stdout, "job #%li, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
 		exit(0);
 	} else {
 		//parent process 
