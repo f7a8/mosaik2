@@ -58,7 +58,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 	init_mosaik2_project(&mp, md.id, dest_filename);
 
-	printf("analyze master image\n");
+//	printf("analyze master image\n");
 
 	uint8_t debug = 0;
 	uint8_t debug1 = 0;
