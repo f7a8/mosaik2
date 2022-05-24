@@ -93,12 +93,12 @@ typedef struct mosaik2_database_struct mosaik2_database;
 
 struct mosaik2_project_struct {
 	char dest_filename[256];
-	char dest_mastertiledims_filename[256];
+	char dest_primarytiledims_filename[256];
 	char dest_result_filename[256];
 	uint8_t ratio;
 	uint8_t unique;
 	uint32_t file_size;
-	uint8_t master_tile_count;
+	uint8_t primary_tile_count;
 	char dest_html_filename[ 256 ]; 
 	char dest_src_filename[ 256 ];
 	mosaik2_database *mds;
@@ -128,17 +128,17 @@ int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, ui
 int mosaik2_tiler(mosaik2_database *, mosaik2_indextask *);
 void mosaik2_index_write_to_disk(mosaik2_database *, mosaik2_indextask *);
 
-/**  	1 => master_tile_count (only approx. depends on the input image, can be slightly more)
+/**  	1 => primary_tile_count (only approx. depends on the input image, can be slightly more)
 	2 => file_size in bytes
 	3 => dest_filename (including jpeg or png suffix)
 	4 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)
 	5 => unique (0 or 1) use a tile at least one time
 	6 => pathname to mosaik2_thumb_db
 */
-int mosaik2_gathering(int master_tile_count, size_t filesize, char *dest_filename, int ratio, int unique, char *mosaik2_db_name);
+int mosaik2_gathering(int primary_tile_count, size_t filesize, char *dest_filename, int ratio, int unique, char *mosaik2_db_name);
 
 /*	1=> dest_filename (including jpeg or png suffix)
-	2=> image width in per master tile in px
+	2=> image width in per primary tile in px
 	3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved
 	4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),
 	5 => thumbs_db_name_1

@@ -42,8 +42,8 @@ int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int 
 	
 	uint8_t argv_start_idx_thumbs_db_names = 6;
 	uint8_t argv_end_idx_thumbs_db_names = argc;	
-	uint8_t master_tile_x_count=0;// atoi(argv[2]);
-	uint8_t master_tile_y_count=0;// = atoi(argv[3]);
+	uint8_t primary_tile_x_count=0;// atoi(argv[2]);
+	uint8_t primary_tile_y_count=0;// = atoi(argv[3]);
 
 	
 	uint8_t tile_count = 0;
@@ -53,7 +53,7 @@ if(debug) fprintf(stderr, "init\n");
 	mosaik2_project mp;
 	mosaik2_database mds[argv_end_idx_thumbs_db_names - argv_start_idx_thumbs_db_names];
 
-	//read master tile n count from file
+	//read primary tile n count from file
 	for(uint32_t i=argv_start_idx_thumbs_db_names, i0=0; i<argv_end_idx_thumbs_db_names; i++,i0++) {
 		if(debug) fprintf( stderr, "check %i %s\n", i, argv[i]);
 		
@@ -64,44 +64,44 @@ if(debug) fprintf(stderr, "init\n");
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
 		if(debug)
-			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,mastertiledis:%s\n", argv[i],dest_filename,mp.dest_mastertiledims_filename);
+			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,primarytiledis:%s\n", argv[i],dest_filename,mp.dest_primarytiledims_filename);
 
-		FILE *mastertiledims_file = fopen(mp.dest_mastertiledims_filename, "r");
-		if( mastertiledims_file == NULL) {
-			fprintf(stderr, "master tile dims file (%s) could not be opened\n", mp.dest_mastertiledims_filename);
+		FILE *primarytiledims_file = fopen(mp.dest_primarytiledims_filename, "r");
+		if( primarytiledims_file == NULL) {
+			fprintf(stderr, "primary tile dims file (%s) could not be opened\n", mp.dest_primarytiledims_filename);
 			exit(EXIT_FAILURE);
 		} else if(debug) {
-			fprintf(stderr, "mastertiledims file loaded\n");
+			fprintf(stderr, "primarytiledims file loaded\n");
 		}
 		struct stat st;
-		stat(mp.dest_mastertiledims_filename, &st);
+		stat(mp.dest_primarytiledims_filename, &st);
 		char buf[st.st_size];
 		memset(buf, 0 , st.st_size);
 
-		int freads_reads = fread(buf, 1, st.st_size, mastertiledims_file);
+		int freads_reads = fread(buf, 1, st.st_size, primarytiledims_file);
 		if(st.st_size != freads_reads) {
-			fprintf(stderr, "read data than it expected (%s)", mp.dest_mastertiledims_filename);
+			fprintf(stderr, "read data than it expected (%s)", mp.dest_primarytiledims_filename);
 			exit(EXIT_FAILURE);
 		}
 
-		uint8_t master_tile_x_count_local = 0;
-		uint8_t master_tile_y_count_local = 0;
+		uint8_t primary_tile_x_count_local = 0;
+		uint8_t primary_tile_y_count_local = 0;
 	
   	char *ptr;
-		ptr=strtok(buf,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing master tile dims file\n");exit(EXIT_FAILURE);}
-		master_tile_x_count_local = atoi( ptr );
-		ptr=strtok(NULL,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing master tile dims file\n");exit(EXIT_FAILURE);}
-		master_tile_y_count_local = atoi( ptr );
-		fclose(mastertiledims_file);
+		ptr=strtok(buf,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing primary tile dims file\n");exit(EXIT_FAILURE);}
+		primary_tile_x_count_local = atoi( ptr );
+		ptr=strtok(NULL,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing primary tile dims file\n");exit(EXIT_FAILURE);}
+		primary_tile_y_count_local = atoi( ptr );
+		fclose(primarytiledims_file);
 
 		if( i > argv_start_idx_thumbs_db_names
-				&& (master_tile_x_count != master_tile_x_count_local
-				|| master_tile_y_count != master_tile_y_count_local)) {
-			fprintf(stderr,"cannot mix different master tile resolutions. sorry. make sure running gathering program with same tile_count\n");
+				&& (primary_tile_x_count != primary_tile_x_count_local
+				|| primary_tile_y_count != primary_tile_y_count_local)) {
+			fprintf(stderr,"cannot mix different primary tile resolutions. sorry. make sure running gathering program with same tile_count\n");
 			exit(EXIT_FAILURE);
 		}
-		master_tile_x_count = master_tile_x_count_local;
-		master_tile_y_count = master_tile_y_count_local;
+		primary_tile_x_count = primary_tile_x_count_local;
+		primary_tile_y_count = primary_tile_y_count_local;
 
 		//fprintf(stderr, "struct todo\n");
 		//exit(1);
@@ -118,16 +118,16 @@ if(debug) fprintf(stderr, "init\n");
 		if(debug)	fprintf(stderr,"tile_count read from parameter %i (%s) => %i\n", i, argv[i], tile_count_local);
 	}
 
-	uint32_t total_master_tile_count = master_tile_x_count * master_tile_y_count;
-	if(debug) fprintf(stderr,"master_tile_count:%i*%i=%i\n", master_tile_x_count, master_tile_y_count, total_master_tile_count);
+	uint32_t total_primary_tile_count = primary_tile_x_count * primary_tile_y_count;
+	if(debug) fprintf(stderr,"primary_tile_count:%i*%i=%i\n", primary_tile_x_count, primary_tile_y_count, total_primary_tile_count);
 	if(debug) fprintf(stderr, "tile_count:%i\n", tile_count);
-	struct result *candidates = malloc(total_master_tile_count * sizeof( struct result ));
+	struct result *candidates = malloc(total_primary_tile_count * sizeof( struct result ));
 	if( candidates == NULL ) {
 		fprintf(stderr, "cannot allocate memory\n");
 		exit(EXIT_FAILURE);
 	}
 
-	for(uint32_t i=0;i<total_master_tile_count;i++) {
+	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		candidates[i].thumbs_db_name = NULL;
 		candidates[i].index=0;
 		candidates[i].score=LLONG_MAX;
@@ -161,14 +161,14 @@ if(debug) fprintf(stderr, "init\n");
 			exit(EXIT_FAILURE);
 		}
 	
-		//uint32_t total_master_tile_count0 = master_tile_x_count * master_tile_y_count;
-		struct result *candidates0 = malloc( total_master_tile_count * sizeof(struct result));
+		//uint32_t total_primary_tile_count0 = primary_tile_x_count * primary_tile_y_count;
+		struct result *candidates0 = malloc( total_primary_tile_count * sizeof(struct result));
 		if(candidates0 == NULL) {
 			fprintf(stderr, "cannot allocate memory for temporary data structure\n");
 			exit(EXIT_FAILURE);
 		}
 
-		for(uint32_t i=0;i<total_master_tile_count;i++) {
+		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			candidates0[i].thumbs_db_name = NULL;
 			candidates0[i].index=0;
 			candidates0[i].score=LLONG_MAX;
@@ -195,7 +195,7 @@ if(debug) fprintf(stderr, "init\n");
 			j++;
 		}
 	
-		for(uint32_t i=0;i<total_master_tile_count;i++) {
+		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			if(candidates0[i].score < candidates[i].score ) {
 				//printf("i %i better score %lli <-> %lli\n", i, candidates_score0[i], candidates_score[i]);
 				candidates[i].thumbs_db_name = candidates0[i].thumbs_db_name;
@@ -210,13 +210,13 @@ if(debug) fprintf(stderr, "init\n");
 	}
 
 	
-	fprintf(stderr,"data is loaded (%i*%i=%i)\n",master_tile_x_count,master_tile_y_count,total_master_tile_count);
+	fprintf(stderr,"data is loaded (%i*%i=%i)\n",primary_tile_x_count,primary_tile_y_count,total_primary_tile_count);
 
-	qsort( candidates, total_master_tile_count, sizeof(struct result), cmpfunc);
+	qsort( candidates, total_primary_tile_count, sizeof(struct result), cmpfunc);
 	fprintf(stderr, "sort arr\n");
 	
 	if(debug)
-		for(uint32_t i=0;i<total_master_tile_count;i++) {
+		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			printf("%i	%li	%li	%i	%i	%s\n",
 			candidates[i].sortorder, 
 			candidates[i].index, 
@@ -234,7 +234,7 @@ if(debug) fprintf(stderr, "init\n");
 	uint64_t total_score = 0;
 	char buffer[MAX_FILENAME_LEN];
 	
-	for(uint32_t i=0;i<total_master_tile_count;i++) {
+	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		if(strcmp(candidates[i].thumbs_db_name, thumbs_db_name)!=0) {
 			if(thumbs_db_file != NULL) fclose(thumbs_db_file);
 			if(thumbs_db_hash != NULL) fclose(thumbs_db_hash);
@@ -321,8 +321,8 @@ if(debug) fprintf(stderr, "init\n");
 
 	fprintf(stderr,"data enriched (filenames and hashes)\n");
 
-	qsort( candidates, total_master_tile_count, sizeof(struct result), cmpfunc_back);
-	/*for(uint32_t i=0;i<total_master_tile_count;i++) {
+	qsort( candidates, total_primary_tile_count, sizeof(struct result), cmpfunc_back);
+	/*for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		printf("%li	%lli	%lli	%i	%i	%s	%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x	%s\n",
 		candidates[i].sortorder, 
 		candidates[i].index, 
@@ -334,10 +334,10 @@ if(debug) fprintf(stderr, "init\n");
   }*/
 
 	//download part
-	for(uint32_t i=0;i<total_master_tile_count;i++) {
+	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 
 		if( access( candidates[i].temp_filename, F_OK ) == 0 ) {
-			printf("%i/%i already exist %s:%li\n", i,total_master_tile_count,candidates[i].thumbs_db_name,candidates[i].index );
+			printf("%i/%i already exist %s:%li\n", i,total_primary_tile_count,candidates[i].thumbs_db_name,candidates[i].index );
 			// TODO check hash
 			continue;
 		}
@@ -347,11 +347,11 @@ if(debug) fprintf(stderr, "init\n");
 
 		//TODO
 		if(local_cache==1) {
-		fprintf(stderr,"%i/%i copy %s:%li %s", i,total_master_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+		fprintf(stderr,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 		File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
 		fprintf(stderr,".\n");
 		} else {
-			fprintf(stderr,"%i/%i symlink %s:%li %s", i,total_master_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			fprintf(stderr,"%i/%i symlink %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			int simlink = symlink(candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
 			if(simlink != 0) {
 				fprintf(stderr, "error creating symlink %s for %s\n", candidates[i].temp_filename, candidates[i].thumbs_db_filenames);
@@ -361,7 +361,7 @@ if(debug) fprintf(stderr, "init\n");
 		}
 
 	} else {
-		printf("%i/%i downloading %s:%li %s\n", i,total_master_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+		printf("%i/%i downloading %s:%li %s\n", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 
 		CURL *curl_handle;
   	FILE *pagefile;
@@ -386,7 +386,7 @@ if(debug) fprintf(stderr, "init\n");
 
 	}
  printf("join mosaik2 for real\n");
- gdImagePtr out_im = gdImageCreateTrueColor(dest_tile_width*master_tile_x_count,dest_tile_width*master_tile_y_count);
+ gdImagePtr out_im = gdImageCreateTrueColor(dest_tile_width*primary_tile_x_count,dest_tile_width*primary_tile_y_count);
 	if(out_im == NULL) {
 		fprintf(stderr, "could not create image object\n");
 		exit(EXIT_FAILURE);
@@ -404,20 +404,20 @@ if(debug) fprintf(stderr, "init\n");
  
 	fprintf(html_out, "<html><body><table>");
 	gdImagePtr im;
- for(int y=0;y<master_tile_y_count;y++) {
+ for(int y=0;y<primary_tile_y_count;y++) {
 		fprintf(html_out, "<tr>");
-    for(int x=0;x<master_tile_x_count;x++) {
-			int master_tile_idx = y*master_tile_x_count+x;
+    for(int x=0;x<primary_tile_x_count;x++) {
+			int primary_tile_idx = y*primary_tile_x_count+x;
       
-			printf("%i/%i %s from %s\n",master_tile_idx,total_master_tile_count,candidates[master_tile_idx].temp_filename,candidates[master_tile_idx].thumbs_db_filenames);
-			im = myLoadPng(candidates[master_tile_idx].temp_filename, candidates[master_tile_idx].thumbs_db_filenames);
+			printf("%i/%i %s from %s\n",primary_tile_idx,total_primary_tile_count,candidates[primary_tile_idx].temp_filename,candidates[primary_tile_idx].thumbs_db_filenames);
+			im = myLoadPng(candidates[primary_tile_idx].temp_filename, candidates[primary_tile_idx].thumbs_db_filenames);
 
 			fprintf(html_out, "<td");
 			if(im==NULL) {
 				fprintf(stderr,"continue\nEXIT\n");exit(99);
 				fprintf(html_out, " class='err'>");
 
-				char *url = candidates[master_tile_idx].thumbs_db_filenames;
+				char *url = candidates[primary_tile_idx].thumbs_db_filenames;
 				char url_file[1000];
 				char url_thumb[1000];
 
@@ -436,9 +436,9 @@ if(debug) fprintf(stderr, "init\n");
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url_thumb,dest_tile_width,dest_tile_width);
 				if(is_file_commons==1) {
 					fprintf(html_out, "</a>\n");
-					fprintf(src_out,"%i: %s\n", master_tile_idx, url);
+					fprintf(src_out,"%i: %s\n", primary_tile_idx, url);
 				} else {
-					fprintf(src_out,"%i: %s\n", master_tile_idx, url_thumb);
+					fprintf(src_out,"%i: %s\n", primary_tile_idx, url_thumb);
 				}
 				fprintf(html_out, "</td>");
 				
@@ -446,7 +446,7 @@ if(debug) fprintf(stderr, "init\n");
 			}
 
 				fprintf(html_out, ">");
-			char *url = candidates[master_tile_idx].thumbs_db_filenames;
+			char *url = candidates[primary_tile_idx].thumbs_db_filenames;
 			char url_thumb[1000];
 			char url_file[1000];
 				memset(url_file, '\0', 1000);
@@ -465,7 +465,7 @@ if(debug) fprintf(stderr, "init\n");
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url_thumb, dest_tile_width, dest_tile_width);
 			
 				fprintf(html_out, "</a>\n");
-				fprintf(src_out,"%i: %s\n", master_tile_idx, url_file);
+				fprintf(src_out,"%i: %s\n", primary_tile_idx, url_file);
 
 				//free(url_thumb);
 				//free(url_file);
@@ -473,8 +473,8 @@ if(debug) fprintf(stderr, "init\n");
 			} else {
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url, dest_tile_width, dest_tile_width);
 				
-				fprintf(src_out,"%i: %s\n", master_tile_idx, url);
-				if(x==master_tile_x_count-1) {
+				fprintf(src_out,"%i: %s\n", primary_tile_idx, url);
+				if(x==primary_tile_x_count-1) {
 					fprintf(src_out, "\n");
 				}
 
@@ -525,8 +525,8 @@ if(debug) fprintf(stderr, "init\n");
 
 			int dstX = x * dest_tile_width;
 			int dstY = y * dest_tile_width;
-			int srcX = offset_x+candidates[master_tile_idx].off_x*pixel_per_tile;
-			int srcY = offset_y+candidates[master_tile_idx].off_y*pixel_per_tile;
+			int srcX = offset_x+candidates[primary_tile_idx].off_x*pixel_per_tile;
+			int srcY = offset_y+candidates[primary_tile_idx].off_y*pixel_per_tile;
 			int dstW = dest_tile_width;
 			int dstH = dest_tile_width;
 			int srcW = tile_count*pixel_per_tile;
@@ -537,8 +537,8 @@ if(debug) fprintf(stderr, "init\n");
       	im,
         x*dest_tile_width,//dstX
         y*dest_tile_width,//()    int   dstY,
-        offset_x+candidates[master_tile_idx].off_x*pixel_per_tile,//thumbs_offx[t],//int  srcX,
-        offset_y+candidates[master_tile_idx].off_y*pixel_per_tile,//thumbs_offy[t],//int  srcY,
+        offset_x+candidates[primary_tile_idx].off_x*pixel_per_tile,//thumbs_offx[t],//int  srcX,
+        offset_y+candidates[primary_tile_idx].off_y*pixel_per_tile,//thumbs_offy[t],//int  srcY,
         dest_tile_width,//int   dstW,
         dest_tile_width,//int   dstH,
         tile_count*pixel_per_tile,//thumbs_x[t],//int   srcW,
@@ -561,7 +561,7 @@ if(debug) fprintf(stderr, "init\n");
 			fprintf(html_out, "</tr>");
 	}
 
-	fprintf(html_out, "</table><p>total score:%li<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
+	fprintf(html_out, "</table><p>total score:%li<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 //	fprintf(stderr,"alpha blending flag:%i\n",out_im->alphaBlendingFlag);
 //	out_im->alphaBlendingFlag=0;
@@ -576,7 +576,7 @@ if(debug) fprintf(stderr, "init\n");
 	fclose(src_out);
   fclose(out);
 	free(candidates);
-	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_master_tile_count*tile_count*tile_count*1.0)));
+	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
 }

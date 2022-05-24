@@ -17,7 +17,7 @@ mona lisa 33 2017 95%
 #include "libmosaik2.h"
 	
 	
-int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
+int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -53,12 +53,12 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 		.ratio = ratio,
 		.unique = unique,
 		.file_size = file_size,
-		.master_tile_count = master_tile_count
+		.primary_tile_count = primary_tile_count
 	};
 
 	init_mosaik2_project(&mp, md.id, dest_filename);
 
-	printf("analyze master image\n");
+	//printf("analyze primary image\n");
 
 	uint8_t debug = 0;
 	uint8_t debug1 = 0;
@@ -66,7 +66,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 	const uint8_t out = 0;
 	//const uint8_t duplicates_allowed = 0;
 
-	if(debug) printf("master_tile_count:%i,thumbs_tile_count:%i,file_size:%li\n",master_tile_count,thumbs_tile_count,file_size);
+	if(debug) printf("primary_tile_count:%i,thumbs_tile_count:%i,file_size:%li\n",primary_tile_count,thumbs_tile_count,file_size);
 
   uint8_t *buffer = malloc(mp.file_size);
 
@@ -107,7 +107,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 	
   //       640        = 40                * 16;
   // tile_count on shorter side
-	uint32_t tile_count = master_tile_count * thumbs_tile_count;
+	uint32_t tile_count = primary_tile_count * thumbs_tile_count;
 
 	//       6000 
 	uint32_t width = gdImageSX(im);
@@ -141,56 +141,56 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
   
   
   //                          96 = 6 * 16
-  uint32_t pixel_per_master_tile = pixel_per_tile * thumbs_tile_count; 
+  uint32_t pixel_per_primary_tile = pixel_per_tile * thumbs_tile_count; 
   //                            9216 = 96 * 96
-  //double total_pixel_per_master_tile = pixel_per_master_tile * pixel_per_master_tile;
+  //double total_pixel_per_primary_tile = pixel_per_primary_tile * pixel_per_primary_tile;
   
   
 	uint32_t tile_x_count;
 	uint32_t tile_y_count;
-	uint32_t master_tile_x_count;
-	uint32_t master_tile_y_count;
+	uint32_t primary_tile_x_count;
+	uint32_t primary_tile_y_count;
 	uint32_t offset_x;
 	uint32_t offset_y;
 	uint32_t total_tile_count;
-	uint32_t total_master_tile_count;
+	uint32_t total_primary_tile_count;
 	uint32_t lx, ly;
 
-	master_tile_x_count = width / pixel_per_master_tile;
-	master_tile_y_count = height / pixel_per_master_tile;
-	tile_x_count = master_tile_x_count * thumbs_tile_count;
-	tile_y_count = master_tile_y_count * thumbs_tile_count;
-	offset_x = (width % master_tile_x_count) / 2;
-	offset_y = (height % master_tile_y_count) / 2;
+	primary_tile_x_count = width / pixel_per_primary_tile;
+	primary_tile_y_count = height / pixel_per_primary_tile;
+	tile_x_count = primary_tile_x_count * thumbs_tile_count;
+	tile_y_count = primary_tile_y_count * thumbs_tile_count;
+	offset_x = (width % primary_tile_x_count) / 2;
+	offset_y = (height % primary_tile_y_count) / 2;
 	
 	total_tile_count = tile_x_count * tile_y_count;
-	total_master_tile_count = ( tile_x_count / thumbs_tile_count ) * ( tile_y_count / thumbs_tile_count );
+	total_primary_tile_count = ( tile_x_count / thumbs_tile_count ) * ( tile_y_count / thumbs_tile_count );
 
 	lx = offset_x + pixel_per_tile * tile_x_count;
 	ly = offset_y + pixel_per_tile * tile_y_count;
 
 	if(debug)
-			printf("image_dims:%i %i, master_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", 
+			printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", 
 		width, height,
-		master_tile_x_count,master_tile_y_count,total_master_tile_count,
+		primary_tile_x_count,primary_tile_y_count,total_primary_tile_count,
 		tile_x_count,tile_y_count,
 		lx,ly,
 		offset_x,offset_y,
-		pixel_per_master_tile,pixel_per_tile);
+		pixel_per_primary_tile,pixel_per_tile);
 
-	if(unique == 1 && total_master_tile_count > thumbs_count) {
-		fprintf(stderr, "there are too few candidates (%lu) for unique than needed (%i)\n", thumbs_count, total_master_tile_count);
+	if(unique == 1 && total_primary_tile_count > thumbs_count) {
+		fprintf(stderr, "there are too few candidates (%lu) for unique than needed (%i)\n", thumbs_count, total_primary_tile_count);
 		exit(EXIT_FAILURE);
 	}
 
 
 	/*
 		The data structure of the candidates list.
-		For each tile are stored as many candidates as there are masters tiles. With the largest possible number of multiple selected tiles, a later reduction procedure can lead to only once (best) used tiles, without there being too few alternatives.
+		For each tile are stored as many candidates as there are primarys tiles. With the largest possible number of multiple selected tiles, a later reduction procedure can lead to only once (best) used tiles, without there being too few alternatives.
 	*/
 
-	int max_candidates_len = unique == 1 ? total_master_tile_count : 1;
-	int total_candidates_count = total_master_tile_count * max_candidates_len;
+	int max_candidates_len = unique == 1 ? total_primary_tile_count : 1;
+	int total_candidates_count = total_primary_tile_count * max_candidates_len;
 
 	if(debug)
 		fprintf(stdout, "max_candidates_len:%i, total_candidates_count:%i\n", max_candidates_len, total_candidates_count);
@@ -203,11 +203,11 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 	if( candidates_off_x == NULL ) { fprintf(stderr, "could not allocate memory for candidates_off_x\n"); exit(EXIT_FAILURE); }
 	unsigned char      *candidates_off_y = malloc(total_candidates_count * sizeof(unsigned char));
 	if( candidates_off_y == NULL ) { fprintf(stderr, "could not allocate memory for candidates_off_y\n"); exit(EXIT_FAILURE); }
-	unsigned int       *candidates_len  = malloc(total_master_tile_count * sizeof(unsigned int));
+	unsigned int       *candidates_len  = malloc(total_primary_tile_count * sizeof(unsigned int));
 	if( candidates_len == NULL ) { fprintf(stderr, "could not allocate memory for candidates_len\n"); exit(EXIT_FAILURE); }
-	unsigned int       *candidates_elect = malloc(total_master_tile_count * sizeof(unsigned int));
+	unsigned int       *candidates_elect = malloc(total_primary_tile_count * sizeof(unsigned int));
 	if( candidates_elect == NULL ) { fprintf(stderr, "could not allocate memory for candidates_elect\n"); exit(EXIT_FAILURE); }
-	unsigned int       *candidates_ins  = malloc(total_master_tile_count * sizeof(unsigned int));
+	unsigned int       *candidates_ins  = malloc(total_primary_tile_count * sizeof(unsigned int));
 	if( candidates_ins == NULL ) { fprintf(stderr, "could not allocate memory for candidates_ins\n"); exit(EXIT_FAILURE); }
 
 	//intialize with -1
@@ -218,23 +218,23 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 		candidates_off_y[i] = 0u;
 	}
 
-/*	for(uint32_t i=0;i<total_master_tile_count;i++) {
+/*	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		candidates_len[i] = 0;
 		candidates_ins[i] = 0;
 	}*/
-	memset( candidates_len, 0, total_master_tile_count * sizeof(unsigned int));
-	memset( candidates_elect, 0, total_master_tile_count * sizeof(unsigned int));
-	memset( candidates_ins, 0, total_master_tile_count * sizeof(unsigned int));
+	memset( candidates_len, 0, total_primary_tile_count * sizeof(unsigned int));
+	memset( candidates_elect, 0, total_primary_tile_count * sizeof(unsigned int));
+	memset( candidates_ins, 0, total_primary_tile_count * sizeof(unsigned int));
 
-	//memset( candidates_len, 0, total_master_tile_count); // all candidates lengths have a zero length by default
-	//memset( candidates_ins, 8u, total_master_tile_count);
+	//memset( candidates_len, 0, total_primary_tile_count); // all candidates lengths have a zero length by default
+	//memset( candidates_ins, 8u, total_primary_tile_count);
 	//candidates_ins[0]=0;
 	//fprintf(stdout,"\n***%u%\n", candidates_ins[0]);
 
 
 	if(debug) {
 		fprintf(stdout, "\ncandidates_ins:" );
-		for( int i=0;i<total_master_tile_count;i++) {
+		for( int i=0;i<total_primary_tile_count;i++) {
 			fprintf(stdout, "%u,", candidates_ins[i]);
 		}
 		fprintf(stdout, "\n" );
@@ -340,7 +340,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 			}
 		}
 
-		if(debug)printf("dim:%i %i,off:%i %i,l:%i %i,master_tile_cout:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n",width,height,offset_x,offset_y,lx,ly,master_tile_x_count,master_tile_y_count,tile_x_count,tile_y_count,pixel_per_tile,total_pixel_per_tile);
+		if(debug)printf("dim:%i %i,off:%i %i,l:%i %i,primary_tile_cout:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n",width,height,offset_x,offset_y,lx,ly,primary_tile_x_count,primary_tile_y_count,tile_x_count,tile_y_count,pixel_per_tile,total_pixel_per_tile);
 		if(html)printf("<html><head><style>table{ width:851px;height:566px; border-collapse: collapse;}td{padding:0;height:0.2em;width:0.2em;}</style></head><body><table>");
 
 
@@ -493,7 +493,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 	
 
 	const uint32_t SIZE_64 = 65536;//64KB
-	const uint32_t SIZE_MASTER = total_master_tile_count;
+	const uint32_t SIZE_PRIMARY = total_primary_tile_count;
 
 	// buffers for db file reading
 	uint8_t tile_dims_buf[SIZE_64];
@@ -506,14 +506,14 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 
 
-	//SAVING MASTER TILE DIMENSIONS
-	FILE *mastertiledims_file = fopen(mp.dest_mastertiledims_filename, "w");
-	if(mastertiledims_file == NULL ) {
-		fprintf(stderr, "could not open file for save master tile lengths (%s)\n", mp.dest_mastertiledims_filename);
+	//SAVING PRIMARY TILE DIMENSIONS
+	FILE *primarytiledims_file = fopen(mp.dest_primarytiledims_filename, "w");
+	if(primarytiledims_file == NULL ) {
+		fprintf(stderr, "could not open file for save primary tile lengths (%s)\n", mp.dest_primarytiledims_filename);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(mastertiledims_file, "%i	%i", master_tile_x_count, master_tile_y_count);
-	fclose(mastertiledims_file);
+	fprintf(primarytiledims_file, "%i	%i", primary_tile_x_count, primary_tile_y_count);
+	fclose(primarytiledims_file);
 
 	
 	
@@ -609,11 +609,11 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 					if(debug)fprintf(stderr,"1 shift:%i %i\n",shift_x,shift_y);
 
-					for(uint32_t master_y=0;master_y<master_tile_y_count;master_y++) {
-						for(uint32_t master_x=0;master_x<master_tile_x_count;master_x++) {
+					for(uint32_t primary_y=0;primary_y<primary_tile_y_count;primary_y++) {
+						for(uint32_t primary_x=0;primary_x<primary_tile_x_count;primary_x++) {
 
-							uint32_t master_tile_idx = master_tile_x_count * master_y + master_x;
-							if(debug1&&master_x==0&&master_y==0) printf("master_tile_idx:%i\nk:",master_tile_idx);
+							uint32_t primary_tile_idx = primary_tile_x_count * primary_y + primary_x;
+							if(debug1&&primary_x==0&&primary_y==0) printf("primary_tile_idx:%i\nk:",primary_tile_idx);
 							
 					if(debug1)fprintf(stderr,"2 shift:%i %i\n",shift_x,shift_y);
 							
@@ -622,13 +622,13 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 							for(uint32_t k=0;k<thumbs_tile_count*thumbs_tile_count;k++) {
 								
 								
-						 // how to find 64 (8x8 for example) tiles of the master tile?
-             //--------MASTER TILE 0---------------------------MASTER TILE 1-----------|
+						 // how to find 64 (8x8 for example) tiles of the primary tile?
+             //--------PRIMARY TILE 0---------------------------PRIMARY TILE 1-----------|
              // 0     1   2   3   4   5   6   7|   8    9   10   11   12   13   14   15|
              // 400 401 402 403 404 405 406 407| 408  409  410  411  412  413  414  415|  ...
              // 800          ...               |                                       |
              //2800 2801                   2807|2808 2809                          2815|
-             //--------MASTER TILE 50----------|---------------MASTER TILE 51--------  |
+             //--------PRIMARY TILE 50----------|---------------PRIMARY TILE 51--------  |
              //3200                        3207|3208                               3215|
              //3600                        3607|3608                               3615|  ...
              //                ...             |                   ...                 |
@@ -636,23 +636,23 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
              //------------------------------------------------------------------------
              //                               ...
        			// now getting difficult
-						// trying compare 64 tiles of the thumb with corresponding 64 tiles of the master image
+						// trying compare 64 tiles of the thumb with corresponding 64 tiles of the primary image
 						// but they are spread 
 			 
 			 			// 0..8 => k%8    0,...,7    
 			 			//       PLUS
 			 			// 0..400 => (k/8)*50*8 == 0,400,800
 			 			//       PLUS
-			 			// 0,8,16,...400  => MASTER_TILE_IDX*8+(MASTER_TILE_IDX/50)*50*8*8
+			 			// 0,8,16,...400  => PRIMARY_TILE_IDX*8+(PRIMARY_TILE_IDX/50)*50*8*8
 			 
 
 
 
 								uint32_t colors_idx = 
 									k%thumbs_tile_count 
-									+ (k/thumbs_tile_count)*master_tile_x_count*thumbs_tile_count
-									+ (master_tile_idx%master_tile_x_count)*thumbs_tile_count 
-									+ (master_tile_idx/master_tile_x_count)*master_tile_x_count*thumbs_tile_count*thumbs_tile_count;
+									+ (k/thumbs_tile_count)*primary_tile_x_count*thumbs_tile_count
+									+ (primary_tile_idx%primary_tile_x_count)*thumbs_tile_count 
+									+ (primary_tile_idx/primary_tile_x_count)*primary_tile_x_count*thumbs_tile_count*thumbs_tile_count;
 								
 								uint32_t j = 
 									k%thumbs_tile_count 
@@ -665,7 +665,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 			//						exit(EXIT_FAILURE);
 			//					}
 
-								if(debug1&&master_x==0&&master_y==0) 
+								if(debug1&&primary_x==0&&primary_y==0) 
 										printf("%i:%i:%i ",k,colors_idx,j);
 					
 								int  diff_c_r = abs(colors_red_int  [colors_idx] - (int) colors_buf[j*3  ]);
@@ -721,7 +721,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 									printf("%i \n",idx);
 									exit(0);
 								}*/
-								if(debug1&&master_x==0&&master_y==0)
+								if(debug1&&primary_x==0&&primary_y==0)
 										printf("\n");
 								/*candidates_index[iiiii] = 0;
 								candidates_score[iiiii] = 0.0;
@@ -732,29 +732,29 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 								// THIS is the point where the calculated color difference
 								// is compared to the already stored ones.
 								// If its lower, it is more equal and it should be the new candidate
-								//if(diff_color0 < candidates_score[master_tile_idx] ) {
+								//if(diff_color0 < candidates_score[primary_tile_idx] ) {
 								                 // badest score is saved in the last position, and this position 
-																 // will expand from 0 to total_master_tile_count
-								uint32_t offset = master_tile_idx * max_candidates_len;
+																 // will expand from 0 to total_primary_tile_count
+								uint32_t offset = primary_tile_idx * max_candidates_len;
 								unsigned long long old_score=ULLONG_MAX;
 
 								
 
-								if(candidates_len[master_tile_idx]>0 && candidates_len[master_tile_idx] >= max_candidates_len)
-									old_score = candidates_score[offset + candidates_len[master_tile_idx] -1];
+								if(candidates_len[primary_tile_idx]>0 && candidates_len[primary_tile_idx] >= max_candidates_len)
+									old_score = candidates_score[offset + candidates_len[primary_tile_idx] -1];
 
 								if(diff_color0 < old_score) {
 
 									
 									
 									if(debug)
-										printf("idx:%lu master_tile_idx:%05i diff_color0:%05llu,old_score:%05llu,len:%i %i\n",idx,master_tile_idx,diff_color0,old_score,candidates_len[master_tile_idx], max_candidates_len);
+										printf("idx:%lu primary_tile_idx:%05i diff_color0:%05llu,old_score:%05llu,len:%i %i\n",idx,primary_tile_idx,diff_color0,old_score,candidates_len[primary_tile_idx], max_candidates_len);
 									if(unique==1) {
 										int continue_=0;
 										//if there is the same candidate already with a lower score in it
 										// it is removed by shifting all worse one the left
 										// so if the already one is better (lower) => the new one wont be inserted
-										for(uint32_t i=0;i<candidates_len[master_tile_idx];i++) {
+										for(uint32_t i=0;i<candidates_len[primary_tile_idx];i++) {
 											if(candidates_index[offset + i] == idx) {
 												if(debug)fprintf(stdout, "same candidate already selected\n");
 												if( candidates_score[offset + i] <= diff_color0) {
@@ -763,15 +763,15 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 													break;
 												} else {
 													if(debug)
-														fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[master_tile_idx]);
-													for(uint32_t j=i;j<candidates_len[master_tile_idx];j++) {
+														fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[primary_tile_idx]);
+													for(uint32_t j=i;j<candidates_len[primary_tile_idx];j++) {
 														candidates_index[offset+j] = candidates_index[offset+j+1];
 														candidates_score[offset+j] = candidates_score[offset+j+1];
 														candidates_off_x[offset+j] = candidates_off_x[offset+j+1];
 														candidates_off_y[offset+j] = candidates_off_y[offset+j+1];
 														if(debug)fprintf(stdout, "remove old candidate %i\n", j);
 													}
-													candidates_len[master_tile_idx]--;
+													candidates_len[primary_tile_idx]--;
 
 												}
 											}
@@ -783,33 +783,33 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 											continue;
 										}
 									}
-									candidates_ins[master_tile_idx]++;
+									candidates_ins[primary_tile_idx]++;
 									// the better scores are the lower ones and they are stored at the beginning
 
 									int insert_pos = 0;
-									for(; insert_pos < candidates_len[master_tile_idx]; insert_pos++) {
+									for(; insert_pos < candidates_len[primary_tile_idx]; insert_pos++) {
 										if( diff_color0 < candidates_score[offset + insert_pos] )
 											// the right insert position is found
 											break;
 									}
 				
 									if(debug)
-										fprintf(stdout, "thumbs_db_idx:%lu master_tile_idx:%i insert pos found:%i\n", idx, master_tile_idx, insert_pos);
+										fprintf(stdout, "thumbs_db_idx:%lu primary_tile_idx:%i insert pos found:%i\n", idx, primary_tile_idx, insert_pos);
 
-									if(candidates_len[master_tile_idx] <total_master_tile_count 
-										&& candidates_len[master_tile_idx] < max_candidates_len) {
+									if(candidates_len[primary_tile_idx] <total_primary_tile_count 
+										&& candidates_len[primary_tile_idx] < max_candidates_len) {
 										// if there is any space left in the candidates list
-										// it increases its usage space until the max len (total_master_tile_count)
+										// it increases its usage space until the max len (total_primary_tile_count)
 										// is reached.
-										candidates_len[master_tile_idx]++;
+										candidates_len[primary_tile_idx]++;
 									}
 									if(debug)
-										fprintf(stdout,"master_tile_idx:%i inspos:%i, diff_color0:%llu, idx:%lu, off:%i %i, len:%i\n", master_tile_idx, insert_pos, diff_color0, idx, candidates_off_x[offset + insert_pos], candidates_off_y[offset + insert_pos], candidates_len[master_tile_idx]);
+										fprintf(stdout,"primary_tile_idx:%i inspos:%i, diff_color0:%llu, idx:%lu, off:%i %i, len:%i\n", primary_tile_idx, insert_pos, diff_color0, idx, candidates_off_x[offset + insert_pos], candidates_off_y[offset + insert_pos], candidates_len[primary_tile_idx]);
 
 									//position to insert new score found
 									//shift worse scores to the right
 										
-									for(int i=candidates_len[master_tile_idx] - 1;i>insert_pos;i--) {
+									for(int i=candidates_len[primary_tile_idx] - 1;i>insert_pos;i--) {
 												
 										candidates_index[offset + i] = candidates_index[offset + i - 1];
 										candidates_score[offset + i] = candidates_score[offset + i - 1];
@@ -835,27 +835,27 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 										}*/
 
 									if(debug) {
-									fprintf(stdout, "candidates_index[%i:%i-%i]:{", master_tile_idx, 0, max_candidates_len);
+									fprintf(stdout, "candidates_index[%i:%i-%i]:{", primary_tile_idx, 0, max_candidates_len);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%lu,", candidates_index[offset + i]);
 									}
-									fprintf(stdout, "\ncandidates_score[%i:%i-%i]:{", master_tile_idx, 0, max_candidates_len);
-//									fprintf(stdout, "%05lli ", candidates_score[master_tile_idx + insert_pos ], diff_color0);
+									fprintf(stdout, "\ncandidates_score[%i:%i-%i]:{", primary_tile_idx, 0, max_candidates_len);
+//									fprintf(stdout, "%05lli ", candidates_score[primary_tile_idx + insert_pos ], diff_color0);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%llu,", candidates_score[offset + i]);
 									}
-									fprintf(stdout, "\ncandidates_off[%i:%i-%i]:{", master_tile_idx, 0, max_candidates_len);
+									fprintf(stdout, "\ncandidates_off[%i:%i-%i]:{", primary_tile_idx, 0, max_candidates_len);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%i %i,", candidates_off_x[offset + i], candidates_off_y[offset + i]);
 									}
 									fprintf(stdout, "\ncandidates_ins:" );
-									for( int i=0;i<total_master_tile_count;i++) {
+									for( int i=0;i<total_primary_tile_count;i++) {
 										fprintf(stdout, "%d,", candidates_ins[i]);
 									}
 									fprintf(stdout,"\n");
@@ -871,7 +871,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 											exit(EXIT_FAILURE);
 										}
 										
-										for(uint32_t i=0;i<SIZE_MASTER;i++) {
+										for(uint32_t i=0;i<SIZE_PRIMARY;i++) {
 										//TODO dont know why, somewhere in this program a routine seems to change the offsets. Can anybody identify this error source?
 											if(candidates_off_x[i*max_candidates_len] != 0 && candidates_off_y[i*max_candidates_len] != 0 ) {
 												fprintf(stderr,"*** #%lu one offset should be zero cid: %lu: off:%i %i\n", 
@@ -904,8 +904,8 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 									} // save intermediate result
 								} // better candidate found
 							} // for thumb_tile_count
-						} // for master_x
-					} // for master_y
+						} // for primary_x
+					} // for primary_y
 				} //for shift_x
 			} //for shift_y
 	
@@ -922,26 +922,26 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 
 									if(debug) {
-									for(int master_tile_idx=0;master_tile_idx<total_master_tile_count;master_tile_idx++) {
+									for(int primary_tile_idx=0;primary_tile_idx<total_primary_tile_count;primary_tile_idx++) {
 
-										uint32_t offset = master_tile_idx*max_candidates_len;
+										uint32_t offset = primary_tile_idx*max_candidates_len;
 
-									fprintf(stdout, "candidates_index[%i]:{", master_tile_idx);
+									fprintf(stdout, "candidates_index[%i]:{", primary_tile_idx);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%lu,", candidates_index[offset + i]);
 									}
-									fprintf(stdout, "\ncandidates_score[%i]:{", master_tile_idx);
-//									fprintf(stdout, "%05lli ", candidates_score[master_tile_idx + insert_pos ], diff_color0);
+									fprintf(stdout, "\ncandidates_score[%i]:{", primary_tile_idx);
+//									fprintf(stdout, "%05lli ", candidates_score[primary_tile_idx + insert_pos ], diff_color0);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%llu,", candidates_score[offset + i]);
 									}
-									fprintf(stdout, "\ncandidates_off[%i]:{", master_tile_idx);
+									fprintf(stdout, "\ncandidates_off[%i]:{", primary_tile_idx);
 									for( int i=0;i<max_candidates_len;i++) {
-										if(candidates_len[master_tile_idx]==i)
+										if(candidates_len[primary_tile_idx]==i)
 											fprintf(stdout, "}");
 										fprintf(stdout, "%i %i,", candidates_off_x[offset + i], candidates_off_y[offset + i]);
 									}
@@ -963,8 +963,8 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 
 			
 			unique_run = 1;
-			for(uint32_t i = 0;i<total_master_tile_count-1;i++) {
-				for(uint32_t j = 0;j<total_master_tile_count;j++) {
+			for(uint32_t i = 0;i<total_primary_tile_count-1;i++) {
+				for(uint32_t j = 0;j<total_primary_tile_count;j++) {
 					if(i==j)continue;
 					uint32_t offset_i = i*max_candidates_len+candidates_elect[i];
 					uint32_t offset_j = j*max_candidates_len+candidates_elect[j];
@@ -981,12 +981,12 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 							candidates_elect[i]++;
 						else
 							candidates_elect[j]++;
-						if(candidates_elect[i] == total_master_tile_count) {
+						if(candidates_elect[i] == total_primary_tile_count) {
 							fprintf(stderr, "there were more candidates compared as possible. EXIT\n");
 							exit(EXIT_FAILURE);
 						}
 						unique_run = 0;
-		if(debug){for(uint32_t i=0;i<total_master_tile_count;i++) {
+		if(debug){for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			fprintf(stdout, "%i,", candidates_elect[i]);
 		}
 		fprintf(stdout, "\n");}
@@ -1001,7 +1001,7 @@ int mosaik2_gathering(int master_tile_count, size_t file_size, char * dest_filen
 if(debug) {
 	fprintf(stdout, "\ncandidates_elect:");
 		
-		for(uint32_t i=0;i<total_master_tile_count;i++) {
+		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			fprintf(stdout, "%i,", candidates_elect[i]);
 		}
 		fprintf(stdout, "\n");
@@ -1017,8 +1017,8 @@ if(debug) {
 		exit(EXIT_FAILURE);
 	}
 
-	for(uint32_t i=0;i<SIZE_MASTER;i++) {
-	// total_master_tile_count * max_candidates_len
+	for(uint32_t i=0;i<SIZE_PRIMARY;i++) {
+	// total_primary_tile_count * max_candidates_len
 		uint32_t offset = i * max_candidates_len + candidates_elect[i];
 		fprintf(mosaik2_result,"%i	%li	%llu	%i	%i\n",
 				i,candidates_index[offset],
@@ -1027,7 +1027,7 @@ if(debug) {
 	fclose(mosaik2_result);
 									unsigned long long sum_ins = 0u;
 
-									for( int i=0;i<total_master_tile_count;i++) {
+									for( int i=0;i<total_primary_tile_count;i++) {
 										sum_ins += candidates_ins[i];
 									}
 									fprintf(stdout,"sorting operations to create uniqueness:%llu\n",sum_ins);

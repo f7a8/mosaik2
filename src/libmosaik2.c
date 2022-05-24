@@ -122,11 +122,11 @@ void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *
 	char *thumbs_db_ending=".mtileres";
 	size_t thumbs_db_ending_len = strlen(thumbs_db_ending);
 
-	memset(mp->dest_mastertiledims_filename, 0, 256);
-	strncpy(mp->dest_mastertiledims_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_mastertiledims_filename, ".", 1);
-	strncat(mp->dest_mastertiledims_filename, mosaik2_database_id, mosaik2_database_id_len);
-	strncat(mp->dest_mastertiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
+	memset(mp->dest_primarytiledims_filename, 0, 256);
+	strncpy(mp->dest_primarytiledims_filename, mp->dest_filename, dest_filename_len);
+	strncat(mp->dest_primarytiledims_filename, ".", 1);
+	strncat(mp->dest_primarytiledims_filename, mosaik2_database_id, mosaik2_database_id_len);
+	strncat(mp->dest_primarytiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
  
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
