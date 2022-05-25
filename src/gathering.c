@@ -765,7 +765,7 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 												} else {
 													if(debug)
 														fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[primary_tile_idx]);
-													for(uint32_t j=i;j<candidates_len[primary_tile_idx];j++) {
+													for(uint32_t j=i;j<candidates_len[primary_tile_idx]-1;j++) {
 														candidates_index[offset+j] = candidates_index[offset+j+1];
 														candidates_score[offset+j] = candidates_score[offset+j+1];
 														candidates_off_x[offset+j] = candidates_off_x[offset+j+1];
