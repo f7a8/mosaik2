@@ -103,6 +103,7 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 		fprintf(stderr,"image could not be instanciated\n");
 		exit(EXIT_FAILURE);
 	}
+	free(buffer);
 	
 	
   //       640        = 40                * 16;
@@ -920,6 +921,13 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 	fclose(thumbs_db_invalid);
 	fclose(duplicates_file);
 
+	free( colors_red_int );
+	free( colors_green_int );
+	free( colors_blue_int );
+	free( stddev_red_int );
+	free( stddev_green_int );
+	free( stddev_blue_int );
+
 
 									if(debug) {
 									for(int primary_tile_idx=0;primary_tile_idx<total_primary_tile_count;primary_tile_idx++) {
@@ -1031,6 +1039,15 @@ if(debug) {
 										sum_ins += candidates_ins[i];
 									}
 									fprintf(stdout,"sorting operations to create uniqueness:%llu\n",sum_ins);
+
+	free( candidates_index );
+	free(candidates_score);
+	free(candidates_off_x);
+	free(candidates_off_y);
+	free(candidates_len);
+	free(candidates_elect);
+	free(candidates_ins);
+
 	return 0;
 }
 
