@@ -572,6 +572,7 @@ if(debug) fprintf(stderr, "init\n");
 		
     gdImageJpeg(out_im, out, 100);
   }
+	gdImageDestroy(out_im);
 	fclose(html_out);
 	fclose(src_out);
   fclose(out);
