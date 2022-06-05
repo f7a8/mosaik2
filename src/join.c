@@ -335,12 +335,18 @@ if(debug) fprintf(stderr, "init\n");
 
 	//download part
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
-
 		if( access( candidates[i].temp_filename, F_OK ) == 0 ) {
 			printf("%i/%i already exist %s:%li\n", i,total_primary_tile_count,candidates[i].thumbs_db_name,candidates[i].index );
 			// TODO check hash
 			continue;
 		}
+		if(errno == ENOENT) { //dangeling symlink
+			fprintf(stderr,"%i/%i found dangling symbolic link %s for %s:%li %s\nthose bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n", i,total_primary_tile_count, candidates[i].temp_filename, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			fprintf(stderr,"those bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n" );
+			fprintf(stderr,"you may want have a look at the invalidate mode\n" );
+			exit(EXIT_FAILURE);
+		}
+
 
 
 	if(is_file_local( candidates[i].thumbs_db_filenames )) {
@@ -351,13 +357,12 @@ if(debug) fprintf(stderr, "init\n");
 		File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
 		fprintf(stderr,".\n");
 		} else {
-			fprintf(stderr,"%i/%i symlink %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			fprintf(stderr,"%i/%i symlink %s:%li %s\n", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			int simlink = symlink(candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
 			if(simlink != 0) {
 				fprintf(stderr, "error creating symlink %s for %s\n", candidates[i].temp_filename, candidates[i].thumbs_db_filenames);
 				exit(EXIT_FAILURE);
 			}
-			fprintf(stderr,".\n");
 		}
 
 	} else {
