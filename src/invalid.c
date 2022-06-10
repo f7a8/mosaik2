@@ -28,10 +28,15 @@ void print_invalid(char *filename, size_t filesize, time_t last_modified ) {
 	fprintf(stdout, "%s\t%li\t%li\n", filename, filesize, last_modified);
 }
 
-void print_invalid_(char *filename) {
+void print_invalid_(char *filename,int access) {
+	if(access != 0) {
+		fprintf(stderr, "file (%s) not accessible => invalid: %s\n", filename, strerror(errno));
+		return;
+	}
 	size_t filesize;
 	time_t last_modified;
   struct stat st;
+	//TODO take care about missing files
 	if( stat(filename, &st) != 0) {
 		fprintf(stderr, "error cannot gather file information from (%s)\n", filename);
 		exit(EXIT_FAILURE);
@@ -42,20 +47,27 @@ void print_invalid_(char *filename) {
 	print_invalid(filename, filesize, last_modified);
 }
 
-int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run) {
+int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run, int no_hash_cmp) {
 
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
+	check_thumbs_db(&md);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
 		fprintf(stderr, "ingore_old_invalids must be 0 or 1\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if(dry_run < 0 || dry_run > 1) {
 		fprintf(stderr, "dry_run must be 0 or 1\n");
+		exit(EXIT_FAILURE);
 	} else {
 		DRY_RUN = dry_run;
+	}
+
+	if(no_hash_cmp < 0 || no_hash_cmp > 1 ) {
+		fprintf(stderr, "no_hash_cmp must be 0 or 1\n");
 	}
 		
 
@@ -94,7 +106,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 	}
 	
 	char buf[MAX_FILENAME_LEN];
-	uint8_t image_data[65536];
+	uint8_t image_data[BUFSIZ];
 	//printf("%li database elems\n", mosaik2_database_elems);
 	for(uint64_t j=0;j<mosaik2_database_elems;j++) {
 		memset(buf,0,MAX_FILENAME_LEN);
@@ -130,18 +142,18 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 			if(debug) fprintf(stderr, "check access\n"); 
 			
 			int access_code = access( buf, R_OK );
-			if(debug) fprintf(stderr, "access%i\n",access_code);
+			if(debug) fprintf(stderr, "file (%s) cannot be accessed: %s\n", buf, strerror(errno));
 			if( access_code != 0 ) {
 
 
 				// NOT READABLE => INVALID
-				if(debug)fprintf(stderr, "%li. file (%s) is not readable => invalid\n", j, buf);
-				print_invalid_(buf);
+				if(debug)fprintf(stderr, "%li. file (%s) cannot be accessed => invalid\n", j, buf);
+				print_invalid_(buf,access_code);
 				mark_invalid(invalid_file,j,md.invalid_filename);
 				continue;
 			} else {
 
-
+				//FILE IS ACCESSABLE
 
 				if(debug) fprintf(stderr, "check timestamp\n");
 				// lets first do a timestamp comparison (should be faster, than hash cmp)
@@ -163,34 +175,40 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 
 				if(debug) fprintf(stderr, "old_timestamp: %li, new_timestamp: %li\n", old_timestamp, cur_timestamp);
 
-				// THERE IS A FILE WITH A NEWER TIMESTAMP
-				if(cur_timestamp > old_timestamp) {
-					if(debug)fprintf(stdout, "file version with different timestamp for (%s) available, mark this file as invalid\n",buf);
+				// THERE IS A FILE WITH A ANOTHER TIMESTAMP
+				if(cur_timestamp == old_timestamp) {
+					//BOTH TIMESTAMPS ARE EQUAL, NOW COMPARE THE SIZE
+					if(debug) printf("no newer file\n");
+					//continue;
+				} else {
+					if(debug)fprintf(stdout, "file version with different timestamps for (%s) available, mark this file as invalid\n",buf);
 					print_invalid( buf, cur_filesize, cur_timestamp );	
 					mark_invalid(invalid_file, j,md.invalid_filename);
-				} else {
-					if(debug) printf("no newer file\n");
 					continue;
 				}
 				
-				uint32_t old_filesize = 0;
-				if(fseeko(filesizes_file,j*sizeof(uint32_t),SEEK_SET) == -1) {
+				size_t old_filesize = 0;
+				if(fseeko(filesizes_file,j*sizeof(size_t),SEEK_SET) == -1) {
 					fprintf(stderr, "error setting file cursor to nmemb %li in timestamps file\n", j);
 					exit(EXIT_FAILURE);
 				}
-				if( fread(&old_filesize, sizeof(uint32_t), 1, filesizes_file ) == -1 ) {
+				if( fread(&old_filesize, sizeof(size_t), 1, filesizes_file ) == -1 ) {
 					fprintf(stderr, "the filesizes data could not be read for element %li\n", j);
 					exit(EXIT_FAILURE);
 				}
 
+				if(debug) fprintf(stderr, "old_filesize: %li, cur_filesize: %li\n", old_filesize, cur_filesize);
 				// IF FILESIZE HAS CHANGED => IT IS INVALID
 				if(cur_filesize != old_filesize) {
 					
-					fprintf(stderr, "file version with different filesize (%s) %i %li available, mark this file as invalid\n",buf, old_filesize, cur_filesize);
+					fprintf(stderr, "file (%s) version with different filesize (old:%li cur:%li) available => invalid\n",buf, old_filesize, cur_filesize);
 					print_invalid(buf, cur_filesize, cur_timestamp );
 					mark_invalid(invalid_file,j,md.invalid_filename);
 					
 				} else {
+					
+					if(no_hash_cmp == 1) 
+						continue;
 
 					//NEW TIMESTAMP, SAME SIZE? LET'S COMAPARE THE HASH FOR BEING SURE
 					if(debug) printf("no changed filesize\n");
@@ -210,7 +228,7 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 
 					FILE *image_file = fopen(buf, "rb");
 					if(image_file==NULL) {
-						fprintf(stderr,"error while opening image file (%s)\n", buf);
+						fprintf(stderr,"error while opening image file (%s): %s\n", buf, strerror(errno));
 						exit(EXIT_FAILURE);
 					}
 
@@ -231,6 +249,10 @@ int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run)
 					}
 					if( MD5_Final(new_hash, &md5_ctx) == 0 ) {
 						fprintf(stderr, "error md5_final for element %li\n", j);
+						exit(EXIT_FAILURE);
+					}
+					if( fclose(image_file) != 0) {
+						fprintf(stderr, "error closing file\n");
 						exit(EXIT_FAILURE);
 					}
 					
