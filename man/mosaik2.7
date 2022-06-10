@@ -10,13 +10,13 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR index \fImosaik2db\fR \fImax-tiler\fR \fImax-load\fR < \fIfile-list\fR
 .PP
-\fBmosaik2\fR gathering \fImosaik2db\fR tile-resoution file-size dest-name color-stddev-ratio unique mosaik2db < src-file
+\fBmosaik2\fR gathering tile-resoution file-size dest-file color-stddev-ratio unique \fImosaik2db\fR < src-file
 .br
-\fBmosaik2\fR join dest-name pixel-per-tile unique-tiles local-cache mosaik2db0 [, mosaik2db1, ...]
+\fBmosaik2\fR join dest-file pixel-per-tile unique-tiles local-cache \fImosaik2db\fR0 [, \fImosaik2db\fR1, ...]
 .PP
-\fBmosaik2\fR duplicates \fImosaik2db-src\fR mosaik2db-dest dry-run
+\fBmosaik2\fR duplicates \fImosaik2db\fR-src \fImosaik2db\fR-dest dry-run
 .br
-\fBmosaik2\fR invalid \fImosaik2db\fR
+\fBmosaik2\fR invalid \fImosaik2db\fR ignore-old-invalids dry-run no-hash-cmp
 .SH "DESCRIPTION"
 .PP
 mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.
@@ -71,9 +71,24 @@ The maximum load value before temporarily reducing the number of concurrent tile
 text data, which contains filename, filesize and timestamp of all images which should be indexed. How to create a list in the right format is decribed in the section \fBFILE LIST\fR.
 .RE
 .PP
+\fIignore-old-invalids\fR
+.RS 4
+this compares all files again with their original source if set to 1, otherwise only valid files are compared
+.RE
+.PP
+\fIdry-run\fR
+.RS 4
+outputs invalids as desired, but won't save it to the mosaik2db.
+.RE
+.PP
+\fIno-hash-cmp\fR
+.RS 4
+1 to make a full invalid check including file content comparision (md5 hashes), or use 0, the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
+.RE
+.PP
 .SH "FILE LIST"
 If you want to index a bunch of images its is needed to create an input stream 
-to mosaik2 in the format
+to mosaik2 in the text format
 
 file_link{TABULATOR}file_size{TABULATOR}timestamp{LINEBREAK}
 .br
