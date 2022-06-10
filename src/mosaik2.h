@@ -148,6 +148,6 @@ int mosaik2_join(char *dest_filename, int image_width, int unique_tiles, int loc
 /* 1=> mosaik2_db_dir, 2=> mosaik2_db_dir, 3=> dry_run (0 or 1) */
 int mosaik2_duplicates(char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run);
 
-/* 1=> mosaik2_db_dir, 2=> ignore_old_ivalids ( 0 or 1; if 1 already as invalid marked files are not checked again ), 3=> dry_run (0 or 1; if 1, then nothing i save to the invalid file) */
-int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run);
+/* 1=> mosaik2_db_dir, 2=> ignore_old_invalids ( 0 or 1; if 1 already as invalid marked files are not checked again ), 3=> dry_run (0 or 1; if 1, then nothing i save to the invalid file, 4=> no_hash_cmp (0 or 1, 1 ignore already compared hashes) */
+int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run, int no_hash_cmp);
 

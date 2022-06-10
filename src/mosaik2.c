@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 		return mosaik2_init(argv[2],atoi(argv[3]));
 	} else if(strncmp( argv[1], index, strlen(index)) == 0) {
 		if(argc!=5) {
-			fprintf(stderr, "wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => max_tiler_process (uint8_t), 3 => max_load_avg (uint32_t)\n");
+			fprintf(stderr, "wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => max_tiler_process (uint8_t), 3 => max_load_avg (uint32_t). File list for indexing is only accepted via stdin stream.\n");
 			exit(EXIT_FAILURE);
 		}
 		return mosaik2_index(argv[2], atoi(argv[3]), atoi(argv[4]));
@@ -79,11 +79,11 @@ int main(int argc, char **argv) {
 	return mosaik2_join(dest_filename, dest_tile_width, unique_tile, local_cache, argc, argv);
 //		return mosaik2_join(argc, argv);
 	} else if(strncmp( argv[1], invalid, strlen(invalid)) == 0) {
-	if(argc!=5) {
-		fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> ignore_old_ivalids ( 0 or 1; if 1 already as invalid marked files are not checked again ), 3=> dry_run (0 or 1; if 1, then nothing i save to the invalid file)\nThis program marks only new invalid files. It will print a filelist with the new valid informations to stdout, you can use this for creating a new mosaik2 database\n");
+	if(argc!=6) {
+		fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> ignore_old_invalids ( 0 or 1; 1 ingores already marked invalids ), 3=> dry_run (0 or 1; if 1, then nothing is saved to the invalid file), 4 => no_hash_cmp (0 or 1; if 1 only file meta data is compared no file contents)\nThis program marks only new invalid files. It will print a filelist with the new valid informations to stdout, you can use this for creating a new mosaik2 database\n");
 		exit(EXIT_FAILURE);
 	}
-		return mosaik2_invalid(argv[2],atoi(argv[3]), atoi(argv[4]));
+		return mosaik2_invalid(argv[2],atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
 //		return mosaik2_invalid(argc, argv);
 	} else if(strncmp( argv[1], duplicates, strlen(duplicates)) == 0) {
 		if(argc!=5) {
