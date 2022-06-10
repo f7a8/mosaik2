@@ -459,7 +459,7 @@ void check_thumbs_db(mosaik2_database *md) {
 	// TODO make more plause checks
 	uint64_t element_count = read_thumbs_db_count(md);
 	if( get_file_size(md->filenames_index_filename) != element_count*sizeof(long)) {
-		fprintf(stderr, "mosaik2 database file (%s) has not the expected size\n", md->filenames_index_filename);
+		fprintf(stderr, "mosaik2 database file (%s) has not the expected size of:%li\n", md->filenames_index_filename, element_count*sizeof(long));
 		exit(EXIT_FAILURE);
 	}
 
@@ -480,10 +480,10 @@ int check_dest_filename(char *dest_filename) {
 		exit(EXIT_FAILURE);
 	}
 
-	if(dest_filename[0] == '.') {
+	/*if(dest_filename[0] == '.') {
 		fprintf(stderr, "dest_filename (%s) must not start with a dot\n", dest_filename);
 		exit(EXIT_FAILURE);
-	}
+	}*/
 /*
 	char valid_signs[] = {"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-."};
 	uint8_t valid_signs_count = strlen( valid_signs );
@@ -601,24 +601,29 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	}
 
 	entry = exif_content_get_entry(ed->ifd[EXIF_IFD_0], EXIF_TAG_ORIENTATION);
-	exif_data_free(ed);
 	if (entry) {
 		char buf[64];
 		if (exif_entry_get_value(entry, buf, sizeof(buf))) {
     	trim_spaces(buf);
 
-			exif_entry_free(entry);
 
       if (strcmp(buf, "Right-top")==0) {
+//	exif_data_free(ed);
+//			exif_entry_free(entry);
 				return ORIENTATION_RIGHT_TOP;
 			} else if(strcmp(buf, "Bottom-right")==0) {
+//	exif_data_free(ed);
+	//		exif_entry_free(entry);
 				return ORIENTATION_BOTTOM_RIGHT;
 			} else if(strcmp(buf, "Left-Bottom")==0) {
+	//exif_data_free(ed);
+		//	exif_entry_free(entry);
 				return ORIENTATION_LEFT_BOTTOM;
 			}
     }
 	}
-	exif_entry_free(entry);
+	//exif_data_free(ed);
+	//exif_entry_free(entry);
 	return ORIENTATION_TOP_LEFT;
 }
 
