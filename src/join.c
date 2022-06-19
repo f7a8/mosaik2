@@ -340,12 +340,12 @@ if(debug) fprintf(stderr, "init\n");
 			// TODO check hash
 			continue;
 		}
-		if(errno == ENOENT) { //dangeling symlink
+		/*if(errno == ENOENT) { //dangeling symlink
 			fprintf(stderr,"%i/%i found dangling symbolic link %s for %s:%li %s\nthose bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n", i,total_primary_tile_count, candidates[i].temp_filename, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			fprintf(stderr,"those bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n" );
 			fprintf(stderr,"you may want have a look at the invalidate mode\n" );
 			exit(EXIT_FAILURE);
-		}
+		}*/
 
 
 
