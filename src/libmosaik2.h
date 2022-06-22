@@ -48,6 +48,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name);
 void init_mosaik2_project(mosaik2_project *mp, char *thumbs_db_name, char *dest_filename);
 
 int mosaik2_indextask_read_image(mosaik2_indextask *);
+unsigned char* read_stdin(size_t *);
 
 int EndsWith(const char *str, const char *suffix);
 int StartsWith(const char *pre, const char *str);

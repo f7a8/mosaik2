@@ -28,7 +28,7 @@ I.   create file list (read README.file_list)
 
 II.  bin/mosaik2 init mosaik2db 16
 III. bin/mosaik2 index mosaik2db 4 10 < first_mosaik2.file_list
-IV.  bin/mosaik2 gathering 40 6353080 mosaik2.jpg 100 1 mosaik2db < src.jpg
+IV.  bin/mosaik2 gathering 40 mosaik2.jpg 100 1 mosaik2db < src.jpg
 V.   bin/mosaik2 join mosaik2.jpg 150 0 1 mosaik2db
 
 Usage Description
@@ -58,17 +58,16 @@ IV.  Just here we are talking about the actual image from which to create a
      mosaic. Explanation of the parameters:
   1. number of tiles of the narrower side in which small photos are to be
      inserted.
-  2. size of the actual image in bytes.
-  3. name of the target file.
-  4. ratio between color deviations and color values. 100 means evaluate color
+  2. name of the target file.
+  3. ratio between color deviations and color values. 100 means evaluate color
      values only, 0 means evaluate color deviations only. (use 100, less will
      generate not explainable mosaics)
-  5. eager unique enabled by 1, disabled by 0: images are only used one time at
+  4. eager unique enabled by 1, disabled by 0: images are only used one time at
      the best position, otherwise images can be used n times if its the best
      matching image for that region. Making huge mosaics with unique images,
      will lead into a longer processing and shifting of canidates, but the
      result will look better.
-  6. name of the mosaik2 database.
+  5. name of the mosaik2 database.
   as STDIN the actual image from which a mosaic is to be created.
 
 V.   The results of (multiple) gatherings are merged here and the final

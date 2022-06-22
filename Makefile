@@ -49,8 +49,8 @@ test:
 	bin/mosaik2 index test/flower/flowerphotos8 8 0 < flower_photos.file_list
 	bin/mosaik2 init test/flower/flowerphotos16 16
 	bin/mosaik2 index test/flower/flowerphotos16 8 0 < flower_photos.file_list
-	bin/mosaik2 gathering 15 5868357  test/flower/Wiesen-Schaumkraut8.jpeg 100 1 test/flower/flowerphotos8 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
-	bin/mosaik2 gathering 15 5868357  test/flower/Wiesen-Schaumkraut16.jpeg 100 1 test/flower/flowerphotos16 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 gathering 15 test/flower/Wiesen-Schaumkraut8.jpeg 100 1 test/flower/flowerphotos8 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
+	bin/mosaik2 gathering 15 test/flower/Wiesen-Schaumkraut16.jpeg 100 1 test/flower/flowerphotos16 < test/flower/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
 	bin/mosaik2 join test/flower/Wiesen-Schaumkraut8.jpeg 100 0 1 test/flower/flowerphotos8
 	bin/mosaik2 join test/flower/Wiesen-Schaumkraut16.jpeg 100 0 1 test/flower/flowerphotos16
 	diff misc/test/Wiesen-Schaumkraut8.jpeg test/flower/Wiesen-Schaumkraut8.jpeg

@@ -10,7 +10,7 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR index \fImosaik2db\fR \fImax-tiler\fR \fImax-load\fR < \fIfile-list\fR
 .PP
-\fBmosaik2\fR gathering tile-resoution file-size dest-file color-stddev-ratio unique \fImosaik2db\fR < src-file
+\fBmosaik2\fR gathering tile-resoution dest-file color-stddev-ratio unique \fImosaik2db\fR < src-file
 .br
 \fBmosaik2\fR join dest-file pixel-per-tile unique-tiles local-cache \fImosaik2db\fR0 [, \fImosaik2db\fR1, ...]
 .PP
@@ -31,7 +31,7 @@ For now a single database can have size_t-1 entries. The indexing will stop afte
 .br
 If hanging index subprocesses were not able to safe their results, you can reduce the line_offset by \fImax-tiler\fR. Images which may be indexed twice can be later invalidated in \fBduplicates\fR mode.
 .PP
-After your mosaik2 database(s) have been created, you can start to work on your individually mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. If you mix several mosaik2 database different \fItile-resolutions\fR can be chosen here.
+After your mosaik2 database(s) have been created, you can start to work on your individual mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. If you mix several mosaik2 database different \fItile-resolutions\fR can be chosen here.
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases and will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
 
@@ -185,7 +185,7 @@ mosaik2 index first_mosaik2_db 4 10 < first_mosaik2.file_list
 .br
 mosaik2 duplicates mosaik2_db
 .br
-mosaik2 gathering 40 6353080 my_first_mosaik2.jpeg 100 first_mosaik2_db < source_image.jpeg
+mosaik2 gathering 40 my_first_mosaik2.jpeg 100 first_mosaik2_db < source_image.jpeg
 .br
 mosaik2 join my_first_mosaik2.jpeg 150 0 1 first_mosaik2_db
 .SH "NOTE"

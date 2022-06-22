@@ -17,7 +17,7 @@ mona lisa 33 2017 95%
 #include "libmosaik2.h"
 	
 	
-int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
+int mosaik2_gathering(int primary_tile_count, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -52,7 +52,6 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 	mosaik2_project mp = {
 		.ratio = ratio,
 		.unique = unique,
-		.file_size = file_size,
 		.primary_tile_count = primary_tile_count
 	};
 
@@ -66,38 +65,19 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 	const uint8_t out = 0;
 	//const uint8_t duplicates_allowed = 0;
 
-	if(debug) printf("primary_tile_count:%i,thumbs_tile_count:%i,file_size:%li\n",primary_tile_count,thumbs_tile_count,file_size);
-
-  uint8_t *buffer = malloc(mp.file_size);
-
-  if(!buffer) {
-    fprintf(stderr,"memory could not be allocated for primary image data\n");
-    exit(EXIT_FAILURE);
-  }
-
-  size_t bytes_read = fread(buffer, 1, file_size, stdin);
-
-	if(bytes_read != file_size) {
-  	free( buffer );
-    fprintf(stderr, "image could not be loaded bytes_should:%li, bytes_read:%li\n", file_size, bytes_read);
-    exit(EXIT_FAILURE);
-  }
-
-	char buf2[1];
-	if(fread(buf2, 1,1, stdin)>0) {
-		fprintf(stderr, "after file_size (%li) is at least one byte further more to read\n", file_size);
-		exit(EXIT_FAILURE);
-	}
-
+	if(debug) printf("primary_tile_count:%i,thumbs_tile_count:%i\n",primary_tile_count,thumbs_tile_count);
+	
+	unsigned char* buffer = read_stdin(&mp.file_size);
 	fclose(stdin);
 
+
   gdImagePtr im;
-	int ft = get_file_type_from_buf( buffer, file_size);
+	int ft = get_file_type_from_buf( buffer, mp.file_size);
 
   if(ft == FT_JPEG) 
-		im = gdImageCreateFromJpegPtrEx(file_size, buffer, 0);
+		im = gdImageCreateFromJpegPtrEx(mp.file_size, buffer, 0);
 	else if(ft == FT_PNG)
-		im = gdImageCreateFromPngPtr(file_size, buffer);
+		im = gdImageCreateFromPngPtr(mp.file_size, buffer);
 	else {
 		free(buffer);
 		fprintf(stderr,"image could not be instanciated\n");
@@ -561,7 +541,7 @@ int mosaik2_gathering(int primary_tile_count, size_t file_size, char * dest_file
 			}
 
 			if(invalid_buf[i/2]==1) {
-				fprintf(stderr,"thumb (%lu) is marked as invalid, will be skipped\n", idx);
+				if(debug)fprintf(stderr,"thumb (%lu) is marked as invalid, will be skipped\n", idx);
 
 				// in case of invalid entries move the file pointers without reading the colors data
 				fseeko(thumbs_db_image_colors,thumbs_db_total_tile_count*3,SEEK_CUR);

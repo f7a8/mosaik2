@@ -842,6 +842,35 @@ void mosai2_indextask_deconst(mosaik2_indextask *task) {
 	
 }
 
+unsigned char* read_stdin( size_t *file_size) {
+
+	unsigned char *buffer0[BUFSIZ];
+  unsigned char *buffer = malloc(BUFSIZ);
+	(*file_size) = 0;
+
+  if(!buffer) {
+    fprintf(stderr,"memory could not be allocated for primary image data\n");
+    exit(EXIT_FAILURE);
+  }
+	int i=1;
+	while(1) {
+  	size_t bytes_read = fread(buffer0, 1, BUFSIZ, stdin);
+		size_t new_file_size = (*file_size) + bytes_read;
+		if((buffer = realloc(buffer, new_file_size))==NULL || errno == ENOMEM) {
+  		free( buffer );
+    	fprintf(stderr, "image could not be loaded bytes_should:%li, bytes_read:%li\n", (*file_size), bytes_read);
+    	exit(EXIT_FAILURE);
+		}
+		i++;
+		
+		memcpy(buffer+(*file_size),buffer0,bytes_read);
+		(*file_size) = new_file_size;
+		if(bytes_read<BUFSIZ) 
+			break;
+	}
+	return buffer;
+}
+
 #include <sys/timeb.h>
 void print_usage(char *m) {
 	struct timeb tb;

@@ -53,19 +53,18 @@ int main(int argc, char **argv) {
 		return mosaik2_tiler(NULL);*/
 	} else if(strncmp( argv[1], gathering, strlen(gathering)) == 0) {
 
-		if(argc!=8) {
-			fprintf(stderr,"wrong parameter. usage param: \n\t1 => primary_tile_count (only approx. depends on the input image, can be slightly more)\n\t2 => file_size in bytes\n\t3 => dest_filename (including jpeg or png suffix)\n\t4 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)\n\t5 => unique (0 or 1) use a tile at least one time\n\t6 => pathname to mosaik2_thumb_db\nImage data is only accepted via stdin stream.\n");
+		if(argc!=7) {
+			fprintf(stderr,"wrong parameter. usage param: \n\t1 => primary_tile_count (only approx. depends on the input image, can be slightly more)\n\t2 => dest_filename (including jpeg or png suffix)\n\t3 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)\n\t4 => unique (0 or 1) use a photo at least one time\n\t5 => pathname to mosaik2_thumb_db\nImage data is only accepted via stdin stream.\n");
 			exit(EXIT_FAILURE);
 		}
 
 		uint8_t primary_tile_count = atoi(argv[2]);
-		uint32_t file_size=atoi(argv[3]);
-		char *dest_filename=argv[4];
-		uint8_t ratio = atoi(argv[5]);
-		uint8_t unique = atoi(argv[6]);
-		char *mosaik2_db_name=argv[7];
+		char *dest_filename=argv[3];
+		uint8_t ratio = atoi(argv[4]);
+		uint8_t unique = atoi(argv[5]);
+		char *mosaik2_db_name=argv[6];
 
-		return mosaik2_gathering(primary_tile_count, file_size, dest_filename, ratio, unique, mosaik2_db_name);
+		return mosaik2_gathering(primary_tile_count, dest_filename, ratio, unique, mosaik2_db_name);
 	} else if(strncmp( argv[1], join, strlen(join)) == 0) {
 	if(argc<=5) {
 		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per primary tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),\n\t5 => thumbs_db_name_1\n\t[ ... ]\n");
