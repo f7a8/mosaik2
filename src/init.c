@@ -108,15 +108,17 @@ void create_mosaik2_database_file_readme(char *filename) {
 	}
 }
 
-int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount) {
+int mosaik2_init(mosaik2_arguments *args) {
 	
+	char *mosaik2_database_name = args->mosaik2db;
+	int tilecount = args->resolution;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);
 
 	check_resolution(tilecount);
 
-	if( mkdir(mosaik2_database_name, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {	
+	if( mkdir(mosaik2_database_name, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
 		fprintf(stderr,"mosaik2 database directory (%s) could not be created: %s\n", mosaik2_database_name, strerror(errno));
 		exit(EXIT_FAILURE);
 	}

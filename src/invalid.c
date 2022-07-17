@@ -47,7 +47,12 @@ void print_invalid_(char *filename,int access) {
 	print_invalid(filename, filesize, last_modified);
 }
 
-int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run, int no_hash_cmp) {
+int mosaik2_invalid(mosaik2_arguments *args) {
+
+	char *mosaik2_db_name = args->mosaik2db;
+	int ignore_old_invalids = args->ignore_old_invalids;
+	int dry_run = args->dry_run;
+	int no_hash_cmp = args->no_hash_cmp;
 
 
 	mosaik2_database md;

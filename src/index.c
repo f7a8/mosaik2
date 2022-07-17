@@ -10,8 +10,8 @@ double read_system_load();
 void check_pid_file(mosaik2_database *md);
 void write_pid_file(mosaik2_database *md);
 void remove_pid_file(mosaik2_database *md);
-void process_input_data(mosaik2_context *ctx, mosaik2_database *md);
-void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i,FILE *);
+void process_input_data(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md);
+void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i,FILE *);
 //void signal_handler(int signal);
 void mosaik2_index_add_tiler_pid(mosaik2_context *, pid_t);
 void mosaik2_index_clean_tiler_pids(mosaik2_context *);
@@ -49,7 +49,11 @@ printf("what happened to this child? (status=%x)\n",
 }
 }
 
-int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, uint32_t max_load_avg) {
+int mosaik2_index(mosaik2_arguments *args) {
+
+	char *mosaik2_database_name = args->mosaik2db;
+  uint32_t max_tiler_processes = args->max_jobs;
+	uint32_t max_load_avg = args->max_load;
 
 	//signal(SIGINT, signal_handler);
 
@@ -67,7 +71,7 @@ int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, ui
 	check_pid_file(&md);
 	write_pid_file(&md);
 
-	process_input_data(&ctx, &md);
+	process_input_data(args, &ctx, &md);
 
 	remove_pid_file(&md);
 
@@ -141,7 +145,7 @@ void remove_pid_file(mosaik2_database *md) {
 }
 
 
-void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
+void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md) {
 	
 	//mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
@@ -159,7 +163,7 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	}
 	ctx->start_t = time(NULL);
 	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0 && i < maxmemb) {
-		process_next_line(ctx, md, lineptr, i++,stdin0);
+		process_next_line(args, ctx, md, lineptr, i++,stdin0);
 	}
 	free(lineptr);
 	if(exiting == 1) {
@@ -173,7 +177,7 @@ void process_input_data(mosaik2_context *ctx, mosaik2_database *md) {
 	wait(&wstatus); //TODO doesnt work always
 }
 
-void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i, FILE *file) {
+void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i, FILE *file) {
 
   if(ctx->exiting)
 		fprintf(stdout, "input data is not resumed, EXITing because of SIGTERM.");
@@ -216,7 +220,7 @@ void process_next_line(mosaik2_context *ctx, mosaik2_database *md, char *line, s
 	if(pid==0) {
 		// closing the input file now, because there where reproduceable invalid data in the main process. Don't know why.
 		fclose(file);
-		mosaik2_tiler(md, &task);
+		mosaik2_tiler(args, md, &task);
 
 		int jobs = ctx->current_tiler_processes + 1;
 		double img_per_min = 60.*i/(time(NULL)-ctx->start_t);

@@ -5,94 +5,200 @@
 #include <string.h>
 #include <openssl/md5.h>
 #include <err.h>
+#include <unistd.h>
+#include <error.h>
 
 #include "mosaik2.h"
 
+void print_usage();
+void print_help();
+void print_version();
+void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv);
+
+
 int main(int argc, char **argv) {
 
-	if(argc==1) {
-		fprintf(stderr,"mosaik2 - creates real photo mosaics\n\n");
-		fprintf(stderr,"mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.\n");
-		fprintf(stderr,"website at https://f7a8.github.io/mosaik2/\n\n\nwrong parameter. append an action.\n");
-		exit(EXIT_FAILURE);
+  mosaik2_arguments args;
+	get_mosaik2_arguments(&args, argc, argv);
+
+	if(strncmp( args.mode, "init", strlen("init")) == 0) {
+		return mosaik2_init(&args);
+	} else if(strncmp( args.mode, "index", strlen("index")) == 0) {
+		return mosaik2_index(&args);
+	} else if(strncmp( args.mode, "gathering", strlen("gathering")) == 0) {
+		return mosaik2_gathering(&args);
+	} else if(strncmp( args.mode, "join", strlen("join")) == 0) {
+		return mosaik2_join(&args);
+	} else if(strncmp( args.mode, "invalid", strlen("invalid")) == 0) {
+		return mosaik2_invalid(&args);
+	} else if(strncmp( args.mode, "duplicates", strlen("duplicates")) == 0) {
+		return mosaik2_duplicates(&args);
 	}
 
-	const char *init = "init";
-	const char *index = "index";
-	//const char *tiler = "tiler";
-	const char *gathering = "gathering";
-	const char *join = "join";
-	const char *invalid = "invalid";
-	const char *duplicates = "duplicates";
-
-	if(strncmp( argv[1], init, strlen(init)) == 0) {
-		if(argc!=4) {
-			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => tilecount\n");
-			exit(EXIT_FAILURE);
-		}
-		return mosaik2_init(argv[2],atoi(argv[3]));
-	} else if(strncmp( argv[1], index, strlen(index)) == 0) {
-		if(argc!=5) {
-			fprintf(stderr, "wrong parameter. usage param 1=> mosaik2_database_name (path to directory), 2 => max_tiler_process (uint8_t), 3 => max_load_avg (uint32_t). File list for indexing is only accepted via stdin stream.\n");
-			exit(EXIT_FAILURE);
-		}
-		return mosaik2_index(argv[2], atoi(argv[3]), atoi(argv[4]));
-	/*} else if(strncmp(	argv[1], tiler, strlen(tiler)) == 0) {
-	
-		if(argc!=4) {
-			fprintf(stderr,"wrong parameter. usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream\n");
-			exit(EXIT_FAILURE);
-		}
-		uint32_t tile_count = atoi(argv[2]);
-		uint32_t file_size = atoi(argv[3]);
-		
-		mosaik2_indextask task;
-		task.tile_count = atoi(argv[2]);
-		task.filesize = atoi(argv[3]);
-
-		return mosaik2_tiler(NULL);*/
-	} else if(strncmp( argv[1], gathering, strlen(gathering)) == 0) {
-
-		if(argc!=7) {
-			fprintf(stderr,"wrong parameter. usage param: \n\t1 => primary_tile_count (only approx. depends on the input image, can be slightly more)\n\t2 => dest_filename (including jpeg or png suffix)\n\t3 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)\n\t4 => unique (0 or 1) use a photo at least one time\n\t5 => pathname to mosaik2_thumb_db\nImage data is only accepted via stdin stream.\n");
-			exit(EXIT_FAILURE);
-		}
-
-		uint8_t primary_tile_count = atoi(argv[2]);
-		char *dest_filename=argv[3];
-		uint8_t ratio = atoi(argv[4]);
-		uint8_t unique = atoi(argv[5]);
-		char *mosaik2_db_name=argv[6];
-
-		return mosaik2_gathering(primary_tile_count, dest_filename, ratio, unique, mosaik2_db_name);
-	} else if(strncmp( argv[1], join, strlen(join)) == 0) {
-	if(argc<=5) {
-		fprintf(stderr,"wrong parameter. usage:\n\t1=> dest_filename (including jpeg or png suffix)\n\t2=> image width in per primary tile in px\n\t3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved\n\t4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),\n\t5 => thumbs_db_name_1\n\t[ ... ]\n");
-		exit(EXIT_FAILURE);
-	}
-
-	char *dest_filename = argv[2];
-	uint32_t dest_tile_width = atoi(argv[3]);
-	uint8_t unique_tile = atoi(argv[4]);
-	uint8_t local_cache = atoi(argv[5]);
-	return mosaik2_join(dest_filename, dest_tile_width, unique_tile, local_cache, argc, argv);
-//		return mosaik2_join(argc, argv);
-	} else if(strncmp( argv[1], invalid, strlen(invalid)) == 0) {
-	if(argc!=6) {
-		fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> ignore_old_invalids ( 0 or 1; 1 ingores already marked invalids ), 3=> dry_run (0 or 1; if 1, then nothing is saved to the invalid file), 4 => no_hash_cmp (0 or 1; if 1 only file meta data is compared no file contents)\nThis program marks only new invalid files. It will print a filelist with the new valid informations to stdout, you can use this for creating a new mosaik2 database\n");
-		exit(EXIT_FAILURE);
-	}
-		return mosaik2_invalid(argv[2],atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
-//		return mosaik2_invalid(argc, argv);
-	} else if(strncmp( argv[1], duplicates, strlen(duplicates)) == 0) {
-		if(argc!=5) {
-			fprintf(stderr,"wrong parameter. usage param 1=> mosaik2_db_dir, 2=> mosaik2_db_dir, 3=> dry_run (0 or 1)\n");
-			exit(EXIT_FAILURE);
-		}
-		return mosaik2_duplicates(argv[2],argv[3],atoi(argv[4]));
-	} else {
-		fprintf(stderr, "invalid action, valid actions: {init,index,gathering,join,invalid,duplicates}\n");
-		exit(EXIT_FAILURE);
-	}
 	return 0;
 }
+
+void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
+	memset(args,0,sizeof(mosaik2_arguments));
+	args->resolution = 16;
+	args->color_stddev_ratio = 100;
+	args->pixel_per_tile = 200;
+
+	int opt;
+	while((opt = getopt(argc, argv, "dhij:l:np:r:R:suvVy?")) != -1 ) {
+		switch(opt) {
+			case 'd': args->duplicate_reduction = 1; break;
+			case 'h': print_usage(); print_help(); exit(0);
+			case 'i': args->ignore_old_invalids = 1; break;
+			case 'j': args->max_jobs = atoi(optarg); break;
+			case 'l': args->max_load = atoi(optarg); break;
+			case 'n': args->no_hash_cmp = 1; break;
+			case 'p': args->pixel_per_tile = atoi(optarg); break;
+			case 'r': args->resolution = atoi(optarg); break;
+			case 'R': args->color_stddev_ratio = atoi(optarg); break;
+			case 's': args->symlink_cache = 1; break;
+			case 'u': args->unique = 1; break;
+			case 'v': print_version(); exit(0);
+			case 'V': args->verbose = 1; break;
+			case 'y': args->dry_run = 1; break;
+			case '?': print_usage(); print_help(); exit(0);
+			default: /* ? */ print_usage(); break;
+		}
+	}
+
+	if(optind >= argc) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+
+	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalidate"};
+	
+	args->mode = argv[optind];
+	int mode = -1;
+	for(int i=0;i<6;i++) {
+		if(strncmp(args->mode, modes[i], strlen(args->mode))==0) {
+			mode=i; break;
+		}
+	}
+	if(mode==-1) {
+		fprintf(stderr, "bad mode\n");
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+
+	int invalid = 0;
+	int marg = argc-optind;
+	invalid = 
+		 (mode == 0 && marg != 2)
+	|| (mode == 1 && marg != 2)
+	|| (mode == 2 && marg != 4)
+	|| (mode == 3 && marg < 3)
+	|| (mode == 4 && marg != 3)
+	|| (mode == 5 && marg != 2);
+
+	if(invalid) {
+		fprintf(stderr, "invalid argument count\n");
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+
+	switch(mode) {
+		case 0: args->mosaik2db = argv[optind+1]; break;
+		case 1: args->mosaik2db = argv[optind+1]; break;
+		case 2: /*gathering */ 
+						args->dest_image = argv[optind+1];
+						args->tile_resolution = atoi(argv[optind+2]);
+            args->mosaik2db = argv[optind+3]; break;
+		case 3: /* join */ 
+						args->dest_image = argv[optind+1];
+            args->mosaik2dbs= &argv[optind+2];
+						args->mosaik2dbs_count = marg-2; break;
+		case 4: args->mosaik2db =  argv[optind+2];
+            args->mosaik2dbs= &argv[optind+3]; 
+						args->mosaik2dbs_count = marg-2; break;
+		case 5: args->mosaik2db = argv[optind+2]; break;
+	}
+	
+	if(args->verbose) {
+		printf ("mode = %s\n", args->mode);
+		printf ("mosaik2db = %s\n", args->mosaik2db);
+		for(int i=0;i<args->mosaik2dbs_count;i++) {
+			printf("mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
+		}
+		printf ("dest-image = %s\n", args->dest_image);
+	  printf ("options:\nverbose = %s\ndry-run = %s\nresolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\n\n",
+              args->verbose ? "yes" : "no",
+
+              args->dry_run ? "yes" : "no",
+              args->resolution,
+              args->max_load,
+              args->max_jobs,
+              args->unique ? "yes" : "no",
+              args->color_stddev_ratio,
+              args->pixel_per_tile,
+              args->duplicate_reduction ? "yes" : "no",
+              args->symlink_cache ? "yes" : "no",
+              args->ignore_old_invalids ? "yes" : "no",
+              args->no_hash_cmp ? "yes" : "no");
+	}
+}
+
+void print_version() {
+	fprintf(stdout, "mosaik2 v%s\n", MOSAIK2_VERSION);
+}
+
+void print_usage() {
+	fprintf(stdout, 
+"Usage: mosaik2 [OPTION]... init MOSAIK2DB\n"
+"  or:  mosaik2 [OPTION]... index MOSAIK2DB < file-list\n"
+"  or:  mosaik2 [OPTION]... gathering dest-image tile-resolution MOSAIK2DB < src-image\n"
+"  or:  mosaik2 [OPTION]... join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
+"  or:  mosaik2 [OPTION]... duplicates MOSAIK2DB_0 MOSAIK2DB_1\n"
+"  or:  mosaik2 [OPTION]... invalid MOSAIK2DB\n"
+"  or:  mosaik2 [-h|-v]\n" );
+}
+
+void print_help() {
+	fprintf(stdout, 
+"\nmosaik2 -- creates real photo mosaics. ready for large data sets.\n"
+"\n"
+" OPTIONS\n"
+"  -v                         Verbose output\n"
+"  -y                         Dry run: does not change the database\n"
+"  -h                         Print this help and exit\n"
+"      --verbose              Print program version and exit\n"
+"\n"
+" INIT-OPTIONS\n"
+"  -r, --resolution=PIXEL     Set the database image resolution to PIXEL\n"
+"                             (default 16) times\n"
+"\n"
+" INDEX-OPTIONS\n"
+"  -j COUNT                   Limit concurrent worker jobs to COUNT (default\n"
+"                             processor cout)\n"
+"  -l LOAD                    Soft limit the system load to LOAD (default 0,\n"
+"                             means off)\n"
+"\n"
+" GATHERING-OPTIONS\n"
+"  -u                         Allow images only once\n"
+"  -R PERCENT                 Ratio between color matching and color\n"
+"                             standard devation (default 100 means only color)\n"
+"                             matching only, 0 uses only stddev informations)\n"
+"\n"
+" JOIN-OPTIONS\n"
+"  -p PIXEL                   Image resolution in PIXEL of one image tile in\n"
+"                             the dest-image (default 200)\n"
+"  -s                         Cache strategy: create symlinks instead of local\n"
+"                             file copies\n"
+//"  -c PATH                    Cache path (default ~/.mosaik2)\n"
+"  -d                         Fast but slight reduction of duplicate images\n"
+"\n"
+" INVALIDATE-OPTIONS\n"
+"  -n                         No hash comparison\n"
+"  -i                         Ignore old invalid images\n"
+"\n"
+"Website: https://f7a8.github.io/mosaik2/\n"
+"\n"
+"Report bugs to https://github.com/f7a8/mosaik2/issues.\n");
+}
+
+

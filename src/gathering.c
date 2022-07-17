@@ -17,7 +17,13 @@ mona lisa 33 2017 95%
 #include "libmosaik2.h"
 	
 	
-int mosaik2_gathering(int primary_tile_count, char * dest_filename, int ratio, int unique, char *mosaik2_db_name) {
+int mosaik2_gathering(mosaik2_arguments *args) {
+
+	int primary_tile_count = args->tile_resolution;
+	char *dest_filename = args->dest_image;
+	int ratio = args->color_stddev_ratio;
+	int unique = args->unique;
+	char *mosaik2_db_name = args->mosaik2db;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);

@@ -17,7 +17,14 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int local_cache, int argc, char **argv) {
+int mosaik2_join(mosaik2_arguments *args) {
+
+	char *dest_filename = args->dest_image;
+	int dest_tile_width = args->pixel_per_tile;
+	int unique_tile = args->duplicate_reduction;
+	int local_cache = args->symlink_cache;
+	int debug = args->verbose;
+
 	char * home = getenv("HOME");
 
 	int ft = check_dest_filename( dest_filename );
@@ -37,11 +44,10 @@ int mosaik2_join(char *dest_filename, int dest_tile_width, int unique_tile, int 
 		exit(EXIT_FAILURE);
 	} 
 
-	int debug = 0;
 
 	
-	uint8_t argv_start_idx_thumbs_db_names = 6;
-	uint8_t argv_end_idx_thumbs_db_names = argc;	
+	uint8_t argv_start_idx_thumbs_db_names = 0;
+	uint8_t argv_end_idx_thumbs_db_names = args->mosaik2dbs_count;	
 	uint8_t primary_tile_x_count=0;// atoi(argv[2]);
 	uint8_t primary_tile_y_count=0;// = atoi(argv[3]);
 
@@ -55,16 +61,16 @@ if(debug) fprintf(stderr, "init\n");
 
 	//read primary tile n count from file
 	for(uint32_t i=argv_start_idx_thumbs_db_names, i0=0; i<argv_end_idx_thumbs_db_names; i++,i0++) {
-		if(debug) fprintf( stderr, "check %i %s\n", i, argv[i]);
+		if(debug) fprintf( stderr, "check %i %s\n", i, args->mosaik2dbs[i]);
 		
-		init_mosaik2_database(&mds[i0], argv[i]);
+		init_mosaik2_database(&mds[i0], args->mosaik2dbs[i]);
 		read_database_id(&mds[i0]);
 		check_thumbs_db(&mds[i0]);
 
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
 		if(debug)
-			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,primarytiledis:%s\n", argv[i],dest_filename,mp.dest_primarytiledims_filename);
+			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,primarytiledis:%s\n", args->mosaik2dbs[i],dest_filename,mp.dest_primarytiledims_filename);
 
 		FILE *primarytiledims_file = fopen(mp.dest_primarytiledims_filename, "r");
 		if( primarytiledims_file == NULL) {
@@ -115,7 +121,7 @@ if(debug) fprintf(stderr, "init\n");
 				exit(EXIT_FAILURE);
 			}	
 		}
-		if(debug)	fprintf(stderr,"tile_count read from parameter %i (%s) => %i\n", i, argv[i], tile_count_local);
+		if(debug)	fprintf(stderr,"tile_count read from parameter %i (%s) => %i\n", i, args->mosaik2dbs[i], tile_count_local);
 	}
 
 	uint32_t total_primary_tile_count = primary_tile_x_count * primary_tile_y_count;
@@ -142,7 +148,7 @@ if(debug) fprintf(stderr, "init\n");
 	for(uint32_t i=argv_start_idx_thumbs_db_names;i<argv_end_idx_thumbs_db_names;i++) {
 
 		
-		fprintf(stderr,"load result file %s\n", argv[i]);
+		fprintf(stderr,"load result file %s\n", args->mosaik2dbs[i]);
 
 		FILE *result_file = fopen(mp.dest_result_filename, "rb");
 		if( result_file == NULL) {
@@ -187,7 +193,7 @@ if(debug) fprintf(stderr, "init\n");
   	ptr = strtok(buf, "\n\t");
   	while(ptr != NULL) {
 			ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
-			candidates0[j].thumbs_db_name = argv[i];
+			candidates0[j].thumbs_db_name = args->mosaik2dbs[i];
 			candidates0[j].index = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].score = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_x = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
@@ -353,9 +359,9 @@ if(debug) fprintf(stderr, "init\n");
 
 		//TODO
 		if(local_cache==1) {
-		fprintf(stderr,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
-		File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
-		fprintf(stderr,".\n");
+			fprintf(stderr,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
+			fprintf(stderr,".\n");
 		} else {
 			fprintf(stderr,"%i/%i symlink %s:%li %s\n", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			int simlink = symlink(candidates[i].thumbs_db_filenames, candidates[i].temp_filename);

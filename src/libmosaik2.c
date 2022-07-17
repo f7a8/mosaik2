@@ -871,8 +871,8 @@ unsigned char* read_stdin( size_t *file_size) {
 	return buffer;
 }
 
-#include <sys/timeb.h>
-void print_usage(char *m) {
+//include <sys/timeb.h>
+/*void print_usage(char *m) {
 	struct timeb tb;
 	ftime(&tb);
     struct rusage resuage;
@@ -883,5 +883,5 @@ void print_usage(char *m) {
       resuage.ru_stime.tv_sec, resuage.ru_stime.tv_usec,
       resuage.ru_maxrss, resuage.ru_ixrss, resuage.ru_idrss, resuage.ru_isrss
   );
-}
+}*/
 

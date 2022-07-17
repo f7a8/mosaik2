@@ -1,9 +1,12 @@
 
+#ifndef _MOSAIK2_H_
+#define _MOSAIK2_H_
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
 #define MOSAIK2_DATABASE_FORMAT_VERSION 5
+#define MOSAIK2_VERSION "0.2"
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
@@ -119,34 +122,39 @@ struct result {
 	int size;
 };
 
+/* Used by main to communicate with parse_opt. */
+struct arguments_struct {
+  char *mode;
+	char *mosaik2db;
+	char **mosaik2dbs;
+	int mosaik2dbs_count;
+	char *dest_image;
+  int verbose;
+	int dry_run;
+	int resolution;
+	int tile_resolution;
+	int max_load, max_jobs;
+	int unique;
+	int color_stddev_ratio;
+	int pixel_per_tile;
+	int duplicate_reduction;
+	int symlink_cache;
+	char *cache_path;
+	int ignore_old_invalids;
+	int no_hash_cmp;
+};
+typedef struct arguments_struct mosaik2_arguments;
 
-int mosaik2_init(char *mosaik2_database_name, uint32_t tilecount);
+int mosaik2_init(mosaik2_arguments*);
+int mosaik2_index(mosaik2_arguments*);
+int mosaik2_gathering(mosaik2_arguments*);
+int mosaik2_join(mosaik2_arguments*);
+int mosaik2_invalid(mosaik2_arguments*);
+int mosaik2_duplicates(mosaik2_arguments*);
+
 int mosaik2_clean(char *mosaik2_database_name);
-int mosaik2_index(char *mosaik2_database_name,  uint32_t max_tiler_processes, uint32_t max_loadavg);
-
-/* usage param 1=> tile_count, 2=> file_size of the image in bytes. Image data is only accepted via stdin stream */
-int mosaik2_tiler(mosaik2_database *, mosaik2_indextask *);
+int mosaik2_tiler(mosaik2_arguments *, mosaik2_database *, mosaik2_indextask *);
 void mosaik2_index_write_to_disk(mosaik2_database *, mosaik2_indextask *);
 
-/**  	1 => primary_tile_count (only approx. depends on the input image, can be slightly more)
-	2 => dest_filename (including jpeg or png suffix)
-	3 => ratio (0<=ratio<=100) of the weightning between image color and image standard deviation of the color (100 could be a good starting value)
-	4 => unique (0 or 1) use a tile at least one time
-	5 => pathname to mosaik2_thumb_db
-*/
-int mosaik2_gathering(int primary_tile_count, char *dest_filename, int ratio, int unique, char *mosaik2_db_name);
 
-/*	1=> dest_filename (including jpeg or png suffix)
-	2=> image width in per primary tile in px
-	3=> unique_tiles ( 1 or 0 ) duplicate tiles can be supressed as much as thumbs_db are involved
-	4 => local_cache ( 1 copy files into ~/.mosaik2/, 0 creates symbolic links),
-	5 => thumbs_db_name_1
-*/
-int mosaik2_join(char *dest_filename, int image_width, int unique_tiles, int local_cache, int argc, char **argv);
-
-/* 1=> mosaik2_db_dir, 2=> mosaik2_db_dir, 3=> dry_run (0 or 1) */
-int mosaik2_duplicates(char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run);
-
-/* 1=> mosaik2_db_dir, 2=> ignore_old_invalids ( 0 or 1; if 1 already as invalid marked files are not checked again ), 3=> dry_run (0 or 1; if 1, then nothing i save to the invalid file, 4=> no_hash_cmp (0 or 1, 1 ignore already compared hashes) */
-int mosaik2_invalid(char *mosaik2_db_name, int ignore_old_invalids, int dry_run, int no_hash_cmp);
-
+#endif
