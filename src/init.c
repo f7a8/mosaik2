@@ -111,7 +111,7 @@ void create_mosaik2_database_file_readme(char *filename) {
 int mosaik2_init(mosaik2_arguments *args) {
 	
 	char *mosaik2_database_name = args->mosaik2db;
-	int tilecount = args->resolution;
+	int tilecount = args->database_image_resolution;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);

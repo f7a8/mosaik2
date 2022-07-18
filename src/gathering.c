@@ -19,7 +19,7 @@ mona lisa 33 2017 95%
 	
 int mosaik2_gathering(mosaik2_arguments *args) {
 
-	int primary_tile_count = args->tile_resolution;
+	int primary_tile_count = args->num_tiles;
 	char *dest_filename = args->dest_image;
 	int ratio = args->color_stddev_ratio;
 	int unique = args->unique;

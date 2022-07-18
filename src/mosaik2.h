@@ -131,8 +131,8 @@ struct arguments_struct {
 	char *dest_image;
   int verbose;
 	int dry_run;
-	int resolution;
-	int tile_resolution;
+	int database_image_resolution;
+	int num_tiles;
 	int max_load, max_jobs;
 	int unique;
 	int color_stddev_ratio;

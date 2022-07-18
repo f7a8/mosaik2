@@ -239,6 +239,19 @@ if(debug) fprintf(stderr, "init\n");
 	uint64_t j=0;
 	uint64_t total_score = 0;
 	char buffer[MAX_FILENAME_LEN];
+
+	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
+	char mkdir_buf[sz+1];
+	snprintf(mkdir_buf, 0, "%s/.mosaik2/mosaik2.hash",home);
+	char *mkdir_path = dirname(mkdir_buf);
+	if(access(mkdir_path, W_OK)!=0) {
+		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
+		//not accessable or writeable, try to create dir
+		if( mkdir(mkdir_path, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
+			fprintf(stderr, "cache directory (%s) could not be created\n", mkdir_path);
+			exit(EXIT_FAILURE);
+		}
+	}
 	
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		if(strcmp(candidates[i].thumbs_db_name, thumbs_db_name)!=0) {
@@ -297,7 +310,6 @@ if(debug) fprintf(stderr, "init\n");
 			fprintf(stderr, "did not read enough hash data, expected %i at idx:%li position:%li but got %li\n",  MD5_DIGEST_LENGTH,candidates[i].index, MD5_DIGEST_LENGTH*candidates[i].index,read);
 			exit(EXIT_FAILURE);
 		}
-		char *buf;
 		size_t sz;
 		sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 		home,
@@ -306,11 +318,7 @@ if(debug) fprintf(stderr, "init\n");
 		candidates[i].hash[8],		candidates[i].hash[9],		candidates[i].hash[10],	candidates[i].hash[11],
 		candidates[i].hash[12],	candidates[i].hash[13],	candidates[i].hash[14],	candidates[i].hash[15]);
 		//candidates[i].hash[16],	candidates[i].hash[17],	candidates[i].hash[18],	candidates[i].hash[19]);
-		buf = (char *)malloc(sz + 1); /* make sure you check for != NULL in real code */
-		if(buf==NULL) {
-			fprintf(stderr, "cannot allocate memory\n");
-			exit(EXIT_FAILURE);
-		}
+		char buf[sz+1];
 		snprintf(buf, sz+1, "%s/.mosaik2/mosaik2.%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 		home,
 		candidates[i].hash[0],		candidates[i].hash[1],		candidates[i].hash[2],		candidates[i].hash[3],
@@ -319,7 +327,8 @@ if(debug) fprintf(stderr, "init\n");
 		candidates[i].hash[12],	candidates[i].hash[13],	candidates[i].hash[14],	candidates[i].hash[15]);
 //		candidates[i].hash[16],	candidates[i].hash[17],	candidates[i].hash[18],	candidates[i].hash[19]);
 		strncpy(candidates[i].temp_filename,buf,strlen(buf));
-		free(buf);
+		
+
 		total_score += candidates[i].score;
 	}
 	fclose(thumbs_db_file);
