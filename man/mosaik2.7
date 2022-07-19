@@ -93,7 +93,7 @@ Ignore-old-invalids: this compares all files again with their original source if
 .PP
 \fB-y\fR
 .RS 4
-Dry-run: outputs invalids or duplicates as desired, but won't save it to the mosaik2db (works only in invalid and duplicates mode).
+Dry-run: outputs invalids or duplicates as desired, but won't save it to the mosaik2db.
 .RE
 .PP
 \fB-d\fR
@@ -108,7 +108,7 @@ Controls the caching strategy. If omitted files are copied to the cache director
 .PP
 \fB-n\fR
 .RS 4
-No-hash-cmp: Set to make a full invalid check including file content comparision (md5 hashes), or use 0, the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
+No-hash-cmp: while checking all images in the mosaik2db, omit the file content comparison through hash compare. This is the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
 .RE
 .PP
 .SH "FILE LIST"
@@ -173,7 +173,7 @@ mosaik2db/imagestddev.bin
 .br
 mosaik2db/image.idx
 .RS 6
-long integers containing the byte offset for their relational partner element in imagecolors.bin and imagestddev.bin. Without this information you have to compute the correct data frame through multiply all tile dimensione (tiledims.bin) of all elements before.
+long integers containing the byte offset for their relational partner element in imagecolors.bin and imagestddev.bin. Without this information you have to compute the correct data frame through multiply all tile dimension (tiledims.bin) of all elements before.
 .RE
 .br
 mosaik2db/invalid.bin
@@ -190,14 +190,29 @@ mosaik2db/timestamps.bin
 mosaik2 project files (here for the my_first_mosaik2.jpeg) are
 .RS 4
 my_first_mosaik2.jpeg
+.RS 6
+The desired photo mosaic result image.
+.RE
 .br
 my_first_mosaik2.jpeg.src
+.RS 6
+A text file of all images used in the photo mosaic, sorted by index.
+.RE
 .br
 my_first_mosaik2.jpeg.html
+.RS 6
+The photo mosaic in table form with image displays.
+.RE
 .br
 my_first_mosaik2.jpeg.result
+.RS 6
+Save the best candidates from the gathering mode. It is saved periodically and at the end.
+.RE
 .br
 my_first_mosaik2.jpeg.mtileres
+.RS 6
+Saves the num_tiles property of the database.
+.RE
 .RE
 
 .SH "EXAMPLE"
