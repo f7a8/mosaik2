@@ -16,5 +16,5 @@ it to the index process or you can use the find program to create a static file
 on disk, which you take as stdin to the index process. The file list can be 
 created like this:
 
-find /root_dir -type f -iregex ".*\.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\t%s\t%T@\n" 
+find /root_dir -type f -iregex ".*\.jpe?g$" -size +10000c -size -100000000c -fprintf  first_mosaik2.file_list "%p\t%s\t%T@\n" 
 
