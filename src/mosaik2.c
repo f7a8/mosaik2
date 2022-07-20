@@ -57,19 +57,15 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	int modes_used[] = {0,0,0,0,0,0};
 
 	char *all_options = "dhij:l:np:r:R:st:uvVy?";
-	char *mode_init_options = "Vr:";
-	char *mode_index_options = "Vj:l:";
-	char *mode_gathering_options = "Vt:uR:";
-	char *mode_join_options = "Vp:sd";
-	char *mode_duplicates_options = "Viyj";
-	char *mode_invalid_options = "Viyn";
 
 	int opt;
-	while((opt = getopt(argc, argv, "dhij:l:np:r:R:st:uvVy")) != -1 ) {
+	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
 			case 'd': args->duplicate_reduction = 1; 
 								modes_used[mode_join]++;
 								break;
+			/* -h should be the only parameter, but this code will print help
+			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
 			case 'i': args->ignore_old_invalids = 1; 
 								modes_used[mode_duplicates]++;
@@ -101,10 +97,10 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			case 'u': args->unique = 1;
 								modes_used[mode_gathering]++;
 								break;
-			case 'v': print_version(); exit(0);
-			case 'V': args->verbose = 1; break;
-			case 'y': args->dry_run = 1; break;
-			default: /* ? */ print_usage(); break;
+			case 'v': print_version(); exit(EXIT_SUCCESS); 
+			case 'V': args->verbose = 1; break; // no modes_used because it appears in serveral modes
+			case 'y': args->dry_run = 1; break; // no modes_used because it appears in serveral modes
+			default: /* ? */ print_usage(); exit(EXIT_FAILURE); break;
 		}
 	}
 
@@ -112,7 +108,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
-
 	
 	args->mode = argv[optind];
 	int mode = -1;
@@ -122,7 +117,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		}
 	}
 
-	if(mode==-1) {
+	if(mode==-1) { // mode is not found in modes
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
@@ -141,12 +136,12 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 
 	int marg = argc-optind;
 	int invalid = 
-		 (mode == 0 && marg != 2)
-	|| (mode == 1 && marg != 2)
-	|| (mode == 2 && marg != 3)
-	|| (mode == 3 && marg < 3)
-	|| (mode == 4 && marg != 3)
-	|| (mode == 5 && marg != 2);
+		 (mode == mode_init       && marg != 2)
+	|| (mode == mode_index      && marg != 2)
+	|| (mode == mode_gathering  && marg != 3)
+	|| (mode == mode_join       && marg < 3)
+	|| (mode == mode_duplicates && marg < 2)
+	|| (mode == mode_invalid    && marg != 2);
 
 	if(invalid) {
 		print_usage();
@@ -165,7 +160,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
             args->mosaik2dbs= &argv[optind+2];
 						args->mosaik2dbs_count = marg-2; break;
 		case 4: args->mosaik2db =  argv[optind+2];
-            args->mosaik2dbs= &argv[optind+3]; 
+						if(marg == 2) {
+            	args->mosaik2dbs= &argv[optind+3]; 
+						}
 						args->mosaik2dbs_count = marg-2; break;
 		case 5: args->mosaik2db = argv[optind+2]; break;
 	}
@@ -212,7 +209,7 @@ void print_usage() {
 "  or:  mosaik2 [-V] [-j <COUNT>] [-l <LOAD>] index MOSAIK2DB < file-list\n"
 "  or:  mosaik2 [-V] [-t <NUM>] [-u] [-R <PERCENT>] gathering dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 [-V] [-p <PIXEL>] [-s] [-d] join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
-"  or:  mosaik2 [-V] [-i] [-y] duplicates MOSAIK2DB_0 MOSAIK2DB_1\n"
+"  or:  mosaik2 [-V] [-i] [-y] duplicates MOSAIK2DB_0 [MOSAIK2DB_1]\n"
 "  or:  mosaik2 [-V] [-i] [-y] [-n] invalid MOSAIK2DB\n"
 "  or:  mosaik2 {-h|-v}\n" );
 }
@@ -239,7 +236,7 @@ void print_help() {
 "              the dest-image (default 200)\n"
 "  -s          Symlinks instead of file copies\n"
 //"  -c PATH                    Cache path (default ~/.mosaik2)\n"
-"  -d          Fast but slight reduction of duplicate images\n"
+"  -d          Fast but not complete reduction of duplicates\n"
 "  -i          Ignore old invalid images\n"
 "  -y          Dry run: does not change the database\n"
 "  -n          No hash comparison\n"

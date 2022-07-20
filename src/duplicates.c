@@ -42,6 +42,9 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 
 	char *mosaik2_db_name_1 = args->mosaik2db;
 	char *mosaik2_db_name_2 = args->mosaik2dbs[0];
+	if(mosaik2_db_name_2 == NULL) {
+		mosaik2_db_name_2 = mosaik2_db_name_1;
+	}
 	int dry_run = args->dry_run;
 
 	mosaik2_database md0;
