@@ -39,31 +39,71 @@ int main(int argc, char **argv) {
 }
 
 void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
+
 	memset(args,0,sizeof(mosaik2_arguments));
+
 	args->database_image_resolution = 16;
 	args->color_stddev_ratio = 100;
 	args->pixel_per_tile = 200;
 	args->num_tiles = 20;
 
+	const int mode_init = 0;
+	const int mode_index = 1;
+	const int mode_gathering = 2;
+	const int mode_join = 3;
+	const int mode_duplicates = 4;
+	const int mode_invalid = 5;
+	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid"};
+	int modes_used[] = {0,0,0,0,0,0};
+
+	char *all_options = "dhij:l:np:r:R:st:uvVy?";
+	char *mode_init_options = "Vr:";
+	char *mode_index_options = "Vj:l:";
+	char *mode_gathering_options = "Vt:uR:";
+	char *mode_join_options = "Vp:sd";
+	char *mode_duplicates_options = "Viyj";
+	char *mode_invalid_options = "Viyn";
+
 	int opt;
-	while((opt = getopt(argc, argv, "dhij:l:np:r:R:st:uvVy?")) != -1 ) {
+	while((opt = getopt(argc, argv, "dhij:l:np:r:R:st:uvVy")) != -1 ) {
 		switch(opt) {
-			case 'd': args->duplicate_reduction = 1; break;
-			case 'h': print_usage(); print_help(); exit(0);
-			case 'i': args->ignore_old_invalids = 1; break;
-			case 'j': args->max_jobs = atoi(optarg); break;
-			case 'l': args->max_load = atoi(optarg); break;
-			case 'n': args->no_hash_cmp = 1; break;
-			case 'p': args->pixel_per_tile = atoi(optarg); break;
-			case 'r': args->database_image_resolution = atoi(optarg); break;
-			case 'R': args->color_stddev_ratio = atoi(optarg); break;
-			case 's': args->symlink_cache = 1; break;
+			case 'd': args->duplicate_reduction = 1; 
+								modes_used[mode_join]++;
+								break;
+			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
+			case 'i': args->ignore_old_invalids = 1; 
+								modes_used[mode_duplicates]++;
+								break;
+			case 'j': args->max_jobs = atoi(optarg); 
+								modes_used[mode_index]++;
+								break;
+			case 'l': args->max_load = atoi(optarg);
+								modes_used[mode_index]++;
+								break;
+			case 'n': args->no_hash_cmp = 1;
+								modes_used[mode_invalid]++;
+								break;
+			case 'p': args->pixel_per_tile = atoi(optarg);
+								modes_used[mode_join]++;
+								break;
+			case 'r': args->database_image_resolution = atoi(optarg);
+								modes_used[mode_init]++;
+								break;
+			case 'R': args->color_stddev_ratio = atoi(optarg);
+								modes_used[mode_gathering]++;
+								break;
+			case 's': args->symlink_cache = 1;
+								modes_used[mode_join]++;
+								break;
 			case 't': args->num_tiles = atoi(optarg);
-			case 'u': args->unique = 1; break;
+								modes_used[mode_gathering]++;
+								break;
+			case 'u': args->unique = 1;
+								modes_used[mode_gathering]++;
+								break;
 			case 'v': print_version(); exit(0);
 			case 'V': args->verbose = 1; break;
 			case 'y': args->dry_run = 1; break;
-			case '?': print_usage(); print_help(); exit(0);
 			default: /* ? */ print_usage(); break;
 		}
 	}
@@ -73,7 +113,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalidate"};
 	
 	args->mode = argv[optind];
 	int mode = -1;
@@ -82,15 +121,26 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			mode=i; break;
 		}
 	}
+
 	if(mode==-1) {
-		fprintf(stderr, "bad mode\n");
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
 
-	int invalid = 0;
+	for(int i=0;i<6;i++) {
+		if(modes_used[i] > 0 && i != mode) {
+			print_usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+	// special case, dry-run is valid in two modes, modes_used was not incremented for it
+	if(args->dry_run == 1 && ( mode != mode_invalid || mode != mode_duplicates ) ) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+
 	int marg = argc-optind;
-	invalid = 
+	int invalid = 
 		 (mode == 0 && marg != 2)
 	|| (mode == 1 && marg != 2)
 	|| (mode == 2 && marg != 3)
@@ -99,10 +149,10 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	|| (mode == 5 && marg != 2);
 
 	if(invalid) {
-		fprintf(stderr, "invalid argument count\n");
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
+
 
 	switch(mode) {
 		case 0: args->mosaik2db = argv[optind+1]; break;
