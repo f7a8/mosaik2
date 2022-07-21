@@ -53,6 +53,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	int ignore_old_invalids = args->ignore_old_invalids;
 	int dry_run = args->dry_run;
 	int no_hash_cmp = args->no_hash_cmp;
+	int debug = args->verbose;
 
 
 	mosaik2_database md;
@@ -76,7 +77,6 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	}
 		
 
-	int debug=0;
 	uint64_t mosaik2_database_elems = read_thumbs_db_count(&md);
 	//uint64_t found_invalid=0;
 	
