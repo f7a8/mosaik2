@@ -14,7 +14,7 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR [-V] [-p <PIXEL>] [-s] [-d] join \fIdest-image\fR \fImosaik2db\fR-0 [, \fImosaik2db\fR-1, ...]
 .PP
-\fBmosaik2\fR [-V] [-i] [-y] duplicates \fImosaik2db\fR-src \fImosaik2db\fR-dest
+\fBmosaik2\fR [-V] [-i] [-y] duplicates \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
 .br
 \fBmosaik2\fR [-V] [-i] [-y] [-n] invalid \fImosaik2db\fR
 .br
@@ -35,7 +35,7 @@ After your mosaik2 database(s) have been created, you can start to work on your 
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases with the same resolution will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
 
-The \fBduplicates\fR mode indentifies images, that appear multiple times in your image collection, and mark all but the first occurance as invalid. This mode prints the invlidated files to stdout. Option dry-run set to 1 make no modification to the mosaik2 database, otherwise 0 will do. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination.
+The \fBduplicates\fR mode indentifies images, that appear multiple times in your image collection, and mark all but the first occurance as invalid. This mode prints the invlidated files to stdout. Option dry-run set to 1 make no modification to the mosaik2 database, otherwise 0 will do. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination or omit mosaik2db-dest.
 .PP
 Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
 .br
