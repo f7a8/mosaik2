@@ -10,6 +10,13 @@
 
 #include "mosaik2.h"
 
+#define MODE_INIT 0
+#define MODE_INDEX 1
+#define MODE_GATHERING 2
+#define MODE_JOIN 3
+#define MODE_DUPLICATES 4
+#define MODE_INVALID 5
+
 void print_usage();
 void print_help();
 void print_version();
@@ -47,12 +54,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->pixel_per_tile = 200;
 	args->num_tiles = 20;
 
-	const int mode_init = 0;
-	const int mode_index = 1;
-	const int mode_gathering = 2;
-	const int mode_join = 3;
-	const int mode_duplicates = 4;
-	const int mode_invalid = 5;
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid"};
 	int modes_used[] = {0,0,0,0,0,0};
 
@@ -62,40 +63,40 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
 			case 'd': args->duplicate_reduction = 1; 
-								modes_used[mode_join]++;
+								modes_used[MODE_JOIN]++;
 								break;
 			/* -h should be the only parameter, but this code will print help
 			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
 			case 'i': args->ignore_old_invalids = 1; 
-								modes_used[mode_duplicates]++;
+								modes_used[MODE_DUPLICATES]++;
 								break;
 			case 'j': args->max_jobs = atoi(optarg); 
-								modes_used[mode_index]++;
+								modes_used[MODE_INDEX]++;
 								break;
 			case 'l': args->max_load = atoi(optarg);
-								modes_used[mode_index]++;
+								modes_used[MODE_INDEX]++;
 								break;
 			case 'n': args->no_hash_cmp = 1;
-								modes_used[mode_invalid]++;
+								modes_used[MODE_INVALID]++;
 								break;
 			case 'p': args->pixel_per_tile = atoi(optarg);
-								modes_used[mode_join]++;
+								modes_used[MODE_JOIN]++;
 								break;
 			case 'r': args->database_image_resolution = atoi(optarg);
-								modes_used[mode_init]++;
+								modes_used[MODE_INIT]++;
 								break;
 			case 'R': args->color_stddev_ratio = atoi(optarg);
-								modes_used[mode_gathering]++;
+								modes_used[MODE_GATHERING]++;
 								break;
 			case 's': args->symlink_cache = 1;
-								modes_used[mode_join]++;
+								modes_used[MODE_JOIN]++;
 								break;
 			case 't': args->num_tiles = atoi(optarg);
-								modes_used[mode_gathering]++;
+								modes_used[MODE_GATHERING]++;
 								break;
 			case 'u': args->unique = 1;
-								modes_used[mode_gathering]++;
+								modes_used[MODE_GATHERING]++;
 								break;
 			case 'v': print_version(); exit(EXIT_SUCCESS); 
 			case 'V': args->verbose = 1; break; // no modes_used because it appears in serveral modes
@@ -129,19 +130,19 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		}
 	}
 	// special case, dry-run is valid in two modes, modes_used was not incremented for it
-	if(args->dry_run == 1 && ( mode != mode_invalid || mode != mode_duplicates ) ) {
+	if(args->dry_run == 1 && !( mode == MODE_INVALID || mode == MODE_DUPLICATES ) ) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
 
 	int marg = argc-optind;
 	int invalid = 
-		 (mode == mode_init       && marg != 2)
-	|| (mode == mode_index      && marg != 2)
-	|| (mode == mode_gathering  && marg != 3)
-	|| (mode == mode_join       && marg < 3)
-	|| (mode == mode_duplicates && marg < 2)
-	|| (mode == mode_invalid    && marg != 2);
+		 (mode == MODE_INIT       && marg != 2)
+	|| (mode == MODE_INDEX      && marg != 2)
+	|| (mode == MODE_GATHERING  && marg != 3)
+	|| (mode == MODE_JOIN       && marg < 3)
+	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
+	|| (mode == MODE_INVALID    && marg != 2);
 
 	if(invalid) {
 		print_usage();
@@ -150,21 +151,32 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 
 
 	switch(mode) {
-		case 0: args->mosaik2db = argv[optind+1]; break;
-		case 1: args->mosaik2db = argv[optind+1]; break;
-		case 2: /*gathering */ 
-						args->dest_image = argv[optind+1];
-            args->mosaik2db = argv[optind+2]; break;
-		case 3: /* join */ 
-						args->dest_image = argv[optind+1];
-            args->mosaik2dbs= &argv[optind+2];
-						args->mosaik2dbs_count = marg-2; break;
-		case 4: args->mosaik2db =  argv[optind+2];
-						if(marg == 2) {
-            	args->mosaik2dbs= &argv[optind+3]; 
-						}
-						args->mosaik2dbs_count = marg-2; break;
-		case 5: args->mosaik2db = argv[optind+2]; break;
+		case MODE_INIT: 
+			args->mosaik2db = argv[optind+1]; 
+			break;
+		case MODE_INDEX:
+			args->mosaik2db = argv[optind+1];
+			break;
+		case MODE_GATHERING: 
+			args->dest_image = argv[optind+1];
+			args->mosaik2db = argv[optind+2];
+			break;
+		case MODE_JOIN:
+			args->dest_image = argv[optind+1];
+      args->mosaik2dbs= &argv[optind+2];
+			args->mosaik2dbs_count = marg-2;
+			break;
+		case MODE_DUPLICATES:
+			args->mosaik2db =  argv[optind+1];
+			args->mosaik2dbs_count = 0;
+			if(marg == 3) {
+      	args->mosaik2dbs= &argv[optind+2];
+				args->mosaik2dbs_count = 1;
+			}
+			break;
+		case MODE_INVALID:
+			args->mosaik2db = argv[optind+1];
+			break;
 	}
 	
 	if(args->verbose) {
