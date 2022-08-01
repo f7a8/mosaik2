@@ -90,4 +90,4 @@ gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 #endif
 
-void print_usage(char *);
+//void print_usage(char *);

@@ -2,7 +2,7 @@
 #include "libmosaik2.h"
 
 
-int mosaik2_tiler(mosaik2_database *md, mosaik2_indextask *task) {
+int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indextask *task) {
 //	print_usage("t read0");
 	if( mosaik2_indextask_read_image(task) ) {
 		fprintf(stderr, "could not read image\n");
@@ -288,6 +288,8 @@ int mosaik2_tiler(mosaik2_database *md, mosaik2_indextask *task) {
 	if(debug1) fprintf(stderr,"ending\n");
 	//print_usage("t_final");
 
+	//TODO
+	//if(args->dry_run == 0)
 	mosaik2_index_write_to_disk(md, task);
 
 	free(task->colors);

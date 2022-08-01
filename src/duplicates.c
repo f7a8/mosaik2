@@ -38,7 +38,14 @@ void p(unsigned char *p0, unsigned char *p1, int nl) {
 }
 
 
-int mosaik2_duplicates(char *mosaik2_db_name_1, char *mosaik2_db_name_2, int dry_run) {
+int mosaik2_duplicates(mosaik2_arguments *args) {
+
+	char *mosaik2_db_name_1 = args->mosaik2db;
+	char *mosaik2_db_name_2 = mosaik2_db_name_1;
+	if(args->mosaik2dbs_count > 0  ) {
+		mosaik2_db_name_2 = args->mosaik2dbs[0];
+	}
+	int dry_run = args->dry_run;
 
 	mosaik2_database md0;
 	init_mosaik2_database(&md0, mosaik2_db_name_1);
