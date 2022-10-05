@@ -53,17 +53,31 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->color_stddev_ratio = 100;
 	args->pixel_per_tile = 200;
 	args->num_tiles = 20;
+	args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN;
 
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid"};
+	
 	int modes_used[] = {0,0,0,0,0,0};
 
-	char *all_options = "dhij:l:np:r:R:st:uvVy?";
+	char *all_options = "c:dD:hij:l:np:r:R:st:uvVy?";
 
 	int opt;
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
 			case 'd': args->duplicate_reduction = 1; 
 								modes_used[MODE_JOIN]++;
+								break;
+			case 'D':
+								if(strncmp("manhattan", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN;
+								} else if(strncmp("euclid", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_EUCLID;
+								} else if(strncmp("chebyshev", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_CHEBYSHEV;
+								} else {
+									print_usage(); exit(EXIT_FAILURE);
+								}
+								modes_used[MODE_INIT]++;
 								break;
 			/* -h should be the only parameter, but this code will print help
 			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
@@ -217,7 +231,7 @@ void print_usage() {
 //"  or:  mosaik2 [OPTION]... invalid MOSAIK2DB\n"
 //"  or:  mosaik2 [-h|-v]\n" );
 	fprintf(stdout, 
-"Usage: mosaik2 [-V] [-r <PIXEL>] init MOSAIK2DB\n"
+"Usage: mosaik2 [-V] [-r <PIXEL>] [-D DIST] [-c SPACE] init MOSAIK2DB\n"
 "  or:  mosaik2 [-V] [-j <COUNT>] [-l <LOAD>] index MOSAIK2DB < file-list\n"
 "  or:  mosaik2 [-V] [-t <NUM>] [-u] [-R <PERCENT>] gathering dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 [-V] [-p <PIXEL>] [-s] [-d] join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
@@ -235,6 +249,8 @@ void print_help() {
 "  -h          Print this help and exit\n"
 "  -v          Print program version and exit\n"
 "  -r PIXEL    Database-image-resolution in PIXEL (default 16)\n"
+"  -D DIST     Color-Distance-Method (default manhatten, euclid, chebyshev)\n"
+"  -c SPACE    Color-Space (default rgb, cielab)\n"
 "  -j COUNT    Limit concurrent worker jobs to COUNT (default\n"
 "              processor cout)\n"
 "  -l LOAD     Soft limit the system load to LOAD (default 0,\n"

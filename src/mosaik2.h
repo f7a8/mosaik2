@@ -19,6 +19,15 @@ extern uint8_t ORIENTATION_LEFT_BOTTOM;
 
 static int const MOSAIK2_CONTEXT_MAX_TILER_PROCESSES = 1024;
 
+static int const MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN = 1;
+static int const MOSAIK2_ARGS_COLOR_DISTANCE_EUCLID = 2;
+static int const MOSAIK2_ARGS_COLOR_DISTANCE_CHEBYSHEV = 3;
+static int const MOSAIK2_ARGS_COLOR_DISTANCE_DEFAULT = 1;
+
+static int const MOSAIK2_ARGS_COLOR_MODEL_RGB = 1;
+static int const MOSAIK2_ARGS_COLOR_MODEL_CIELAB = 2;
+static int const MOSAIK2_ARGS_COLOR_MODEL_DEFAULT = 1;
+
 struct mosaik2_context_struct {
 	int debug;
 	int debug1;
@@ -122,6 +131,7 @@ struct result {
 	int size;
 };
 
+
 /* Used by main to communicate with parse_opt. */
 struct arguments_struct {
   char *mode;
@@ -142,6 +152,8 @@ struct arguments_struct {
 	char *cache_path;
 	int ignore_old_invalids;
 	int no_hash_cmp;
+	int color_distance;
+	int color_space;
 };
 typedef struct arguments_struct mosaik2_arguments;
 
