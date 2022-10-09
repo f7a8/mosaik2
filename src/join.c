@@ -26,6 +26,7 @@ int mosaik2_join(mosaik2_arguments *args) {
 	int debug = args->verbose;
 
 	char * home = getenv("HOME");
+	char *pwd = getenv("PWD");
 
 	int ft = check_dest_filename( dest_filename );
 
@@ -368,14 +369,26 @@ if(debug) fprintf(stderr, "init\n");
 
 		//TODO
 		if(local_cache==1) {
-			fprintf(stderr,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			fprintf(stdout,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
-			fprintf(stderr,".\n");
+			fprintf(stdout,".\n");
 		} else {
-			fprintf(stderr,"%i/%i symlink %s:%li %s\n", i,total_primary_tile_count, candidates[i].thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
-			int simlink = symlink(candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
+
+			fprintf(stdout,"%i/%i create symlink %s:%li %s\n",
+			        i, total_primary_tile_count,
+			        candidates[i].thumbs_db_name, candidates[i].index,
+			        candidates[i].thumbs_db_filenames );
+			int target_len = strlen(pwd) + 1 + strlen(candidates[i].thumbs_db_filenames) + 1;
+			char target[target_len];
+			memset(target, 0, target_len);
+			strncat(target, pwd, strlen(pwd));
+			strncat(target, "/", 1);
+			strncat(target, candidates[i].thumbs_db_filenames, strlen(candidates[i].thumbs_db_filenames));
+
+			int simlink = symlink(target, candidates[i].temp_filename);
 			if(simlink != 0) {
-				fprintf(stderr, "error creating symlink %s for %s\n", candidates[i].temp_filename, candidates[i].thumbs_db_filenames);
+				fprintf(stderr, "error creating symlink %s for %s\n", candidates[i].temp_filename, target);
+				perror("error message =>");
 				exit(EXIT_FAILURE);
 			}
 		}
