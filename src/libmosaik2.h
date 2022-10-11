@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include <errno.h>
 #include <err.h>
+#include <float.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>

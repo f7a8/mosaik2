@@ -6,11 +6,11 @@
 mosaik2 \- creates real photo mosaics. ready for large data sets. 
 .SH "SYNOPSIS"
 .PP
-\fBmosaik2\fR [-V] [-r <PIXEL>] [-D <DIST>] [-c <SPACE>] init \fImosaik2db\fR
+\fBmosaik2\fR [-V] [-r <PIXEL>] [-c <SPACE>] init \fImosaik2db\fR
 .br
 \fBmosaik2\fR [-V] [-j <COUNT>] [-l <LOAD>] index \fImosaik2db\fR < \fIfile-list\fR
 .PP
-\fBmosaik2\fR [-V] [-t <NUM>] [-u] [-R <PERCENT>] gathering \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
+\fBmosaik2\fR [-V] [-t <NUM>] [-u] [-R <PERCENT>] [-D <DIST] gathering \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
 .br
 \fBmosaik2\fR [-V] [-p <PIXEL>] [-s] [-d] join \fIdest-image\fR \fImosaik2db\fR-0 [\fImosaik2db\fR-N ...]
 .PP
@@ -76,20 +76,16 @@ In an existing mosaik2 database the \fIdatabase-image-resolution\fR cannot be ch
 Example of an expected database size: from 2003 to 2019, there are about 53 million JPEG images in Wikimedia Commons, occupying a storage size of about 165 TB. At a image-resolution of 16, the resulting mosaik2 database size was 130 GB.
 .RE
 .PP
-\fB-D\fR colour-distance-method
+\fB-D\fR color-distance-method
 .RS 4
-Specifies the method of determining similar colors. Possible values are manhattan (default), euclid and chebyshev.
+Specifies the method of determining similar colors. Possible values are \fBmanhattan\fR (default), \fBeuclidian\fR and \fBchebyshev\fR.
 .PP
-Manhattan is probably the best compromise between speed and accuracy, which is the sum of the absolute differences of their Cartesian coordinates. Violett in RGB is 161, 70, 255 and a comparison color may 159,71,255 the Manhattan distance would be 3.
+Manhattan is probably the best tradeoff between speed and accuracy, which is the sum of the absolute differences of their Cartesian coordinates. Violett in RGB is 161,70,255 and a comparison color may 159,71,255 the Manhattan distance would be 3.
 .br
 Euclidian distance should be more accurate but is less fast, which is the length of a line segment between the two points. The above example colours √((159-161)²+(71-70)²+(255-255)²) which is ~ 2.23.
 .br
 The Chebyshev distance is the fastest but most inaccurate method, where the distance between two vectors is the greatest of their differences along any coordinate dimension. Same example results to 2 because 159-161 has the absolute value of 2. 71-70 which would be 1 is dropped because it is lower than 2.
 .RE
-.PP
-\fB-C\fR color-space
-.RS 4
-Specifies the internal color space of image colors. Possible values are rgb (default) and cielab.
 .PP
 The RGB color model is an additive color model out of red, green, and blue primary colors of light are added together in various ways to reproduce a broad array of colors. It is more likely the standard on computer systems. It is fast because every pixels rgb color can be retrieved directly.
 .br

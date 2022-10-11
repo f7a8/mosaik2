@@ -136,7 +136,7 @@ if(debug) fprintf(stderr, "init\n");
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		candidates[i].thumbs_db_name = NULL;
 		candidates[i].index=0;
-		candidates[i].score=LLONG_MAX;
+		candidates[i].score=FLT_MAX;
 		candidates[i].off_x=0;
 		candidates[i].off_y=0;
 		candidates[i].sortorder=i;
@@ -177,7 +177,7 @@ if(debug) fprintf(stderr, "init\n");
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			candidates0[i].thumbs_db_name = NULL;
 			candidates0[i].index=0;
-			candidates0[i].score=LLONG_MAX;
+			candidates0[i].score=FLT_MAX;
 			candidates0[i].off_x=0;
 			candidates0[i].off_y=0;
 			candidates0[i].sortorder=i;
@@ -195,7 +195,7 @@ if(debug) fprintf(stderr, "init\n");
 			ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].thumbs_db_name = args->mosaik2dbs[i];
 			candidates0[j].index = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
-			candidates0[j].score = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
+			candidates0[j].score = (float) atof( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_x = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_y = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			j++;
@@ -223,7 +223,7 @@ if(debug) fprintf(stderr, "init\n");
 	
 	if(debug)
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			printf("%i	%li	%li	%i	%i	%s\n",
+			printf("%i	%li	%f	%i	%i	%s\n",
 			candidates[i].sortorder, 
 			candidates[i].index, 
 			candidates[i].score, 
@@ -237,7 +237,7 @@ if(debug) fprintf(stderr, "init\n");
 	FILE *thumbs_db_hash = NULL;
 
 	uint64_t j=0;
-	uint64_t total_score = 0;
+	float total_score = 0;
 	char buffer[MAX_FILENAME_LEN];
 
 	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
@@ -581,7 +581,7 @@ if(debug) fprintf(stderr, "init\n");
 			fprintf(html_out, "</tr>");
 	}
 
-	fprintf(html_out, "</table><p>total score:%li<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	fprintf(html_out, "</table><p>total score:%f<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 //	fprintf(stderr,"alpha blending flag:%i\n",out_im->alphaBlendingFlag);
 //	out_im->alphaBlendingFlag=0;
@@ -597,7 +597,7 @@ if(debug) fprintf(stderr, "init\n");
 	fclose(src_out);
   fclose(out);
 	free(candidates);
-	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	fprintf(stdout, "total score: %f\nscore per tile:%f\n", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
 }

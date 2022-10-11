@@ -110,6 +110,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 
 	strncpy( md->lastmodified_filename, thumbs_db_name, l);
 	strncat( md->lastmodified_filename, "/.lastmodified", 14); 
+
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
