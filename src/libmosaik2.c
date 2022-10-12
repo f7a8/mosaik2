@@ -515,7 +515,7 @@ int check_dest_filename(char *dest_filename) {
 
 void check_thumbs_tile_count(uint32_t thumbs_tile_count) {
   if(thumbs_tile_count*thumbs_tile_count*(6*256)>UINT32_MAX) {
-    //can candidates_score contain the badest possible score?
+    //can candidates_costs contain the badest possible costs?
     fprintf(stderr, "thumb tile size too high for internal data structure\n");
     exit(EXIT_FAILURE);
   }

@@ -119,7 +119,7 @@ struct result {
 	char *thumbs_db_name;
 	uint8_t hash[16];
 	uint64_t index; // index in thumbs_db
-	float score;
+	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
 	char thumbs_db_filenames[MAX_FILENAME_LEN];
