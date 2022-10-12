@@ -137,7 +137,7 @@ if(debug) fprintf(stderr, "init\n");
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		candidates[i].thumbs_db_name = NULL;
 		candidates[i].index=0;
-		candidates[i].score=LLONG_MAX;
+		candidates[i].costs=LLONG_MAX;
 		candidates[i].off_x=0;
 		candidates[i].off_y=0;
 		candidates[i].sortorder=i;
@@ -178,7 +178,7 @@ if(debug) fprintf(stderr, "init\n");
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
 			candidates0[i].thumbs_db_name = NULL;
 			candidates0[i].index=0;
-			candidates0[i].score=LLONG_MAX;
+			candidates0[i].costs=LLONG_MAX;
 			candidates0[i].off_x=0;
 			candidates0[i].off_y=0;
 			candidates0[i].sortorder=i;
@@ -196,22 +196,22 @@ if(debug) fprintf(stderr, "init\n");
 			ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].thumbs_db_name = args->mosaik2dbs[i];
 			candidates0[j].index = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
-			candidates0[j].score = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
+			candidates0[j].costs = atoll( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_x = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_y = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			j++;
 		}
 	
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			if(candidates0[i].score < candidates[i].score ) {
-				//printf("i %i better score %lli <-> %lli\n", i, candidates_score0[i], candidates_score[i]);
+			if(candidates0[i].costs < candidates[i].costs ) {
+				//printf("i %i better costs %lli <-> %lli\n", i, candidates_costs0[i], candidates_costs[i]);
 				candidates[i].thumbs_db_name = candidates0[i].thumbs_db_name;
 				candidates[i].index = candidates0[i].index;
-				candidates[i].score = candidates0[i].score;
+				candidates[i].costs = candidates0[i].costs;
 				candidates[i].off_x = candidates0[i].off_x;
 				candidates[i].off_y = candidates0[i].off_y;
 			} 
-//			else { 				printf("i %i WORSE score %lli <-> %lli\n", i, candidates_score0[i], candidates_score[i]); 			}
+//			else { 				printf("i %i WORSE costs %lli <-> %lli\n", i, candidates_costs0[i], candidates_costs[i]); 			}
 		}
 		free(candidates0);
 	}
@@ -227,7 +227,7 @@ if(debug) fprintf(stderr, "init\n");
 			printf("%i	%li	%li	%i	%i	%s\n",
 			candidates[i].sortorder, 
 			candidates[i].index, 
-			candidates[i].score, 
+			candidates[i].costs, 
 			candidates[i].off_x, 
 			candidates[i].off_y,
 			candidates[i].thumbs_db_name);
@@ -238,7 +238,7 @@ if(debug) fprintf(stderr, "init\n");
 	FILE *thumbs_db_hash = NULL;
 
 	uint64_t j=0;
-	uint64_t total_score = 0;
+	uint64_t total_costs = 0;
 	char buffer[MAX_FILENAME_LEN];
 
 	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
@@ -330,7 +330,7 @@ if(debug) fprintf(stderr, "init\n");
 		strncpy(candidates[i].temp_filename,buf,strlen(buf));
 		
 
-		total_score += candidates[i].score;
+		total_costs += candidates[i].costs;
 	}
 	fclose(thumbs_db_file);
 	fclose(thumbs_db_hash);
@@ -342,7 +342,7 @@ if(debug) fprintf(stderr, "init\n");
 		printf("%li	%lli	%lli	%i	%i	%s	%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x	%s\n",
 		candidates[i].sortorder, 
 		candidates[i].index, 
-		candidates[i].score, 
+		candidates[i].costs, 
 		candidates[i].off_x, 
 		candidates[i].off_y,
 		candidates[i].thumbs_db_name,
@@ -594,7 +594,7 @@ if(debug) fprintf(stderr, "init\n");
 			fprintf(html_out, "</tr>");
 	}
 
-	fprintf(html_out, "</table><p>total score:%li<br/>score per tile:%f</p></body></html>", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	fprintf(html_out, "</table><p>total costs:%li<br/>costs per tile:%f</p></body></html>", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 //	fprintf(stderr,"alpha blending flag:%i\n",out_im->alphaBlendingFlag);
 //	out_im->alphaBlendingFlag=0;
@@ -610,7 +610,7 @@ if(debug) fprintf(stderr, "init\n");
 	fclose(src_out);
   fclose(out);
 	free(candidates);
-	fprintf(stdout, "total score: %li\nscore per tile:%f\n", total_score, (total_score/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	fprintf(stdout, "total costs: %li\ncosts per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
 }
