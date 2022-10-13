@@ -17,6 +17,8 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
+void inject_exif_comment(FILE *out, char *comment);
+
 int mosaik2_join(mosaik2_arguments *args) {
 
 	char *dest_filename = args->dest_image;
@@ -426,7 +428,7 @@ if(debug) fprintf(stderr, "init\n");
 	}
 	gdImageSetInterpolationMethod(out_im,	GD_GAUSSIAN );
 
-  FILE *out = fopen(dest_filename, "wb");
+  FILE *out = fopen(dest_filename, "w+");
   FILE *html_out = fopen(mp.dest_html_filename, "wb");
 	FILE *src_out = fopen(mp.dest_src_filename, "wb");
 
@@ -608,9 +610,52 @@ if(debug) fprintf(stderr, "init\n");
 	gdImageDestroy(out_im);
 	fclose(html_out);
 	fclose(src_out);
+	
+	float costs = total_costs / (total_primary_tile_count*tile_count*tile_count*1.0);
+	char comment[80];
+	snprintf(comment, 80, "mosaik2 %ix%i costs:%f", primary_tile_x_count, primary_tile_y_count, costs);
+	inject_exif_comment(out, comment);
+
   fclose(out);
 	free(candidates);
 	fprintf(stdout, "total costs: %li\ncosts per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
+}
+
+void inject_exif_comment(FILE *out, char *comment) {
+		size_t len = strlen(comment);
+		int f = fseeko(out, 0x16, SEEK_SET);
+		if(f != 0) {
+			fprintf(stdout, "fseeko != 0\n");
+			perror("perror");
+			exit(EXIT_FAILURE);
+		}
+
+		char exif_length_c[2];
+		int exif_length = 0;
+		int r = fread(exif_length_c, 2, 1, out);
+		if( r != 1) {
+			fprintf(stderr, "could not read exif comment length for manipulation it\n");
+			perror("error");
+			exit(EXIT_FAILURE);
+		}
+		exif_length = 256 * exif_length_c[0] + exif_length_c[1];
+		fprintf(stdout, "old exif length = %i, %i,%i\n", exif_length, exif_length_c[0], exif_length_c[1]);
+		if(len >= exif_length) {
+			fprintf(stderr, "new exif comment is too long, dont write it");
+			return;
+		}
+		fseeko(out, 0x16, SEEK_SET);
+		exif_length_c[0] = len/256;
+		exif_length_c[1] = len%256;
+		fwrite(&exif_length_c, 2, 1, out);
+		char space[] = {' '};
+		fwrite(comment, len, 1, out);
+		int l = 0x51-ftello(out);
+		for(int i=0;i<l;i++) {
+		fwrite(space, 1, 1, out);
+		}
+		//char exif_end[] = {0x0A, 0xFF};
+		//fwrite(&exif_end, 2, 1, out);
 }
