@@ -641,7 +641,6 @@ void inject_exif_comment(FILE *out, char *comment) {
 			exit(EXIT_FAILURE);
 		}
 		exif_length = 256 * exif_length_c[0] + exif_length_c[1];
-		fprintf(stdout, "old exif length = %i, %i,%i\n", exif_length, exif_length_c[0], exif_length_c[1]);
 		if(len >= exif_length) {
 			fprintf(stderr, "new exif comment is too long, dont write it");
 			return;
@@ -654,7 +653,7 @@ void inject_exif_comment(FILE *out, char *comment) {
 		fwrite(comment, len, 1, out);
 		int l = 0x51-ftello(out);
 		for(int i=0;i<l;i++) {
-		fwrite(space, 1, 1, out);
+			fwrite(space, 1, 1, out);
 		}
 		//char exif_end[] = {0x0A, 0xFF};
 		//fwrite(&exif_end, 2, 1, out);
