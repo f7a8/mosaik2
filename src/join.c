@@ -17,7 +17,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-void inject_exif_comment(FILE *out, char *comment);
+void inject_exif_comment(FILE *out, char *comment, size_t comment_len);
 
 int mosaik2_join(mosaik2_arguments *args) {
 
@@ -56,6 +56,8 @@ int mosaik2_join(mosaik2_arguments *args) {
 
 	
 	uint8_t tile_count = 0;
+	uint64_t candidates_count = 0;
+
 
 	// init
 if(debug) fprintf(stderr, "init\n");
@@ -69,6 +71,7 @@ if(debug) fprintf(stderr, "init\n");
 		init_mosaik2_database(&mds[i0], args->mosaik2dbs[i]);
 		read_database_id(&mds[i0]);
 		check_thumbs_db(&mds[i0]);
+		candidates_count += read_thumbs_db_count(&mds[i0]);
 
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
@@ -612,9 +615,11 @@ if(debug) fprintf(stderr, "init\n");
 	fclose(src_out);
 	
 	float costs = total_costs / (total_primary_tile_count*tile_count*tile_count*1.0);
-	char comment[80];
-	snprintf(comment, 80, "mosaik2 %ix%i costs:%f", primary_tile_x_count, primary_tile_y_count, costs);
-	inject_exif_comment(out, comment);
+
+	char comment[100];
+	memset(comment, 0, 100);	
+	snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, tile_count, costs);
+	inject_exif_comment(out, comment, strlen(comment));
 
   fclose(out);
 	free(candidates);
@@ -623,38 +628,57 @@ if(debug) fprintf(stderr, "init\n");
 	return 0;
 }
 
-void inject_exif_comment(FILE *out, char *comment) {
-		size_t len = strlen(comment);
-		int f = fseeko(out, 0x16, SEEK_SET);
-		if(f != 0) {
-			fprintf(stdout, "fseeko != 0\n");
-			perror("perror");
+void inject_exif_comment(FILE *out, char *comment, size_t comment_len) {
+		unsigned char buf[BUFSIZ];
+
+		rewind(out);
+		if( fread(&buf, BUFSIZ, 1, out) != 1) {
+			fprintf(stderr, "could not read first %i bytes of already written dest-file\n", BUFSIZ);
 			exit(EXIT_FAILURE);
 		}
 
-		char exif_length_c[2];
-		int exif_length = 0;
-		int r = fread(exif_length_c, 2, 1, out);
-		if( r != 1) {
-			fprintf(stderr, "could not read exif comment length for manipulation it\n");
-			perror("error");
-			exit(EXIT_FAILURE);
+		//assumption that in first bufsize is the total exif comment
+		//search for offset and length of the comment
+
+		int exif_offset=-1;
+		int exif_length=-1;
+		for(int i=0;i<BUFSIZ-2;i++) {
+			if(exif_offset == -1 && buf[i]== 0xFF && buf[i+1] == 0xFE)
+				exif_offset = i + 4;
+			if(exif_offset != -1 && exif_length == -1 && buf[i] == 0x0A && buf[i+1] == 0xFF) {
+				exif_length = i - exif_offset;
+				break;
+			}
 		}
-		exif_length = 256 * exif_length_c[0] + exif_length_c[1];
-		if(len >= exif_length) {
-			fprintf(stderr, "new exif comment is too long, dont write it");
+
+		if(exif_offset == -1 || exif_length == -1 ) {
+			fprintf(stderr, "could not detect exif comment, cannot overwrite it, continue\n");
 			return;
 		}
-		fseeko(out, 0x16, SEEK_SET);
-		exif_length_c[0] = len/256;
-		exif_length_c[1] = len%256;
-		fwrite(&exif_length_c, 2, 1, out);
-		char space[] = {' '};
-		fwrite(comment, len, 1, out);
-		int l = 0x51-ftello(out);
-		for(int i=0;i<l;i++) {
-			fwrite(space, 1, 1, out);
+
+		int comment_len0 = comment_len;		
+		if(exif_length < comment_len0)
+			comment_len0 = exif_length;
+
+		fseeko(out, exif_offset-2, SEEK_SET);
+	
+		char new_exif_length[2] = {comment_len0 / 256, comment_len0 % 256};
+
+		if( fwrite(new_exif_length, 2, 1, out) != 1) {
+			fprintf(stderr, "cannot write exif length\n");
+			exit(EXIT_FAILURE);
 		}
-		//char exif_end[] = {0x0A, 0xFF};
-		//fwrite(&exif_end, 2, 1, out);
+		if( fwrite(comment, comment_len0, 1, out) != 1) {
+			fprintf(stderr, "cannot write exif comment\n");
+			exit(EXIT_FAILURE);
+		}
+
+		char space[]= {' '};
+		for(int i = comment_len; i<exif_length;i++) { // overwrite old exif with white spaces
+			if( fwrite(&space, 1, 1, out) != 1 ) {
+				perror("could not fill rest exif comment with space\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+
 }
