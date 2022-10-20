@@ -149,6 +149,8 @@ struct arguments_struct {
 	int ignore_old_invalids;
 	int no_hash_cmp;
 	int color_distance;
+	int element_number;
+	int has_element_number;
 };
 typedef struct arguments_struct mosaik2_arguments;
 
@@ -158,6 +160,7 @@ int mosaik2_gathering(mosaik2_arguments*);
 int mosaik2_join(mosaik2_arguments*);
 int mosaik2_invalid(mosaik2_arguments*);
 int mosaik2_duplicates(mosaik2_arguments*);
+int mosaik2_info(mosaik2_arguments*);
 
 int mosaik2_clean(char *mosaik2_database_name);
 int mosaik2_tiler(mosaik2_arguments *, mosaik2_database *, mosaik2_indextask *);
