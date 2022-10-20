@@ -328,6 +328,47 @@ uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
 		return thumbs_conf_tilecount;
 }
 
+uint64_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
+	FILE *file = fopen(md->duplicates_filename, "rb");
+	if( file == NULL) {
+		fprintf(stderr, "thumbs db duplicates file could not be opened\n");
+		exit(EXIT_FAILURE);
+	}
+	uint64_t duplicates_count = 0;
+	unsigned char buf[BUFSIZ];
+	while( feof(file) == 0) {
+		ssize_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i++) {
+			if(buf[i]!=0)
+				duplicates_count++;
+		}
+	}
+	fclose( file );
+	return duplicates_count;
+}
+
+uint64_t read_thumbs_db_invalid_count(mosaik2_database *md) {
+	FILE *file = fopen(md->invalid_filename, "rb");
+	if( file == NULL) {
+		fprintf(stderr, "thumbs db invalid file could not be opened\n");
+		exit(EXIT_FAILURE);
+	}
+	uint64_t count = 0;
+	unsigned char buf[BUFSIZ];
+	while( feof(file) == 0) {
+		ssize_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i++) {
+			if(buf[i]!=0) // only 0 marks a valid entry
+				count++;
+		}
+	}
+	if( fclose( file ) != 0) {
+		fprintf(stderr, "cannot close invalid file\n");
+		exit(EXIT_FAILURE);
+	}
+	return count;
+}
+
 void read_database_id(mosaik2_database *md) {
 
 	FILE *id_file = fopen(md->id_filename,"r");
@@ -342,7 +383,51 @@ void read_database_id(mosaik2_database *md) {
 		exit(EXIT_FAILURE);
 	}
 
-	fclose( id_file );
+	if( fclose( id_file ) != 0) {
+		fprintf(stderr, "cannot close id file\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+uint64_t read_thumbs_db_size(mosaik2_database *md) {
+	return    get_file_size( md->imagestddev_filename)
+		+ get_file_size( md->imagecolors_filename)
+		+ get_file_size( md->imagedims_filename)
+		+ get_file_size( md->image_index_filename)
+		+ get_file_size( md->filenames_filename)
+		+ get_file_size( md->filenames_index_filename)
+		+ get_file_size( md->filehashes_filename)
+		+ get_file_size( md->filehashes_index_filename)
+		+ get_file_size( md->timestamps_filename)
+		+ get_file_size( md->filesizes_filename)
+		+ get_file_size( md->tiledims_filename)
+		+ get_file_size( md->invalid_filename)
+		+ get_file_size( md->duplicates_filename)
+		+ get_file_size( md->tilecount_filename)
+		+ get_file_size( md->id_filename)
+		+ get_file_size( md->version_filename)
+		+ get_file_size( md->readme_filename)
+		+ get_file_size( md->lastmodified_filename);
+}
+
+time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
+
+	FILE *file = fopen(md->lastmodified_filename, "rb");
+	if( file == NULL) {
+		fprintf(stderr, "lastmodified file could not be opened\n");
+		exit(EXIT_FAILURE);
+	}
+	time_t lastmodified=0;
+	ssize_t s = fread(&lastmodified, 1, sizeof(time_t), file);
+	if( s != sizeof(time_t) ) {
+		fprintf(stderr, "could not read lastmodified value\n");
+		exit(EXIT_FAILURE);
+	}
+	if( fclose( file ) != 0) {
+		fprintf(stderr, "cannot close id file\n");
+		exit(EXIT_FAILURE);
+	}
+	return lastmodified;
 }
 /**
 void check_thumbs_db_name(char *thumbs_db_name) {
