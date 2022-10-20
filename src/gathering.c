@@ -548,7 +548,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			} else {
 			}
 
-			if(invalid_buf[i/2]==1) {
+			if(invalid_buf[i/2]!=0) {//valid entries must have 0
 				if(debug)fprintf(stderr,"thumb (%lu) is marked as invalid, will be skipped\n", idx);
 
 				// in case of invalid entries move the file pointers without reading the colors data
@@ -920,12 +920,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 												fclose(mosaik2_result);
 												exit(99);
 											}
-											fprintf(stdout, "%i	%li	%f	%i	%i\n",
-												i,
-												candidates_index[i*max_candidates_len],
-												candidates_costs[i*max_candidates_len],
-												candidates_off_x[i*max_candidates_len],
-												candidates_off_y[i*max_candidates_len]);
 											fprintf(mosaik2_result, "%i	%li	%f	%i	%i\n",
 												i,
 												candidates_index[i*max_candidates_len],
