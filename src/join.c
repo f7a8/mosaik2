@@ -498,7 +498,7 @@ if(debug) fprintf(stderr, "init\n");
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url_thumb, dest_tile_width, dest_tile_width);
 			
 				fprintf(html_out, "</a>\n");
-				fprintf(src_out,"%i: %s\n", primary_tile_idx, url_file);
+				fprintf(src_out,"%s\n", url_file);
 
 				//free(url_thumb);
 				//free(url_file);
@@ -506,7 +506,7 @@ if(debug) fprintf(stderr, "init\n");
 			} else {
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url, dest_tile_width, dest_tile_width);
 				
-				fprintf(src_out,"%i: %s\n", primary_tile_idx, url);
+				fprintf(src_out,"%s\n", url);
 				if(x==primary_tile_x_count-1) {
 					fprintf(src_out, "\n");
 				}
