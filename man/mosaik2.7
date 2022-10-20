@@ -16,9 +16,14 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .PP
 \fBmosaik2\fR [-V] [-i] [-y] duplicates \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
 .br
-\fBmosaik2\fR [-V] [-i] [-y] [-n] invalid \fImosaik2db\fR
+\fBmosaik2\fR [-V] { [-i] [-y] [-n] | -e <NUMBER> } invalid \fImosaik2db\fR
+.br
+\fBmosaik2\fR [-V] [-e <NUMBER>] info \fImosaik2db\fR
 .br
 \fBmosaik2\fR {-h|-v}
+.SH "VERSION"
+.PP
+This manual documents mosaik2 version 0.3
 .SH "DESCRIPTION"
 .PP
 mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.
@@ -39,7 +44,12 @@ The \fBduplicates\fR mode indentifies images, that appear multiple times in your
 .PP
 Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
 .br
+You are allowed to mark manually the invalid state of single database elements, back and forth. If the entire database is checked for invalid values, those marks have priority over manual ones.
+.br
 You may want to take a look at the \fBFILE LIST\fR section how to identify the difference between the last state of the mosaik2 database to append it to the old database or to create a new one.
+.PP
+To \fBinfo\fR mode print common database infos to stdout, or for specific database elements.
+.PP
 .SH "OPTIONS"
 .PP
 \fImosaik2db\fR
@@ -127,6 +137,11 @@ Controls the caching strategy. If omitted files are copied to the cache director
 No-hash-cmp: while checking all images in the mosaik2db, omit the file content comparison through hash compare. This is the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
 .RE
 .PP
+\fB-e\fR number
+.RS 4
+Execute the MODE only on the database entry with the nth number (starting at 1), instead on the entire database.
+.RE
+.PP
 .SH "FILE LIST"
 If you want to index a bunch of images its is needed to create an input stream 
 to mosaik2 in the text format
@@ -154,6 +169,21 @@ find /root_dir -type f -iregex ".*\e.jpe?g$" -size +10000c -size -100000000c -fp
 .SH "EXIT STATUS"
 .PP
 In case of an error the exit code is always 1, 0 otherwise. The program tries to exit fast with an appropriate stderr message.
+
+.SH "EXAMPLE"
+.PP
+find ~/Pictures -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
+.br
+mosaik2 init first_mosaik2_db
+.br
+mosaik2 index first_mosaik2_db < first_mosaik2.file_list
+.br
+mosaik2 duplicates mosaik2_db
+.br
+mosaik2 gathering my_first_mosaik2.jpeg first_mosaik2_db < source_image.jpeg
+.br
+mosaik2 join my_first_mosaik2.jpeg first_mosaik2_db
+
 .SH "FILES"
 .PP
 mosaik2 database files are:
@@ -231,19 +261,6 @@ Saves the num_tiles property of the database.
 .RE
 .RE
 
-.SH "EXAMPLE"
-.PP
-find ~/Pictures -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
-.br
-mosaik2 init first_mosaik2_db
-.br
-mosaik2 index first_mosaik2_db < first_mosaik2.file_list
-.br
-mosaik2 duplicates mosaik2_db
-.br
-mosaik2 gathering my_first_mosaik2.jpeg first_mosaik2_db < source_image.jpeg
-.br
-mosaik2 join my_first_mosaik2.jpeg first_mosaik2_db
-.SH "NOTE"
+.SH "NOTES"
 .PP
 website at https://f7a8.github.io/mosaik2/
