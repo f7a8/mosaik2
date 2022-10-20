@@ -297,8 +297,8 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	fwrite(&task->width, sizeof(int), 1, imagedims_file);
 	fwrite(&task->height, sizeof(int), 1, imagedims_file);
 
-	long filenames_offset = ftello(filenames_file);
-	fwrite(&filenames_offset, sizeof(long), 1, filenames_index_file);
+	off_t filenames_offset = ftello(filenames_file);
+	fwrite(&filenames_offset, sizeof(off_t), 1, filenames_index_file);
 	fwrite(task->filename, strlen(task->filename), 1, filenames_file);
 	fwrite(&new_line, 1, 1, filenames_file);
 
