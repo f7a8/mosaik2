@@ -9,18 +9,29 @@
 
 uint8_t DRY_RUN = 0;
 
+/* automatically invalid detection is written to the first bit and preserves existing user defined invalid states in other bits */
 void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
 
 	if(DRY_RUN == 1) 
 		return;
 	// need to be an opend file	
-	if( fseeko(invalid_file,nmemb*1,SEEK_SET) == -1 ) {
-		fprintf(stderr, "error while setting file cursor to %li in invalid file\n", nmemb );
+	if( fseeko(invalid_file, nmemb, SEEK_SET) != 0) {
+		fprintf(stderr, "could not seek to element_number in invalid file\n");
 		exit(EXIT_FAILURE);
 	}
-	uint8_t invalid_data=1;
-	if(fwrite(&invalid_data,1,1,invalid_file) != 1 ) { // == 1, because of one element was hopefully written
-		fprintf(stderr, "error while marking image %li in invalid file as invalid\n", nmemb);
+	int old_value=0;
+	if( fread(&old_value, 1, 1, invalid_file) != 1) {
+		fprintf(stderr, "could not read old invalid state\n");
+		exit(EXIT_FAILURE);
+	}
+	int new_value = old_value | 1;
+	if( fseeko(invalid_file, nmemb, SEEK_SET) != 0) {
+		fprintf(stderr, "could not seek to element_number in invalid file\n");
+		exit(EXIT_FAILURE);
+	}
+	if( fwrite(&new_value, 1, 1, invalid_file) != 1) {
+		fprintf(stderr, "could not write new invalid state\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -54,7 +65,8 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	int dry_run = args->dry_run;
 	int no_hash_cmp = args->no_hash_cmp;
 	int debug = args->verbose;
-
+	int has_element_number = args->has_element_number;
+	int element_number = args->element_number - 1;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -76,15 +88,17 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 		fprintf(stderr, "no_hash_cmp must be 0 or 1\n");
 	}
 		
+	if(has_element_number == 1 &&  element_number < 1 ) {
+		fprintf(stderr, "illegal value of element_number. exit\n");
+		exit(EXIT_FAILURE);
+	}
+
 
 	uint64_t mosaik2_database_elems = read_thumbs_db_count(&md);
-	//uint64_t found_invalid=0;
-	
-	FILE *filenames_file = fopen(md.filenames_filename, "r");
-	if( filenames_file == NULL ) {
-		fprintf(stderr, "filenames file (%s) could not be opened\n", md.filenames_filename);
+	if( has_element_number && element_number > mosaik2_database_elems ) {
+		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
-	} 
+	}
 
 	FILE *invalid_file = fopen(md.invalid_filename, "r+");
 	if(invalid_file == NULL) {
@@ -92,6 +106,40 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 	
+	if(has_element_number == 1) {
+
+		fseeko(invalid_file, element_number, SEEK_SET);
+		int old_value=0;
+		if( fread(&old_value, 1, 1, invalid_file) != 1) {
+			fprintf(stderr, "could not read old invalid state\n");
+			exit(EXIT_FAILURE);
+		}
+		int new_value = old_value ^ 2;
+		if( fseeko(invalid_file, element_number, SEEK_SET) != 0) {
+			fprintf(stderr, "could not seek to element_number in invalid file\n");
+			exit(EXIT_FAILURE);
+		}
+		if( fwrite(&new_value, 1, 1, invalid_file) != 1) {
+			fprintf(stderr, "could not write new invalid state\n");
+			exit(EXIT_FAILURE);
+		}
+		if( fflush(invalid_file) != 0) {
+			fprintf(stderr, "could not flush new invalid state\n");
+			exit(EXIT_FAILURE);
+		}
+		if( fclose(invalid_file) != 0) {
+			fprintf(stderr, "could not close invalid file\n");
+			exit(EXIT_FAILURE);
+		}
+		return 0;
+	}
+
+	FILE *filenames_file = fopen(md.filenames_filename, "r");
+	if( filenames_file == NULL ) {
+		fprintf(stderr, "filenames file (%s) could not be opened\n", md.filenames_filename);
+		exit(EXIT_FAILURE);
+	}
+
 	FILE *timestamps_file = fopen(md.timestamps_filename, "rb");	
 	if( timestamps_file == NULL) {
 		fprintf(stderr, "timestamps file (%s) could not be opened\n", md.timestamps_filename);
