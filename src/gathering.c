@@ -446,50 +446,55 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	//memset(filename,0,250);
 	
 	//int candidate_id = 0;
-	FILE *thumbs_db_tile_dims = fopen(md.tiledims_filename, "rb");
-	if( thumbs_db_tile_dims == NULL) {
+	FILE *thumbs_db_tiledims_file = fopen(md.tiledims_filename, "rb");
+	if( thumbs_db_tiledims_file == NULL) {
 		fprintf(stderr, "thumbs db file with tile dimensions (%s) could not be opened\n", md.tiledims_filename);
 		exit(EXIT_FAILURE);
 	}
 
+	FILE *thumbs_db_tileoffsets_file = fopen(md.tileoffsets_filename, "rb");
+	if(thumbs_db_tileoffsets_file == NULL) {
+		fprintf(stderr, "thumbs db file with the tile offsets (%s) could not be opened\n", md.tileoffsets_filename);
+		exit(EXIT_FAILURE);
+	}
 //	uint64_t thumbs_db_element_count = st.st_size/2;
 
 
-	FILE *thumbs_db_image_colors = fopen(md.imagecolors_filename, "rb");
-	if( thumbs_db_image_colors == NULL ) {
+	FILE *thumbs_db_imagecolors_file = fopen(md.imagecolors_filename, "rb");
+	if( thumbs_db_imagecolors_file == NULL ) {
 		fprintf(stderr, "thumbs db file with image colors (%s) could not be opened\n", md.imagecolors_filename);
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *thumbs_db_image_stddev = fopen(md.imagestddev_filename, "rb");
-	if( thumbs_db_image_stddev == NULL ) {
+	FILE *thumbs_db_imagestddev_file = fopen(md.imagestddev_filename, "rb");
+	if( thumbs_db_imagestddev_file == NULL ) {
 		fprintf(stderr, "thumbs db file with image stddev colors (%s) could not be opened\n", md.imagestddev_filename);
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *thumbs_db_invalid = fopen(md.invalid_filename, "rb");
-	if( thumbs_db_invalid == NULL ) {
+	FILE *thumbs_db_invalid_file = fopen(md.invalid_filename, "rb");
+	if( thumbs_db_invalid_file == NULL ) {
 		fprintf(stderr, "thumbs db file that marks the invalid images (%s) could not be opened\n", md.invalid_filename);
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *duplicates_file = fopen(md.duplicates_filename, "rb");
-	if( duplicates_file == NULL ) {
+	FILE *thumbs_db_duplicates_file = fopen(md.duplicates_filename, "rb");
+	if( thumbs_db_duplicates_file == NULL ) {
 		fprintf(stderr, "mosaik2 database file for duplicate images (%s) could not be opened\n", md.duplicates_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	
 
-	const uint32_t SIZE_64 = 65536;//64KB
 	const uint32_t SIZE_PRIMARY = total_primary_tile_count;
 
 	// buffers for db file reading
-	uint8_t tile_dims_buf[SIZE_64];
-	unsigned char colors_buf[SIZE_64];
-	unsigned char stddev_buf[SIZE_64];
-	unsigned char invalid_buf[SIZE_64];
-	unsigned char duplicates_buf[SIZE_64];
+	uint8_t tile_dims_buf[BUFSIZ];
+	unsigned char tileoffsets_buf[BUFSIZ];
+	unsigned char colors_buf[BUFSIZ];
+	unsigned char stddev_buf[BUFSIZ];
+	unsigned char invalid_buf[BUFSIZ];
+	unsigned char duplicates_buf[BUFSIZ];
 
 
 
@@ -513,19 +518,24 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	int32_t percent = -1;
 	while(1) {
-		uint32_t len = fread(invalid_buf,1,SIZE_64/2,thumbs_db_invalid);
+		uint32_t len = fread(invalid_buf,1,BUFSIZ/2,thumbs_db_invalid_file);
 		if(len==0) {
 			fprintf(stderr,"there is no data to read from invalid file\n");
 			exit(EXIT_FAILURE);
 		}
-		len = fread(duplicates_buf,1,SIZE_64/2, duplicates_file);
+		len = fread(duplicates_buf,1,BUFSIZ/2, thumbs_db_duplicates_file);
 		if(len==0) {
 			fprintf(stderr, "could not read from duplicates file\n");
 			exit(EXIT_FAILURE);
 		}
-		len = fread(tile_dims_buf,1,SIZE_64,thumbs_db_tile_dims);
+		len = fread(tile_dims_buf,1,BUFSIZ,thumbs_db_tiledims_file);
 		if(len==0) {
 			fprintf(stderr,"there is no data to read int tile_dims file\n");
+			exit(EXIT_FAILURE);
+		}
+		len = fread(tileoffsets_buf,1, BUFSIZ, thumbs_db_tileoffsets_file);
+		if(len==0) {
+			fprintf(stderr, "there is no data to read tileoffsets file\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -534,6 +544,10 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			// printf("%02X %02X tile dim\n", tile_dims_buf[i], tile_dims_buf[i+1]);
 			uint8_t thumbs_db_tile_x_count = tile_dims_buf[i];
 			uint8_t thumbs_db_tile_y_count = tile_dims_buf[i+1];
+			unsigned char thumbs_db_tileoffset_x = tileoffsets_buf[i];
+			unsigned char thumbs_db_tileoffset_y = tileoffsets_buf[i+1];
+			int thumbs_db_tileoffsets_unset = thumbs_db_tileoffset_x == 0xFF && thumbs_db_tileoffset_y == 0xFF;
+
 			uint32_t thumbs_db_total_tile_count = thumbs_db_tile_x_count * thumbs_db_tile_y_count;
 
 			float new_percent_f = idx / (thumbs_count * 1.0); 
@@ -552,16 +566,16 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 				if(debug)fprintf(stderr,"thumb (%lu) is marked as invalid, will be skipped\n", idx);
 
 				// in case of invalid entries move the file pointers without reading the colors data
-				fseeko(thumbs_db_image_colors,thumbs_db_total_tile_count*3,SEEK_CUR);
-				fseeko(thumbs_db_image_stddev,thumbs_db_total_tile_count*3,SEEK_CUR);
+				fseeko(thumbs_db_imagecolors_file,thumbs_db_total_tile_count*3,SEEK_CUR);
+				fseeko(thumbs_db_imagestddev_file,thumbs_db_total_tile_count*3,SEEK_CUR);
 
 				continue;
 			} 
 			
 			// this could be slow, but works definitly
 			// if an thumb is valid read its image data
-			uint32_t colors_len = fread(colors_buf,1,thumbs_db_total_tile_count*3,thumbs_db_image_colors);
-			uint32_t stddev_len = fread(stddev_buf,1,thumbs_db_total_tile_count*3,thumbs_db_image_stddev);
+			uint32_t colors_len = fread(colors_buf,1,thumbs_db_total_tile_count*3,thumbs_db_imagecolors_file);
+			uint32_t stddev_len = fread(stddev_buf,1,thumbs_db_total_tile_count*3,thumbs_db_imagestddev_file);
 			
 			if(debug1)printf("colors_len:%i (%i %i)\n",colors_len, tile_dims_buf[i], tile_dims_buf[i+1]);
 			if(debug1)printf("stddev_len:%i\n",stddev_len);
@@ -587,14 +601,23 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 				exit(EXIT_FAILURE);
 			}
 
+			unsigned char shift_y_0 = 0;
+			unsigned char shift_x_0 = 0;
+			if( !thumbs_db_tileoffsets_unset ) {
+				shift_y_0 = thumbs_db_tileoffset_y;
+				shift_x_0 = thumbs_db_tileoffset_x;
+				shift_y_len = shift_y_0 + 1;
+				shift_x_len = shift_x_0 + 1;
+			}
+
 			if(debug1) {fprintf(stderr,"%lu shift_len:%i %i\n", idx, shift_x_len,shift_y_len);  }
 			
 			//uint32_t candidates_costs_f = UINT32_MAX;
 			//uint32_t candidates_index_f = 0;
 			//uint32_t candidates_
 
-			for(uint8_t shift_y=0;shift_y<=shift_y_len;shift_y++) {
-				for(uint8_t shift_x=0;shift_x<=shift_x_len;shift_x++) {
+			for(uint8_t shift_y=shift_y_0;shift_y<=shift_y_len;shift_y++) {
+				for(uint8_t shift_x=shift_x_0;shift_x<=shift_x_len;shift_x++) {
 
 					if(debug)fprintf(stderr,"1 shift:%i %i\n",shift_x,shift_y);
 
@@ -936,16 +959,17 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 				} //for shift_x
 			} //for shift_y
 	
-		if(len < SIZE_64) {
+		if(len < BUFSIZ) {
 			break;
 		}
 	}
 
-	fclose(thumbs_db_tile_dims);
-	fclose(thumbs_db_image_colors);
-	fclose(thumbs_db_image_stddev);
-	fclose(thumbs_db_invalid);
-	fclose(duplicates_file);
+	fclose(thumbs_db_tiledims_file);
+	fclose(thumbs_db_tileoffsets_file);
+	fclose(thumbs_db_imagecolors_file);
+	fclose(thumbs_db_imagestddev_file);
+	fclose(thumbs_db_invalid_file);
+	fclose(thumbs_db_duplicates_file);
 
 	free( colors_red_int );
 	free( colors_green_int );

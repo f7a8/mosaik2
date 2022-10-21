@@ -8,8 +8,8 @@ all: bin/ bin/mosaik2
 bin/:
 	mkdir -p bin/
 
-bin/mosaik2: src/mosaik2.h src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o
-	${COMPILER} ${CFLAGS} src/mosaik2.c bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl
+bin/mosaik2: src/mosaik2.h src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/crop.o
+	${COMPILER} ${CFLAGS} src/mosaik2.c bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/crop.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl
 
 bin/libmosaik2.o: src/libmosaik2.c src/libmosaik2.h
 	${COMPILER} ${CFLAGS} -c src/libmosaik2.c -o bin/libmosaik2.o -lexif -lgd
@@ -37,6 +37,9 @@ bin/invalid.o: src/invalid.c
 
 bin/info.o: src/info.c
 	${COMPILER} ${CFLAGS} -c src/info.c -o bin/info.o
+
+bin/crop.o: src/crop.c
+	${COMPILER} ${CFLAGS} -c src/crop.c -o bin/crop.o
 
 clean:
 	rm -rf bin

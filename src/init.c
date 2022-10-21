@@ -129,6 +129,7 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.tilecount_filename, 1, 1);
 	create_mosaik2_database_file(md.lock_filename, 1, 1);
 	create_mosaik2_database_file(md.lastmodified_filename, 1, 1);
+	create_mosaik2_database_file(md.tileoffsets_filename, 1, 1);
 
 	create_mosaik2_database_file_id(md.id_filename);
 	create_mosaik2_database_file_int(md.version_filename, MOSAIK2_DATABASE_FORMAT_VERSION);

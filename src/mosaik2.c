@@ -17,7 +17,8 @@
 #define MODE_DUPLICATES 4
 #define MODE_INVALID 5
 #define MODE_INFO 6
-#define MODE_COUNT 7
+#define MODE_CROP 7
+#define MODE_COUNT 8
 
 void print_usage();
 void print_help();
@@ -43,6 +44,8 @@ int main(int argc, char **argv) {
 		return mosaik2_duplicates(&args);
 	} else if(strncmp( args.mode, "info", strlen("info")) == 0) {
 		return mosaik2_info(&args);
+	} else if(strncmp( args.mode, "crop", strlen("crop")) == 0) {
+		return mosaik2_crop(&args);
 	}
 
 	return 0;
@@ -55,13 +58,13 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->database_image_resolution = 16;
 	args->color_stddev_ratio = 100;
 	args->pixel_per_tile = 200;
-	args->num_tiles = 20;
 	args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_DEFAULT;
+	args->has_num_tiles = 0;
 	args->has_element_number = 0;
 
-	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info"};
+	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","crop"};
 	
-	int modes_used[] = {0,0,0,0,0,0,0};
+	int modes_used[] = {0,0,0,0,0,0,0,0};
 
 	char *all_options = "dD:he:ij:l:np:r:R:st:uvVy?";
 
@@ -113,14 +116,14 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			case 's': args->symlink_cache = 1;
 								modes_used[MODE_JOIN]++;
 								break;
-			case 't': args->num_tiles = atoi(optarg);
-								modes_used[MODE_GATHERING]++;
+			case 't': args->num_tiles = atoi(optarg);// no modes_used because it appears in serveral modes
+				args->has_num_tiles = 1;
 								break;
 			case 'u': args->unique = 1;
 								modes_used[MODE_GATHERING]++;
 								break;
 			case 'v': print_version(); exit(EXIT_SUCCESS); 
-			case 'V': args->verbose = 1; break; // no modes_used because it appears in serveral modes
+			case 'V': args->verbose = 1; break;// no modes_used because it appears in serveral modes 
 			case 'y': args->dry_run = 1; break; // no modes_used because it appears in serveral modes
 
 			default: /* ? */ print_usage(); exit(EXIT_FAILURE); break;
@@ -151,8 +154,20 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+	if(mode == MODE_GATHERING)
 	// special case, dry-run is valid in two modes, modes_used was not incremented for it
 	if(args->dry_run == 1 && !( mode == MODE_INVALID || mode == MODE_DUPLICATES ) ) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+	if(args->has_num_tiles == 1 && !( mode == MODE_GATHERING || mode == MODE_CROP ) ) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+	if(args->has_num_tiles == 0 && mode == MODE_GATHERING ) {
+		args->num_tiles = 20;
+	} else if( args->has_num_tiles == 0 && mode == MODE_CROP ) {
+		// no default value!
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
@@ -165,7 +180,8 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	|| (mode == MODE_JOIN       && marg < 3)
 	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
 	|| (mode == MODE_INVALID    && marg != 2)
-	|| (mode == MODE_INFO       && marg != 2);
+	|| (mode == MODE_INFO       && marg != 2)
+	|| (mode == MODE_CROP        && marg != 2);
 
 	if(invalid) {
 		print_usage();
@@ -208,6 +224,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		case MODE_INFO:
 			args->mosaik2db = argv[optind+1];
 			break;
+		case MODE_CROP:
+			args->mosaik2db = argv[optind+1];
+			break;
 	}
 	
 	if(args->verbose) {
@@ -217,7 +236,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n",
+		fprintf (stderr,"options:\nverbose = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n,num_tiles = %i\n",
               args->verbose ? "yes" : "no",
 
               args->dry_run ? "yes" : "no",
@@ -232,7 +251,8 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->ignore_old_invalids ? "yes" : "no",
               args->no_hash_cmp ? "yes" : "no",
 		args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
-			args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev");
+			args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
+		args->num_tiles);
 		if(args->has_element_number) {
 			fprintf(stderr, "element_number = %i\n", args->element_number);
 		} else {
@@ -247,23 +267,16 @@ void print_version() {
 }
 
 void print_usage() {
-//	fprintf(stdout, 
-//"Usage: mosaik2 [OPTION]... init MOSAIK2DB\n"
-//"  or:  mosaik2 [OPTION]... index MOSAIK2DB < file-list\n"
-//"  or:  mosaik2 [OPTION]... gathering dest-image MOSAIK2DB < src-image\n"
-//"  or:  mosaik2 [OPTION]... join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
-//"  or:  mosaik2 [OPTION]... duplicates MOSAIK2DB_0 MOSAIK2DB_1\n"
-//"  or:  mosaik2 [OPTION]... invalid MOSAIK2DB\n"
-//"  or:  mosaik2 [-h|-v]\n" );
 	fprintf(stdout, 
 "Usage: mosaik2 [-V] [-r <PIXEL>] init MOSAIK2DB\n"
 "  or:  mosaik2 [-V] [-j <COUNT>] [-l <LOAD>] index MOSAIK2DB < file-list\n"
 "  or:  mosaik2 [-V] [-t <NUM>] [-u] [-R <PERCENT>] [-D DIST] gathering dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 [-V] [-p <PIXEL>] [-s] [-d] join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
 "  or:  mosaik2 [-V] [-i] [-y] duplicates MOSAIK2DB_0 [MOSAIK2DB_1]\n"
-"  or:  mosaik2 [-V] { [-i] [-y] [-n] | -e <NUM> } invalid MOSAIK2DB\n"
+"  or:  mosaik2 [-V] [[-i] [-y] [-n] | -e <NUM>] invalid MOSAIK2DB\n"
 "  or:  mosaik2 [-V] [-e <NUM>] info MOSAIK2DB\n"
-"  or:  mosaik2 {-h|-v}\n" );
+"  or:  mosaik2 [-V] -e <NUM> -t <NUM> crop MOSAIK2DB\n"
+"  or:  mosaik2 (-h|-v)\n" );
 }
 
 void print_help() {
@@ -274,26 +287,23 @@ void print_help() {
 "  -V          Verbose output\n"
 "  -h          Print this help and exit\n"
 "  -v          Print program version and exit\n"
-"  -r PIXEL    Database-image-resolution in PIXEL (default 16)\n"
+"  -d          Fast but not complete reduction of duplicates processor cout)\n"
+"  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
+"  -e NUM      operate only on the NUMth database element\n"
+"  -i          Ignore old invalid images\n"
 "  -j COUNT    Limit concurrent worker jobs to COUNT (default\n"
-"              processor cout)\n"
-"  -l LOAD     Soft limit the system load to LOAD (default 0,\n"
-"              means off)\n"
-"  -t NUM      Use NUM image tiles (default 20)\n"
-"  -u          Allow images only once (unique)\n"
+"  -l LOAD     Soft limit the system load to LOAD (default 0, means off)\n"
+"  -n          No hash comparison\n"
+"  -p PIXEL    Image resolution in PIXEL of one image tile in\n"
+"              the dest-image (default 200)\n"
+"  -r PIXEL    Database-image-resolution in PIXEL (default 16)\n"
 "  -R PERCENT  Ratio between color matching and color\n"
 "              standard devation (default 100 means only color\n"
 "              matching only, 0 uses only stddev informations)\n"
-"  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
-"  -p PIXEL    Image resolution in PIXEL of one image tile in\n"
-"              the dest-image (default 200)\n"
 "  -s          Symlinks instead of file copies\n"
-//"  -c PATH                    Cache path (default ~/.mosaik2)\n"
-"  -d          Fast but not complete reduction of duplicates\n"
-"  -i          Ignore old invalid images\n"
+"  -t NUM      Use NUM image tiles (default 20)\n"
+"  -u          Allow images only once (unique)\n"
 "  -y          Dry run: does not change the database\n"
-"  -n          No hash comparison\n"
-"  -e NUM      Print infos of the NUMth database element\n"
 "\n"
 "Website: https://f7a8.github.io/mosaik2/\n"
 "\n"

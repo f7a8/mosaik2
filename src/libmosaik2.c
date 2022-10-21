@@ -42,6 +42,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( md->pid_filename, 0, 256);
 	memset( md->lock_filename, 0, 256);
 	memset( md->lastmodified_filename, 0, 256);
+	memset( md->tileoffsets_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -111,6 +112,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( md->lastmodified_filename, thumbs_db_name, l);
 	strncat( md->lastmodified_filename, "/.lastmodified", 14); 
 
+	strncpy( md->tileoffsets_filename, thumbs_db_name, l);
+	strncat( md->tileoffsets_filename, "/tileoffsets.bin", 16);
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -369,6 +372,28 @@ uint64_t read_thumbs_db_invalid_count(mosaik2_database *md) {
 	return count;
 }
 
+uint64_t read_thumbs_db_tileoffset_count(mosaik2_database *md) {
+	FILE *file = fopen(md->tileoffsets_filename, "rb");
+	if( file == NULL) {
+		fprintf(stderr, "thumbs db tileoffset file could not be opened\n");
+		exit(EXIT_FAILURE);
+	}
+	uint64_t count = 0;
+	unsigned char buf[BUFSIZ];
+	while( feof(file) == 0) {
+		ssize_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i+=2) {
+			if(!( buf[i]==0xFF && buf[i+1]==0xFF)) // 2x 0xFF marks unset, everything else should have a custom value
+				count++;
+		}
+	}
+	if( fclose( file ) != 0) {
+		fprintf(stderr, "cannot close invalid file\n");
+		exit(EXIT_FAILURE);
+	}
+	return count;
+}
+
 void read_database_id(mosaik2_database *md) {
 
 	FILE *id_file = fopen(md->id_filename,"r");
@@ -407,7 +432,8 @@ uint64_t read_thumbs_db_size(mosaik2_database *md) {
 		+ get_file_size( md->id_filename)
 		+ get_file_size( md->version_filename)
 		+ get_file_size( md->readme_filename)
-		+ get_file_size( md->lastmodified_filename);
+		+ get_file_size( md->lastmodified_filename)
+		+ get_file_size( md->tileoffsets_filename);
 }
 
 time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
@@ -464,81 +490,86 @@ void check_thumbs_db(mosaik2_database *md) {
 
 	
 	if( access( md->thumbs_db_name, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database directory (%s) is not accessable\n", md->thumbs_db_name);
+		fprintf(stderr, "mosaik2 database directory (%s) is not accessible\n", md->thumbs_db_name);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->imagecolors_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagecolors_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->imagecolors_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->imagestddev_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagestddev_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->imagestddev_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->imagedims_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagedims_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->imagedims_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->image_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->image_index_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->image_index_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->filenames_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->filenames_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->filenames_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_index_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->filenames_index_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->filesizes_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filesizes_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->filesizes_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->filehashes_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->filehashes_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->filehashes_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_index_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->filehashes_index_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->tiledims_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->tiledims_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->tiledims_filename);
 		exit(EXIT_FAILURE);
 	}
 	
 	if( access( md->invalid_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->invalid_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->invalid_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->duplicates_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->duplicates_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->duplicates_filename);
 	}
 
 	if( access( md->tilecount_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->tilecount_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->tilecount_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->lock_filename, F_OK ) != 0) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lock_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->lock_filename);
 		exit(EXIT_FAILURE);
 	}
 
 	if( access( md->lastmodified_filename, F_OK ) != 0) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lastmodified_filename);
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->lastmodified_filename);
+		exit(EXIT_FAILURE);
+	}
+
+	if( access( md->tileoffsets_filename, F_OK ) != 0) {
+		fprintf(stderr, "mosaik2 database file (%s) is not accessible\n", md->tileoffsets_filename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -554,6 +585,10 @@ void check_thumbs_db(mosaik2_database *md) {
 		exit(EXIT_FAILURE);
 	}
 
+	if( get_file_size(md->tileoffsets_filename) != element_count*2*sizeof(char)) {
+		fprintf(stderr, "mosaik2 database file (%s) has not the expected size:%li\n", md->tileoffsets_filename, element_count*2*sizeof(char));
+		exit(EXIT_FAILURE);
+	}
 
 	
 }
@@ -970,4 +1005,45 @@ unsigned char* read_stdin( size_t *file_size) {
       resuage.ru_maxrss, resuage.ru_ixrss, resuage.ru_idrss, resuage.ru_isrss
   );
 }*/
+
+
+void read_entry(char *filename, void *val, int len, int offset)  {
+	FILE *f = fopen(filename, "r");
+	if(f == NULL) {
+		fprintf(stderr, "mosaik2 database file (%s)  could not be opened\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	if( fseeko(f, offset, SEEK_SET) != 0) {
+		fprintf(stderr, "mosaik2 database file could not be seeked\n");
+		exit(EXIT_FAILURE);
+	}
+	if( fread(val, 1, len, f) != len) {
+		fprintf(stderr, "cannot read value\n");
+		exit(EXIT_FAILURE);
+	}
+	if(fclose(f) != 0) {
+		fprintf(stderr, "mosaik2 database file (%s) could not be closed\n", filename);
+		exit(EXIT_FAILURE);
+	}
+}
+
+void write_entry(char *filename, void *val, int len, int offset)  {
+	FILE *f = fopen(filename, "r+");
+	if(f == NULL) {
+		fprintf(stderr, "mosaik2 database file (%s)  could not be opened\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	if( fseeko(f, offset, SEEK_SET) != 0) {
+		fprintf(stderr, "mosaik2 database file could not be seeked\n");
+		exit(EXIT_FAILURE);
+	}
+	if( fwrite(val, 1, len, f) != len) {
+		fprintf(stderr, "cannot write value\n");
+		exit(EXIT_FAILURE);
+	}
+	if(fclose(f) != 0) {
+		fprintf(stderr, "mosaik2 database file (%s) could not be closed\n", filename);
+		exit(EXIT_FAILURE);
+	}
+}
 

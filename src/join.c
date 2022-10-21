@@ -247,7 +247,7 @@ if(debug) fprintf(stderr, "init\n");
 	char *mkdir_path = dirname(mkdir_buf);
 	if(access(mkdir_path, W_OK)!=0) {
 		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
-		//not accessable or writeable, try to create dir
+		//not accessible or writeable, try to create dir
 		if( mkdir(mkdir_path, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
 			fprintf(stderr, "cache directory (%s) could not be created\n", mkdir_path);
 			exit(EXIT_FAILURE);

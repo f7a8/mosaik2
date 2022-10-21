@@ -281,11 +281,14 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	if(duplicates_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->duplicates_filename);
 	FILE *lastmodified_file = fopen( md->lastmodified_filename, "w");
 	if(lastmodified_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->lastmodified_filename);
+	FILE *tileoffsets_file = fopen( md->tileoffsets_filename, "w");
+	if(lastmodified_file == NULL) errx(errno, "cannot open mosaik2 database file (%s)", md->tileoffsets_filename);
 
 
 
   //size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 	char null_value='\0';
+	char ff_value=0xFF;
 	char new_line='\n';
 
 	//TODO check if everything is written to disk
@@ -318,6 +321,9 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	// the content is just written for updating ".lastmodified"s modified timestamp
 	fwrite(&task->lastmodified, sizeof(time_t), 1, lastmodified_file);
 
+	fwrite(&ff_value, sizeof(ff_value), 1, tileoffsets_file);
+	fwrite(&ff_value, sizeof(ff_value), 1, tileoffsets_file);
+
 
 	if( fclose( imagecolors_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagecolors_filename);
 	if( fclose( imagestddev_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->imagestddev_filename);
@@ -332,6 +338,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	if( fclose( invalid_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->invalid_filename);
 	if( fclose( duplicates_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->duplicates_filename);
 	if( fclose( lastmodified_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->lastmodified_filename);
+	if( fclose( tileoffsets_file ) != 0) errx(errno, "cannot close mosaik2 database file (%s)", md->tileoffsets_filename);
 
 
 	//print_usage("unflock");

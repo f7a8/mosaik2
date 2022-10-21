@@ -5,7 +5,7 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-#define MOSAIK2_DATABASE_FORMAT_VERSION 5
+#define MOSAIK2_DATABASE_FORMAT_VERSION 6
 #define MOSAIK2_VERSION "0.3"
 
 extern const int FT_JPEG;
@@ -56,12 +56,11 @@ struct mosaik2_indextask_struct {
 	uint8_t tile_count;
 	unsigned char *image_data;
 
-
 	int width;
 	int height;
-	int tile_x_count;
-	int tile_y_count;
-  unsigned char hash[MD5_DIGEST_LENGTH];
+	unsigned char tile_x_count;
+	unsigned char tile_y_count;
+	unsigned char hash[MD5_DIGEST_LENGTH];
 
 	uint32_t total_tile_count;	
 	uint8_t *colors;
@@ -94,6 +93,7 @@ struct mosaik2_database_struct {
 	char pid_filename[256];
 	char lock_filename[256];
 	char lastmodified_filename[256];
+	char tileoffsets_filename[256];
 
 	uint8_t tilecount;
 };
@@ -139,6 +139,7 @@ struct arguments_struct {
 	int dry_run;
 	int database_image_resolution;
 	int num_tiles;
+	int has_num_tiles;
 	int max_load, max_jobs;
 	int unique;
 	int color_stddev_ratio;
@@ -161,6 +162,7 @@ int mosaik2_join(mosaik2_arguments*);
 int mosaik2_invalid(mosaik2_arguments*);
 int mosaik2_duplicates(mosaik2_arguments*);
 int mosaik2_info(mosaik2_arguments*);
+int mosaik2_crop(mosaik2_arguments*);
 
 int mosaik2_clean(char *mosaik2_database_name);
 int mosaik2_tiler(mosaik2_arguments *, mosaik2_database *, mosaik2_indextask *);

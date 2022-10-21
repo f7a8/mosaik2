@@ -65,6 +65,7 @@ uint64_t read_thumbs_db_count(mosaik2_database *md);
 uint8_t read_thumbs_conf_tilecount(mosaik2_database *md);
 uint64_t read_thumbs_db_duplicates_count(mosaik2_database *md);
 uint64_t read_thumbs_db_invalid_count(mosaik2_database *md);
+uint64_t read_thumbs_db_tileoffset_count(mosaik2_database *md);
 time_t read_thumbs_db_lastmodified(mosaik2_database *md);
 void read_database_id(mosaik2_database *md);
 uint64_t read_thumbs_db_size(mosaik2_database *md);
@@ -96,3 +97,6 @@ gdImagePtr gdImageRotate270 (gdImagePtr src);
 #endif
 
 //void print_usage(char *);
+
+void read_entry(char *filename, void *val, int len, int offset); //read single values from a single database file. 
+void write_entry(char *filename, void *val, int len, int offset); //read single values from a single database file. 

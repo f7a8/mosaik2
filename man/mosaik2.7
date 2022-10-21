@@ -16,11 +16,13 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .PP
 \fBmosaik2\fR [-V] [-i] [-y] duplicates \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
 .br
-\fBmosaik2\fR [-V] { [-i] [-y] [-n] | -e <NUMBER> } invalid \fImosaik2db\fR
+\fBmosaik2\fR [-V] [[-i] [-y] [-n] | -e <NUM>] invalid \fImosaik2db\fR
 .br
-\fBmosaik2\fR [-V] [-e <NUMBER>] info \fImosaik2db\fR
+\fBmosaik2\fR [-V] [-e <NUM>] info \fImosaik2db\fR
 .br
-\fBmosaik2\fR {-h|-v}
+\fBmosaik2\fR [-V] -e <NUM> -t <NUM> crop \fImosaik2db\fR
+.br
+\fBmosaik2\fR (-h|-v)
 .SH "VERSION"
 .PP
 This manual documents mosaik2 version 0.3
@@ -36,7 +38,7 @@ If your indexing gets stuck due to any imponderables, you can safely cancel the 
 .br
 For now a single database can have size_t-1 entries. The indexing will stop after reaching this limit and give you an appropiate message.
 .PP
-After your mosaik2 database(s) have been created, you can start to work on your individual mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. If you mix several mosaik2 database different \fItile-resolutions\fR can be chosen here.
+After your mosaik2 database(s) have been created, you can start to work on your individual mosaics. First you have to analyze your mosaic motive with any mosaik2 database you want to use in the \fBgathering\fR mode. Normally, the best matching square crop used from all candidates. With the \fBcrop\fR mode, the crops of individual images can be changed manually. If you create several mosaik2 databases, different \fItile-resolutions\fR can be chosen. 
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases with the same resolution will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
 
@@ -72,9 +74,49 @@ The image data that is the motif for the photo mosaic.
 The path to the photo mosaic which to create. The link between the gathering and join mode is using the same dest-image. Additional files are created, which serve serveral statistics, like <dest-image>.html and <dest-image>.src. 
 .RE
 .PP
-\fB-t\fR num-tiles
+\fB-d\fR
 .RS 4
-The \fIdest-image\fR will be created out of \fInum-tiles\fR images at its smaller dimension. The aspect ratio is obtained. The image-resolution of the src-image must be greater than image-resolution multiplied by num-tiles. For example: the mosaik2db image-resolution is 16 and your choosen num-tiles is 40, so the smaller dimension of your src-image has to be 640 pixel at least. Most images have a aspect ratio from 3:4, here such an image must have at least 640 x 853 pixel image dimension. 
+Fast but slight reduction of duplicates images. When N mosaik2dbs are used the duplication can be reduced by N. Three mosaik2dbs can reduce seven duplicates to four.
+.RE
+.PP
+\fB-D\fR color-distance-method
+.RS 4
+Specifies the method of determining similar colors. Possible values are \fBmanhattan\fR (default), \fBeuclidian\fR and \fBchebyshev\fR.
+.PP
+\fBmanhattan\fR is probably the best tradeoff between speed and accuracy, which is the sum of the absolute differences of their Cartesian coordinates. Violett in RGB is 161,70,255 and a comparison color may 159,71,255 the Manhattan distance would be 3.
+.br
+\fBeuclidian\fR distance should be more accurate but is less fast, which is the length of a line segment between the two points. The above example colours √((159-161)²+(71-70)²+(255-255)²) which is ~ 2.23.
+.br
+The \fBchebyshev\fR distance is the fastest but most inaccurate method, where the distance between two vectors is the greatest of their differences along any coordinate dimension. Same example results to 2 because 159-161 has the absolute value of 2. 71-70 which would be 1 is dropped because it is lower than 2.
+.RE
+\fB-e\fR number
+.RS 4
+Execute the MODE only on the database entry with the nth number (starting at 1), instead on the entire database.
+.RE
+.PP
+\fB-i\fR
+.RS 4
+Ignore-old-invalids: this compares all files again with their original source if set, otherwise only valid files are compared.
+.RE
+.PP
+\fB-j\fR max-tiler
+.RS 4
+The number of concurrent worker jobs, which (down)load and index in parallel. Default value is the number of CPU cores available, because the worker jobs are subprocesses.
+.RE
+.PP
+\fB-l\fR max-load
+.RS 4
+The maximum system load value as integer value. Default value is 0, which means unset. If the maximum system load exceeds, concurrent worker jobs are limited to 1.
+.RE
+.PP
+\fB-n\fR
+.RS 4
+No-hash-cmp: while checking all images in the mosaik2db, omit the file content comparison through hash compare. This is the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
+.RE
+.PP
+\fB-p\fR pixel-per-tile
+.RS 4
+Each original image is reduced to squared \fIpixel-per-tile\fR pixels. The default value is 200 px. This value controls the resulting total image size. Multiply pixel-per-tile with num-tile results to the pixel size at the smaller dimension.
 .RE
 .PP
 \fB-r\fR database-image-resolution
@@ -86,60 +128,23 @@ In an existing mosaik2 database the \fIdatabase-image-resolution\fR cannot be ch
 Example of an expected database size: from 2003 to 2019, there are about 53 million JPEG images in Wikimedia Commons, occupying a storage size of about 165 TB. At a image-resolution of 16, the resulting mosaik2 database size was 130 GB.
 .RE
 .PP
-\fB-D\fR color-distance-method
-.RS 4
-Specifies the method of determining similar colors. Possible values are \fBmanhattan\fR (default), \fBeuclidian\fR and \fBchebyshev\fR.
-.PP
-Manhattan is probably the best tradeoff between speed and accuracy, which is the sum of the absolute differences of their Cartesian coordinates. Violett in RGB is 161,70,255 and a comparison color may 159,71,255 the Manhattan distance would be 3.
-.br
-Euclidian distance should be more accurate but is less fast, which is the length of a line segment between the two points. The above example colours √((159-161)²+(71-70)²+(255-255)²) which is ~ 2.23.
-.br
-The Chebyshev distance is the fastest but most inaccurate method, where the distance between two vectors is the greatest of their differences along any coordinate dimension. Same example results to 2 because 159-161 has the absolute value of 2. 71-70 which would be 1 is dropped because it is lower than 2.
-.RE
-.PP
-The RGB color model is an additive color model out of red, green, and blue primary colors of light are added together in various ways to reproduce a broad array of colors. It is more likely the standard on computer systems. It is fast because every pixels rgb color can be retrieved directly.
-.br
-The CIELAB color model describes all perceptible colors. It uses a three-dimensional color space in which the brightness value L* is perpendicular to the color plane (a*,b*). It addresses the color perception of humans and similar colors can be determined better. Unfortunately the RGB colors have to be converted into this color space, which costs additional computing time.
-.RE
-.PP 
-\fB-j\fR max-tiler
-.RS 4
-The number of concurrent worker jobs, which (down)load and index in parallel. Default value is the number of CPU cores available, because the worker jobs are subprocesses.
-.RE
-.PP
-\fB-l\fR max-load
-.RS 4
-The maximum system load value as integer value. Default value is 0, which means unset. If the maximum system load exceeds, concurrent worker jobs are limited to 1.
-.RE
-.PP
-\fB-i\fR
-.RS 4
-Ignore-old-invalids: this compares all files again with their original source if set, otherwise only valid files are compared.
-.RE
-.PP
-\fB-y\fR
-.RS 4
-Dry-run: outputs invalids or duplicates as desired, but won't save it to the mosaik2db.
-.RE
-.PP
-\fB-d\fR
-.RS 4
-Fast but slight reduction of duplicates images. When N mosaik2dbs are used the duplication can be reduced by N. Three mosaik2dbs can reduce seven duplicates to four.
-.RE
-.PP
 \fB-s\fR
 .RS 4
 Controls the caching strategy. If omitted files are copied to the cache directory ~/.mosaik2/, which should be advantageous for downloaded data. But this option can create symlinks instead of copies, if files are local.
 .RE
 .PP
-\fB-n\fR
+\fB-t\fR num-tiles
 .RS 4
-No-hash-cmp: while checking all images in the mosaik2db, omit the file content comparison through hash compare. This is the quicker but less accurate method, which only checks image resource availability, timestamps and file sizes.
+\fBgathering\fR mode: The \fIdest-image\fR will be created out of \fInum-tiles\fR images at its smaller dimension (default value is 20). The aspect ratio is obtained. The image-resolution of the src-image must be greater than image-resolution multiplied by num-tiles. For example: the mosaik2db image-resolution is 16 and your choosen num-tiles is 40, so the smaller dimension of your src-image has to be 640 pixel at least. Most images have a aspect ratio from 3:4, here such an image must have at least 640 x 853 pixel image dimension.
+.PP
+\fBcrop\fR mode: sets a specific offset to a database entry. 255 will unset the offset.
+.br
+Example: Common image formats are reduced to 22x16 if the \fIdatabase-image-resolution\fR was set to 16. Then only a 16x16 image section will used to find the best candidate, which will later be placed at this position. Here you can define which of the 4 possible 16x16 image sections to take. In this case valid values are from 0 to 3.
 .RE
 .PP
-\fB-e\fR number
+\fB-y\fR
 .RS 4
-Execute the MODE only on the database entry with the nth number (starting at 1), instead on the entire database.
+Dry-run: outputs invalids or duplicates as desired, but won't save it to the mosaik2db.
 .RE
 .PP
 .SH "FILE LIST"
@@ -230,6 +235,10 @@ mosaik2db/tilecount.txt
 .br
 mosaik2db/tiledims.bin
 .br
+mosaik2db/tileoffsets.bin
+.RS 6
+Provides user defined crops of images. Default unset value is 0xFF for width and 0xFF for height dimension. If unset the gathering mode will detect the best matching crop, which may have undesired effects because of truncated main motives. Any image can save here its special tile offsets. Defined entries should have at least one zero, because one dimension is always the narrow side where no scrolling is possibile. 
+.RE
 mosaik2db/timestamps.bin
 .RE
 .PP
