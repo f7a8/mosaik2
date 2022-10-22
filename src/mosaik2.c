@@ -22,7 +22,6 @@ void print_help();
 void print_version();
 void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv);
 
-
 int main(int argc, char **argv) {
 
   mosaik2_arguments args;
@@ -53,17 +52,31 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->color_stddev_ratio = 100;
 	args->pixel_per_tile = 200;
 	args->num_tiles = 20;
+	args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_DEFAULT;
 
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid"};
+	
 	int modes_used[] = {0,0,0,0,0,0};
 
-	char *all_options = "dhij:l:np:r:R:st:uvVy?";
+	char *all_options = "dD:hij:l:np:r:R:st:uvVy?";
 
 	int opt;
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
 			case 'd': args->duplicate_reduction = 1; 
 								modes_used[MODE_JOIN]++;
+								break;
+			case 'D':
+								if(strncmp("manhattan", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN;
+								} else if(strncmp("euclidian", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN;
+								} else if(strncmp("chebyshev", optarg, strlen(optarg)) == 0) {
+									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_CHEBYSHEV;
+								} else {
+									print_usage(); exit(EXIT_FAILURE);
+								}
+								modes_used[MODE_GATHERING]++;
 								break;
 			/* -h should be the only parameter, but this code will print help
 			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
@@ -186,7 +199,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			printf("mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		printf ("dest-image = %s\n", args->dest_image);
-	  printf ("options:\nverbose = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\n\n",
+	  printf ("options:\nverbose = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n\n",
               args->verbose ? "yes" : "no",
 
               args->dry_run ? "yes" : "no",
@@ -199,7 +212,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->duplicate_reduction ? "yes" : "no",
               args->symlink_cache ? "yes" : "no",
               args->ignore_old_invalids ? "yes" : "no",
-              args->no_hash_cmp ? "yes" : "no");
+              args->no_hash_cmp ? "yes" : "no",
+							args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" : 
+								args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev");
 	}
 }
 
@@ -219,7 +234,7 @@ void print_usage() {
 	fprintf(stdout, 
 "Usage: mosaik2 [-V] [-r <PIXEL>] init MOSAIK2DB\n"
 "  or:  mosaik2 [-V] [-j <COUNT>] [-l <LOAD>] index MOSAIK2DB < file-list\n"
-"  or:  mosaik2 [-V] [-t <NUM>] [-u] [-R <PERCENT>] gathering dest-image MOSAIK2DB < src-image\n"
+"  or:  mosaik2 [-V] [-t <NUM>] [-u] [-R <PERCENT>] [-D DIST] gathering dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 [-V] [-p <PIXEL>] [-s] [-d] join dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
 "  or:  mosaik2 [-V] [-i] [-y] duplicates MOSAIK2DB_0 [MOSAIK2DB_1]\n"
 "  or:  mosaik2 [-V] [-i] [-y] [-n] invalid MOSAIK2DB\n"
@@ -244,6 +259,7 @@ void print_help() {
 "  -R PERCENT  Ratio between color matching and color\n"
 "              standard devation (default 100 means only color\n"
 "              matching only, 0 uses only stddev informations)\n"
+"  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
 "  -p PIXEL    Image resolution in PIXEL of one image tile in\n"
 "              the dest-image (default 200)\n"
 "  -s          Symlinks instead of file copies\n"

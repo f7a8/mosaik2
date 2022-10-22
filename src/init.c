@@ -75,35 +75,23 @@ void create_mosaik2_database_file_id(char *filename) {
 	printf( "mosaik2 database file %s created\n", filename);
 }
 
-void create_mosaik2_database_file_version(char *filename) {
-	FILE *file = create_mosaik2_database_file(filename, 0, 1);
-	if( fprintf(file, "%i", MOSAIK2_DATABASE_FORMAT_VERSION) < 1 ) {
-		fprintf(stderr, "could not write mosaik2 database version file\n");
-		exit(EXIT_FAILURE);
-	}
-	if( fclose(file) != 0 ) {
-		fprintf(stderr, "could not close mosaik2 database version file\n");
-		exit(EXIT_FAILURE);
-	}
-}
-
-void create_mosaik2_database_file_tilecount(char *filename, uint8_t tilecount) {
-	FILE *file = create_mosaik2_database_file(filename, 0, 1);
-	if ( fprintf(file, "%i", tilecount) < 1 ) {
-		fprintf(stderr, "could not write mosaik2 database tilecount file\n");
-		exit(EXIT_FAILURE);
-	}
-	if( fclose(file) != 0 ) {
-		fprintf(stderr, "could not close mosaik2 database version file\n");
-		exit(EXIT_FAILURE);
-	}
-}
-
 void create_mosaik2_database_file_readme(char *filename) {
 	FILE *file = create_mosaik2_database_file(filename, 0, 1);
 	fprintf(file, "This is a mosaik2 database directory.\n\nmosaik2 creates real photo mosaics especially like from large datasets.\nView the projects website at https://f7a8.github.io/mosaik2/\n");
 	if( fclose( file) != 0 ) {
-		fprintf(stderr, "could not close mosaik2 database id file\n");
+		fprintf(stderr, "could not close mosaik2 database readme file\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void create_mosaik2_database_file_int(char *filename, int value) {
+	FILE *file = create_mosaik2_database_file(filename, 0, 1);
+	if ( fprintf(file, "%i", value) < 1 ) {
+		fprintf(stderr, "could not write mosaik2 database file (%s)\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	if( fclose(file) != 0 ) {
+		fprintf(stderr, "could not close mosaik2 database file (%s)\n", filename);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -112,6 +100,7 @@ int mosaik2_init(mosaik2_arguments *args) {
 	
 	char *mosaik2_database_name = args->mosaik2db;
 	int tilecount = args->database_image_resolution;
+
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);
@@ -142,8 +131,8 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.lastmodified_filename, 1, 1);
 
 	create_mosaik2_database_file_id(md.id_filename);
-	create_mosaik2_database_file_version(md.version_filename);
-	create_mosaik2_database_file_tilecount(md.tilecount_filename, tilecount);
+	create_mosaik2_database_file_int(md.version_filename, MOSAIK2_DATABASE_FORMAT_VERSION);
+	create_mosaik2_database_file_int(md.tilecount_filename, tilecount);
 	create_mosaik2_database_file_readme(md.readme_filename);
 
 	return 0;
