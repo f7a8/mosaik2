@@ -107,8 +107,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	if(width < tile_count || height < tile_count ) {
 		fprintf(stderr,"image too small\n");
 		exit(EXIT_FAILURE);
-	} else {
-		printf("tile_count:%i (on shorter side)\n", tile_count);
 	}
 	
 	uint32_t short_dim;//, long_dim;
@@ -157,6 +155,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	lx = offset_x + pixel_per_tile * tile_x_count;
 	ly = offset_y + pixel_per_tile * tile_y_count;
+
+	printf("tile count: %ix%i\n", primary_tile_x_count, primary_tile_y_count);
 
 	if(debug)
 			printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", 
