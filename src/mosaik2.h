@@ -42,6 +42,62 @@ struct mosaik2_context_struct {
 
 typedef struct mosaik2_context_struct mosaik2_context;
 
+struct mosaik2_tile_infos_struct {
+
+	int image_width;
+	int image_height;
+	unsigned char src_image_resolution; // -t count of mosaic elements at the shorter src-image side
+	unsigned char database_image_resolution;
+
+	int short_dim;
+	uint32_t pixel_per_tile;
+	double total_pixel_per_tile;
+	uint32_t total_pixel_per_primary_tile;
+	uint32_t pixel_per_primary_tile;
+	uint32_t total_pixel_count; // only recognized pixel count
+	uint32_t ignored_pixel_count; // none recognized pixels
+	uint32_t tile_count; 
+	uint32_t tile_x_count;
+	uint32_t tile_y_count;
+	uint32_t primary_tile_count;
+	uint32_t primary_tile_x_count;
+	uint32_t primary_tile_y_count;
+	uint32_t total_tile_count;
+	uint32_t total_primary_tile_count;
+	uint32_t offset_x, offset_y; // pixel offset to cut a maybe margin
+	uint32_t lx, ly; // absolute pixel length where the regognized image area ends
+	/*
+	 * initial values
+	 * database_image_resolution 3
+	 * src_image_resolution 2
+	 * image_width 19
+	 * image_height 6
+	 
+	 * are controlling this values
+
+	 primary_tile_count 2
+	 primary_tile_x_count 5
+	 primary_tile_y_count 2
+	 tile_count 6
+	 tile_x_count
+
+	   ------------------- <- 0                 pixel_per_tile 3
+	   | ++#++#++#++#++# | <- offset_y 1        total_pixel_per_tile 9
+	   | ++#++#++#++#++# |                      
+	   | ############### |   +# total_pixel_count 14*5=70
+	   | ++#++#++#++#++# |
+	   | ++#++#++#++#++# | 
+	   | ############### | <- ly 6
+	   ------------------- <- image_height 8 
+	   ^ ^             ^ ^
+	   | |             | |
+	   0 offset_x     lx image_width 
+	     2            16 19
+
+	*/
+};
+typedef struct mosaik2_tile_infos_struct mosaik2_tile_infos;
+
 typedef enum {  INDEXTASK_STATE_INITIAL, INDEXTASK_STATE_LOADING, INDEXTASK_STATE_INDEXING, INDEXTASK_STATE_WRITING_INDEX, INDEXTASK_STATE_ENDING } TASK_STATE;
 
 struct mosaik2_indextask_struct {
@@ -96,13 +152,33 @@ struct mosaik2_database_struct {
 	char tileoffsets_filename[256];
 
 	uint8_t tilecount;
+	float histogram_color[3]; // all valid entries
+	float histogram_stddev[3];
 };
 typedef struct mosaik2_database_struct mosaik2_database;
+
+struct mosaik2_database_element_struct {
+	mosaik2_database *md;
+	uint64_t element_number;
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	char *filename;
+	ssize_t filesize;
+	int imagedims[2];
+	unsigned char tiledims[2];
+	time_t timestamp;
+	unsigned char duplicate;
+	unsigned char invalid;
+	unsigned char tileoffsets[2];
+	float histogram_color[3];
+	float histogram_stddev[3];
+};
+typedef struct mosaik2_database_element_struct mosaik2_database_element;
 
 struct mosaik2_project_struct {
 	char dest_filename[256];
 	char dest_primarytiledims_filename[256];
 	char dest_result_filename[256];
+	char dest_imagedims_filename[256];
 	uint8_t ratio;
 	uint8_t unique;
 	size_t file_size;
@@ -111,12 +187,17 @@ struct mosaik2_project_struct {
 	char dest_src_filename[ 256 ];
 	mosaik2_database *mds;
 	uint8_t mds_len;
+	int image_height; // populated by read_image_dim( *mosaik2_project)
+	int image_width;  // populated by read_image_dim( *mosaik2_project)
+	int pixel_per_tile;
+	uint8_t primary_tile_x_count; //populated by mosaik2_project_read_primary_tile_dims( *mosaik2_project)
+	uint8_t primary_tile_y_count;//populated by mosaik2_project_read_primary_tile_dims( *mosaik2_project)
 };
-typedef struct mosaik2_project_struct mosaik2_project;
+typedef struct mosaik2_project_struct          mosaik2_project;
 
-struct result {
+struct mosaik2_project_result_struct {
 	uint32_t sortorder;
-	char *thumbs_db_name;
+	mosaik2_database *md;
 	uint8_t hash[16];
 	uint64_t index; // index in thumbs_db
 	float costs;
@@ -126,6 +207,7 @@ struct result {
 	char temp_filename[MAX_TEMP_FILENAME_LEN];
 	int size;
 };
+typedef struct mosaik2_project_result_struct    mosaik2_project_result;
 
 
 /* Used by main to communicate with parse_opt. */
@@ -150,8 +232,10 @@ struct arguments_struct {
 	int ignore_old_invalids;
 	int no_hash_cmp;
 	int color_distance;
-	int element_number;
+	uint64_t element_number;
 	int has_element_number;
+	char *src_image;
+	int quiet;
 };
 typedef struct arguments_struct mosaik2_arguments;
 
