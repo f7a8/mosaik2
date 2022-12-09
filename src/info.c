@@ -49,7 +49,7 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 
 	read_thumbs_db_histogram(md);
 	
-	printf("histogram_color=%f %f %f\nhistogram_stddev=%f %f %f\n",
+	printf("histogram-color=%f %f %f\nhistogram-stddev=%f %f %f\n",
 		md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
 		md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
 }
@@ -82,13 +82,13 @@ void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_datab
 	}
 	free(mde.filename);
 
-	printf("histogram_color=%f %f %f\n", mde.histogram_color[R], mde.histogram_color[G], mde.histogram_color[B]);
-	printf("histogram_stddev=%f %f %f\n", mde.histogram_stddev[R], mde.histogram_stddev[G], mde.histogram_stddev[B]);
+	printf("histogram-color=%f %f %f\n", mde.histogram_color[R], mde.histogram_color[G], mde.histogram_color[B]);
+	printf("histogram-stddev=%f %f %f\n", mde.histogram_stddev[R], mde.histogram_stddev[G], mde.histogram_stddev[B]);
 }
 
 void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_database *md) {
 	printf("mosaik2db=%s\n", mosaik2_db_name);
-	printf("src_image=%s\n", args->src_image);
+	printf("src-image=%s\n", args->src_image);
 
 
 	FILE *src_image = m_fopen(args->src_image, "r");
@@ -138,10 +138,10 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 			histogram_color[G] += green0 / total_pixel_count_f;
 			histogram_color[B] += blue0 / total_pixel_count_f;
 			//printf("%i : %i %i %i / %f = %f %f %f\n", color, red0, green0, blue0, total_pixel_count_f, histogram_color[R], histogram_color[G], histogram_color[B]);
-	//printf("histogram_color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
+	//printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 		}
 	}
-	printf("histogram_color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
+	printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 
 	
 	for(int x = ti.offset_x; x < ti.lx; x++ ) {
@@ -161,17 +161,17 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	histogram_stddev[R] = sqrt(histogram_stddev[R] / (total_pixel_count_f - 1));
 	histogram_stddev[G] = sqrt(histogram_stddev[G] / (total_pixel_count_f - 1));
 	histogram_stddev[B] = sqrt(histogram_stddev[B] / (total_pixel_count_f - 1));
-	printf("histogram_stddev:%f %f %f\n", histogram_stddev[R], histogram_stddev[G], histogram_stddev[B]);
+	printf("histogram-stddev:%f %f %f\n", histogram_stddev[R], histogram_stddev[G], histogram_stddev[B]);
 	//	mosaik2_database_read_database_id(md);
 	//print_xdatabase(args, mosaik2_db_name, md);
 	read_thumbs_db_histogram(md);
 
-	printf("histogram_color_similarity=%f\n", 
+	printf("histogram-color-similarity=%f\n",
 			sqrt(
 				pow(histogram_color[R] - md->histogram_color[R],2) +
 				pow(histogram_color[G] - md->histogram_color[G],2) +
 				pow(histogram_color[B] - md->histogram_color[B],2)));
-	printf("histogram_stddev_similarity=%f\n",
+	printf("histogram-stddev-similarity=%f\n",
 			sqrt(
 				pow(histogram_stddev[R] - md->histogram_stddev[R],2) +
 				pow(histogram_stddev[G] - md->histogram_stddev[G],2) +
