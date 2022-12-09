@@ -20,6 +20,8 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR info       [-V|-q] (-e <NUM> | \fIsrc-image\fR -t <NUM>) \fImosaik2db\fR
 .br
+\fBmosaik2\fR xinfo      [-V|-q] ([-e <NUM>] | \fIdest-image\fR) \fImosaik2db\fR
+.br
 \fBmosaik2\fR crop       [-V|-q] -e <NUM> -t <NUM> \fImosaik2db\fR
 .br
 \fBmosaik2\fR (-h|-v)
@@ -51,6 +53,8 @@ You are allowed to mark manually the invalid state of single database elements, 
 You may want to take a look at the \fBFILE LIST\fR section how to identify the difference between the last state of the mosaik2 database to append it to the old database or to create a new one.
 .PP
 To \fBinfo\fR mode serves several informations about the database or an individial database element or applying a src_image to the mosaik2 database. Every type includes a poor boys histogram, which is more an average over the RGB colors and its standard derivation. When applying the src_image two numbers (histogram_color_similarity, histogram_stddev_similarity) can help to get a rough guess, if the database content will lead to good result with this src_image. Lower values are better.
+.br
+Whereas the \fBxinfo\fR mode displays information about finished mosaics and allows to edit individual images from there, within the possibilities offered by the crop and invalid modes.
 .PP
 .SH "OPTIONS"
 .PP
@@ -76,7 +80,7 @@ The path to the photo mosaic which to create. The link between the gathering and
 .PP
 \fB-d\fR
 .RS 4
-Fast but primitive reduction of duplicates images. When N mosaik2dbs are used the duplication can be reduced by N. Three mosaik2dbs can reduce seven duplicates to four.
+Fast but slight reduction of duplicates images. When N mosaik2dbs are used the duplication can be reduced by N-1. Three mosaik2dbs can reduce seven duplicates to four.
 .RE
 .PP
 \fB-D\fR color-distance-method
