@@ -246,6 +246,7 @@ int mosaik2_join(mosaik2_arguments*);
 int mosaik2_invalid(mosaik2_arguments*);
 int mosaik2_duplicates(mosaik2_arguments*);
 int mosaik2_info(mosaik2_arguments*);
+int mosaik2_xinfo(mosaik2_arguments*);
 int mosaik2_crop(mosaik2_arguments*);
 
 int mosaik2_clean(char *mosaik2_database_name);

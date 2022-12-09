@@ -17,8 +17,9 @@
 #define MODE_DUPLICATES 4
 #define MODE_INVALID 5
 #define MODE_INFO 6
-#define MODE_CROP 7
-#define MODE_COUNT 8
+#define MODE_XINFO 7
+#define MODE_CROP 8
+#define MODE_COUNT 9
 
 void print_usage();
 void print_help();
@@ -44,6 +45,8 @@ int main(int argc, char **argv) {
 		return mosaik2_duplicates(&args);
 	} else if(strncmp( args.mode, "info", strlen("info")) == 0) {
 		return mosaik2_info(&args);
+	} else if(strncmp( args.mode, "xinfo", strlen("xinfo")) == 0) {
+		return mosaik2_xinfo(&args);
 	} else if(strncmp( args.mode, "crop", strlen("crop")) == 0) {
 		return mosaik2_crop(&args);
 	}
@@ -63,7 +66,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->element_number = 1;
 	args->has_element_number = 0;
 
-	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","crop"};
+	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","xinfo","crop"};
 	
 	int modes_used[] = {0,0,0,0,0,0,0,0,0};
 
@@ -189,6 +192,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
 	|| (mode == MODE_INVALID    && marg != 2)
 	|| (mode == MODE_INFO       && (marg < 2 || marg > 3))
+	|| (mode == MODE_XINFO       && (marg < 2 || marg > 3))
 	|| (mode == MODE_CROP        && marg != 2);
 
 	if(invalid) {
@@ -236,6 +240,19 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 				args->src_image = argv[optind+1];
+				args->mosaik2db = argv[optind+2];
+			} else {
+				args->mosaik2db = argv[optind+1];
+			}
+			break;
+		case MODE_XINFO:
+
+			if(marg==3) {
+				if( args->has_element_number) {
+					print_usage();
+					exit(EXIT_FAILURE);
+				}
+				args->dest_image = argv[optind+1];
 				args->mosaik2db = argv[optind+2];
 			} else {
 				args->mosaik2db = argv[optind+1];
@@ -293,6 +310,7 @@ void print_usage() {
 "  or:  mosaik2 duplicates [-V|-q] [-i] [-y] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
 "  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <NUM>] MOSAIK2DB\n"
 "  or:  mosaik2 info       [-V|-q] [-e <NUM>] | src-image -t <NUM>] MOSAIK2DB\n"
+"  or:  mosaik2 xinfo      [-V|-q] ([-e <NUM>] | dest-imgage) MOSAIK2DB\n"
 "  or:  mosaik2 crop       [-V|-q] -e <NUM> -t <NUM> MOSAIK2DB\n"
 "  or:  mosaik2 (-h|-v)\n" );
 }
