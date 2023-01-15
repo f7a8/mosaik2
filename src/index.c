@@ -96,21 +96,14 @@ double get_max_load_avg(uint32_t max_load_avg) {
 double read_system_load() {
 	char buf[BUFSIZ];
 	memset(buf,0,BUFSIZ);
-	FILE *loadfile = fopen("/proc/loadavg","r");
-	if(loadfile == NULL) {
-		fprintf(stderr, "could not open /proc/loadavg\n");
-		exit(EXIT_FAILURE);
-	}
+	FILE *loadfile = m_fopen("/proc/loadavg","r");
 
 	size_t read = fread(&buf,1,BUFSIZ,loadfile);
 	if(read<1) {
 		fprintf(stderr, "could not read any data from /proc/loadavg");
 		exit(EXIT_FAILURE);
 	}
-	if(fclose(loadfile)!=0) {
-		fprintf(stderr, "could not close /proc/loadavg\n");
-		exit(EXIT_FAILURE);
-	}
+	m_fclose(loadfile);
 
 	char *token0 = strtok(buf, " ");
 	if(token0 == NULL ) {
@@ -240,10 +233,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	// duration 0.2 ms
 	// lock the lockfile to make all other forked processes wait this process finishp
 
-	FILE *lockfile_file = fopen( md->lock_filename, "r");
-	if(lockfile_file ==NULL) {
-		fprintf(stderr, "could not open lock file\n");
-	}
+	FILE *lockfile_file = m_fopen( md->lock_filename, "r");
 	int lockfile_fd = fileno(lockfile_file);
 	if(lockfile_fd == -1) {
 		fprintf(stderr, "could not open lock fd\n");
@@ -272,8 +262,6 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	FILE *tileoffsets_file = m_fopen( md->tileoffsets_filename, "a");
 
 
-
-  //size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 	char null_value='\0';
 	char ff_value=0xFF;
 	char new_line='\n';

@@ -164,10 +164,8 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	memset(&colors_stddev_blue,  0, total_tile_count*sizeof(double));
 
 
-	task->colors = calloc(3*total_tile_count, sizeof(uint8_t));
-	if(task->colors==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors\n"); exit(1); }
-	task->colors_stddev = calloc(3*total_tile_count, sizeof(uint8_t));
-	if(task->colors_stddev==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors_stddev\n"); exit(1); }
+	task->colors = m_calloc(3*total_tile_count, sizeof(uint8_t));
+	task->colors_stddev = m_calloc(3*total_tile_count, sizeof(uint8_t));
 
 	int red0, green0, blue0;
 		for(int j=0,j1=offset_y;j1<ly;j++,j1++){    

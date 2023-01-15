@@ -49,8 +49,8 @@ int mosaik2_join(mosaik2_arguments *args) {
 	
 	uint8_t argv_start_idx_thumbs_db_names = 0;
 	uint8_t argv_end_idx_thumbs_db_names = args->mosaik2dbs_count;	
-	uint8_t primary_tile_x_count=0;// atoi(argv[2]);
-	uint8_t primary_tile_y_count=0;// = atoi(argv[3]);
+	int primary_tile_x_count=0;// atoi(argv[2]);
+	int primary_tile_y_count=0;// = atoi(argv[3]);
 
 	
 	uint8_t tile_count = 0;
@@ -77,21 +77,16 @@ if(debug) fprintf(stderr, "init\n");
 		if(debug) {
 			fprintf(stderr, "primarytiledims file loaded\n");
 		}
-		struct stat st;
-		stat(mp.dest_primarytiledims_filename, &st);
-		char buf[st.st_size];
-		memset(buf, 0 , st.st_size);
 
-		int freads_reads = fread(buf, 1, st.st_size, primarytiledims_file);
-		if(st.st_size != freads_reads) {
-			fprintf(stderr, "read data than it expected (%s)", mp.dest_primarytiledims_filename);
-			exit(EXIT_FAILURE);
-		}
+		off_t primarytiledims_filesize = get_file_size(mp.dest_primarytiledims_filename);
+		unsigned char buf[primarytiledims_filesize];
+		memset(buf, 0, primarytiledims_filesize);
+		m_fread(buf, primarytiledims_filesize, primarytiledims_file);
 
-		uint8_t primary_tile_x_count_local = 0;
-		uint8_t primary_tile_y_count_local = 0;
+		int primary_tile_x_count_local = 0;
+		int primary_tile_y_count_local = 0;
 	
-  	char *ptr;
+		char *ptr;
 		ptr=strtok(buf,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing primary tile dims file\n");exit(EXIT_FAILURE);}
 		primary_tile_x_count_local = atoi( ptr );
 		ptr=strtok(NULL,"\n\t");if(ptr==NULL){fprintf(stderr,"error while parsing primary tile dims file\n");exit(EXIT_FAILURE);}
@@ -106,9 +101,6 @@ if(debug) fprintf(stderr, "init\n");
 		}
 		primary_tile_x_count = primary_tile_x_count_local;
 		primary_tile_y_count = primary_tile_y_count_local;
-
-		//fprintf(stderr, "struct todo\n");
-		//exit(1);
 
 		uint8_t tile_count_local = read_thumbs_conf_tilecount( &mds[i0] );
 		if(i == argv_start_idx_thumbs_db_names) {
@@ -137,18 +129,12 @@ if(debug) fprintf(stderr, "init\n");
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
 		FILE *result_file = m_fopen(mp.dest_result_filename, "rb");
-		fprintf(stderr,"load result file %s (%s)\n", args->mosaik2dbs[i], mp.dest_result_filename);
+		if(args->verbose)fprintf(stderr,"load result file %s (%s)\n", args->mosaik2dbs[i], mp.dest_result_filename);
 		
-		struct stat st;
-		stat(mp.dest_result_filename, &st);
-		char buf[st.st_size];
-		memset(buf, 0 , st.st_size);
-
-		size_t freads_read = fread(buf, 1, st.st_size, result_file);
-		if(st.st_size != freads_read) {
-			fprintf(stderr, "read data than it expected (%s)", mp.dest_result_filename);
-			exit(EXIT_FAILURE);
-		}
+		off_t dest_result_filesize = get_file_size(mp.dest_result_filename);
+		char buf[dest_result_filesize];
+		memset(buf, 0 , dest_result_filesize);
+		m_fread(buf, dest_result_filesize, result_file);
 	
 		//uint32_t total_primary_tile_count0 = primary_tile_x_count * primary_tile_y_count;
 		mosaik2_project_result *candidates0 = m_calloc( total_primary_tile_count, sizeof(mosaik2_project_result));
@@ -185,7 +171,7 @@ if(debug) fprintf(stderr, "init\n");
 
 	if(debug)
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-				fprintf(stderr,"%s:%i\n", candidates[i].md->thumbs_db_name, candidates[i].index);
+			fprintf(stderr,"%s:%li\n", candidates[i].md->thumbs_db_name, candidates[i].index);
 		}
 
 	
@@ -270,12 +256,9 @@ if(debug) fprintf(stderr, "init\n");
 		if(strlen(buffer)>0)	candidates[i].thumbs_db_filenames[strlen(buffer)-1]=0;
 		
 		
-		fseeko(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
-		size_t read = fread(candidates[i].hash, 1, MD5_DIGEST_LENGTH, thumbs_db_hash);
-		if(read!=MD5_DIGEST_LENGTH) {
-			fprintf(stderr, "did not read enough hash data, expected %i at idx:%li position:%li but got %li\n",  MD5_DIGEST_LENGTH,candidates[i].index, MD5_DIGEST_LENGTH*candidates[i].index,read);
-			exit(EXIT_FAILURE);
-		}
+		m_fseeko(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
+		m_fread(candidates[i].hash, MD5_DIGEST_LENGTH, thumbs_db_hash);
+
 		size_t sz;
 		sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
 		home,
@@ -299,7 +282,7 @@ if(debug) fprintf(stderr, "init\n");
 	m_fclose(thumbs_db_file);
 	m_fclose(thumbs_db_hash);
 
-	fprintf(stderr,"data enriched (filenames and hashes)\n");
+	if(args->verbose)fprintf(stderr,"data enriched (filenames and hashes)\n");
 
 	qsort( candidates, total_primary_tile_count, sizeof(mosaik2_project_result), cmpfunc_back);
 
@@ -370,7 +353,7 @@ if(debug) fprintf(stderr, "init\n");
 			curl_global_cleanup();
 		}
 	}
-	printf("join mosaik2 for real\n");
+	if(args->verbose)printf("join mosaik2 for real\n");
 	gdImagePtr out_im = gdImageCreateTrueColor(dest_tile_width*primary_tile_x_count,dest_tile_width*primary_tile_y_count);
 	if(out_im == NULL) {
 		fprintf(stderr, "could not create image object\n");
@@ -391,7 +374,7 @@ if(debug) fprintf(stderr, "init\n");
       
 			if(!args->quiet)
 				printf("%i/%i %s from %s\n",primary_tile_idx,total_primary_tile_count,candidates[primary_tile_idx].temp_filename,candidates[primary_tile_idx].thumbs_db_filenames);
-			im = myLoadPng(candidates[primary_tile_idx].temp_filename, candidates[primary_tile_idx].thumbs_db_filenames);
+			im = read_image_from_file(candidates[primary_tile_idx].temp_filename);
 
 			fprintf(html_out, "<td");
 			if(im==NULL) {
@@ -538,7 +521,7 @@ if(debug) fprintf(stderr, "init\n");
 	m_fclose(src_out);
   	m_fclose(out);
 	free(candidates);
-	fprintf(stdout, "total costs: %f\ncosts per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	if(args->quiet != 1)fprintf(stdout, "total candidate costs: %f,\n per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
 }

@@ -15,24 +15,12 @@ void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
 	if(DRY_RUN == 1) 
 		return;
 	// need to be an opend file	
-	if( fseeko(invalid_file, nmemb, SEEK_SET) != 0) {
-		fprintf(stderr, "could not seek to element_number in invalid file\n");
-		exit(EXIT_FAILURE);
-	}
+	m_fseeko(invalid_file, nmemb, SEEK_SET);
 	int old_value=0;
-	if( fread(&old_value, 1, 1, invalid_file) != 1) {
-		fprintf(stderr, "could not read old invalid state\n");
-		exit(EXIT_FAILURE);
-	}
+	m_fread(&old_value, 1, invalid_file);
 	int new_value = old_value | 1;
-	if( fseeko(invalid_file, nmemb, SEEK_SET) != 0) {
-		fprintf(stderr, "could not seek to element_number in invalid file\n");
-		exit(EXIT_FAILURE);
-	}
-	if( fwrite(&new_value, 1, 1, invalid_file) != 1) {
-		fprintf(stderr, "could not write new invalid state\n");
-		exit(EXIT_FAILURE);
-	}
+	m_fseeko(invalid_file, nmemb, SEEK_SET);
+	m_fwrite(&new_value, 1, invalid_file);
 }
 
 void print_invalid(char *filename, size_t filesize, time_t last_modified ) {
@@ -46,12 +34,9 @@ void print_invalid_(char *filename,int access) {
 	}
 	size_t filesize;
 	time_t last_modified;
-  struct stat st;
+	 struct stat st;
 	//TODO take care about missing files
-	if( stat(filename, &st) != 0) {
-		fprintf(stderr, "error cannot gather file information from (%s)\n", filename);
-		exit(EXIT_FAILURE);
-	}
+	m_stat(filename, &st);
 	filesize = st.st_size;	
 	last_modified = st.st_mtim.tv_sec;
 
@@ -100,63 +85,26 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *invalid_file = fopen(md.invalid_filename, "r+");
-	if(invalid_file == NULL) {
-		fprintf(stderr, "invalid file (%s) could not be opened\n", md.invalid_filename);
-		exit(EXIT_FAILURE);
-	}
+	FILE *invalid_file = m_fopen(md.invalid_filename, "r+");
 	
 	if(has_element_number == 1) {
 
-		fseeko(invalid_file, element_number, SEEK_SET);
+		m_fseeko(invalid_file, element_number, SEEK_SET);
 		int old_value=0;
-		if( fread(&old_value, 1, 1, invalid_file) != 1) {
-			fprintf(stderr, "could not read old invalid state\n");
-			exit(EXIT_FAILURE);
-		}
+		m_fread(&old_value, 1, invalid_file);
 		int new_value = old_value ^ 2;
-		if( fseeko(invalid_file, element_number, SEEK_SET) != 0) {
-			fprintf(stderr, "could not seek to element_number in invalid file\n");
-			exit(EXIT_FAILURE);
-		}
-		if( fwrite(&new_value, 1, 1, invalid_file) != 1) {
-			fprintf(stderr, "could not write new invalid state\n");
-			exit(EXIT_FAILURE);
-		}
-		if( fflush(invalid_file) != 0) {
-			fprintf(stderr, "could not flush new invalid state\n");
-			exit(EXIT_FAILURE);
-		}
-		if( fclose(invalid_file) != 0) {
-			fprintf(stderr, "could not close invalid file\n");
-			exit(EXIT_FAILURE);
-		}
+		m_fseeko(invalid_file, element_number, SEEK_SET);
+		m_fwrite(&new_value, 1, invalid_file);
+		m_fflush(invalid_file);
+		m_fclose(invalid_file);
+
 		return 0;
 	}
 
-	FILE *filenames_file = fopen(md.filenames_filename, "r");
-	if( filenames_file == NULL ) {
-		fprintf(stderr, "filenames file (%s) could not be opened\n", md.filenames_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *timestamps_file = fopen(md.timestamps_filename, "rb");	
-	if( timestamps_file == NULL) {
-		fprintf(stderr, "timestamps file (%s) could not be opened\n", md.timestamps_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filesizes_file = fopen(md.filesizes_filename, "rb");	
-	if( filesizes_file == NULL) {
-		fprintf(stderr, "filesizes file (%s) could not be opened\n", md.filesizes_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filehashes_file = fopen(md.filehashes_filename, "rb");
-	if( filehashes_file == NULL ) {
-		fprintf(stderr, "filehashes file (%s) could not be opened\n", md.filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
+	FILE *filenames_file  = m_fopen(md.filenames_filename, "r");
+	FILE *timestamps_file = m_fopen(md.timestamps_filename, "rb");
+	FILE *filesizes_file  = m_fopen(md.filesizes_filename, "rb");
+	FILE *filehashes_file = m_fopen(md.filehashes_filename, "rb");
 	
 	char buf[MAX_FILENAME_LEN];
 	uint8_t image_data[BUFSIZ];
@@ -176,17 +124,14 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 		if(debug)fprintf(stderr,"filename:%s\n", buf);
 
 		// IS THIS ELEMENT ALREADY INVALID? THAN SKIP IT
-		if( fseeko(invalid_file,j*1,SEEK_SET) == -1 ) {
-			fprintf(stderr, "error while setting file cursor to %li in invalid file\n", j );
-			exit(EXIT_FAILURE);
-		}
-	uint8_t invalid_data=0;
-	if(fread(&invalid_data,1,1,invalid_file) != 1 ) { // == 1, because of one element was hopefully written
-			fprintf(stderr, "error while reading image %li  invalids status\n", j);
-	} else if( ignore_old_invalids == 0 && invalid_data == 1) {
-		continue;
-	}
+		m_fseeko(invalid_file,j*1,SEEK_SET);
 
+		uint8_t invalid_data=0;
+		if(fread(&invalid_data,1,1,invalid_file) != 1 ) { // == 1, because of one element was hopefully written
+			fprintf(stderr, "error while reading image %li  invalids status\n", j);
+		} else if( ignore_old_invalids == 0 && invalid_data == 1) {
+			continue;
+		}
 
 		if(is_file_wikimedia_commons(buf)) {
 			//TODO extend print_invalid for urls
@@ -195,12 +140,11 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 			if(debug) fprintf(stderr, "check access\n"); 
 			
 			int access_code = access( buf, R_OK );
-			if(debug) fprintf(stderr, "file (%s) cannot be accessed: %s\n", buf, strerror(errno));
 			if( access_code != 0 ) {
 
 
 				// NOT READABLE => INVALID
-				if(debug)fprintf(stderr, "%li. file (%s) cannot be accessed => invalid\n", j, buf);
+				if(debug)fprintf(stderr, "%li. file (%s) cannot be accessed => %s\n", j, buf, strerror(errno));
 				print_invalid_(buf,access_code);
 				mark_invalid(invalid_file,j,md.invalid_filename);
 				continue;
@@ -211,18 +155,12 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				if(debug) fprintf(stderr, "check timestamp\n");
 				// lets first do a timestamp comparison (should be faster, than hash cmp)
 				time_t old_timestamp;
-				if(fseeko(timestamps_file,j*sizeof(time_t),SEEK_SET) == -1) {
-					fprintf(stderr, "error setting file cursor to nmemb %li in timestamps file\n", j);
-					exit(EXIT_FAILURE);
-				}
-				if( fread(&old_timestamp, sizeof(time_t), 1, timestamps_file) == -1 ) {
-					fprintf(stderr, "the timestamp data could not be read for element %li\n", j);
-					exit(EXIT_FAILURE);
-				}
+				m_fseeko(timestamps_file,j*sizeof(time_t),SEEK_SET);
+				m_fread(&old_timestamp, sizeof(time_t), timestamps_file);
 
 
 				struct stat file_stat;
-				stat( buf, &file_stat);
+				m_stat( buf, &file_stat);
 				time_t cur_timestamp = file_stat.st_mtim.tv_sec;
 				off_t cur_filesize = file_stat.st_size;
 
@@ -241,14 +179,8 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				}
 				
 				size_t old_filesize = 0;
-				if(fseeko(filesizes_file,j*sizeof(size_t),SEEK_SET) == -1) {
-					fprintf(stderr, "error setting file cursor to nmemb %li in timestamps file\n", j);
-					exit(EXIT_FAILURE);
-				}
-				if( fread(&old_filesize, sizeof(size_t), 1, filesizes_file ) == -1 ) {
-					fprintf(stderr, "the filesizes data could not be read for element %li\n", j);
-					exit(EXIT_FAILURE);
-				}
+				m_fseeko(filesizes_file,j*sizeof(size_t),SEEK_SET);
+				m_fread(&old_filesize, sizeof(size_t), filesizes_file );
 
 				if(debug) fprintf(stderr, "old_filesize: %li, cur_filesize: %li\n", old_filesize, cur_filesize);
 				// IF FILESIZE HAS CHANGED => IT IS INVALID
@@ -269,22 +201,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					//MAKE A HASH COMPARE
 						
 					uint8_t old_hash[MD5_DIGEST_LENGTH];
-					if( fseeko(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET) == -1 ) {
-						fprintf(stderr, "error while setting filehashes cursor position %li\n",j);
-						exit(EXIT_FAILURE);
-					}
-					if( fread(&old_hash, MD5_DIGEST_LENGTH, 1,filehashes_file) != 1 ) {
-						fprintf(stderr, "error while reading file hash for element %li\n",j);
-						exit(EXIT_FAILURE);
-					}
+					m_fseeko(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET);
+					m_fread(&old_hash, MD5_DIGEST_LENGTH, filehashes_file);
 
-
-					FILE *image_file = fopen(buf, "rb");
-					if(image_file==NULL) {
-						fprintf(stderr,"error while opening image file (%s): %s\n", buf, strerror(errno));
-						exit(EXIT_FAILURE);
-					}
-
+					FILE *image_file = m_fopen(buf, "rb");
 
 					size_t bytes;
 					unsigned char new_hash[MD5_DIGEST_LENGTH];
@@ -294,8 +214,8 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 						fprintf(stderr, "could not init md5 context\n");
 						exit(EXIT_FAILURE);
 					}
-					while ((bytes = fread (image_data, 1, 4096, image_file)) != 0) {
-    				if( MD5_Update (&md5_ctx, image_data, bytes)  == 0 ) {
+					while ((bytes = fread(image_data, 1, BUFSIZ, image_file)) != 0) {
+						if( MD5_Update (&md5_ctx, image_data, bytes)  == 0 ) {
 							fprintf(stderr, "error md5_update for element %li\n", j);
 							exit(EXIT_FAILURE);
 						}
@@ -304,27 +224,9 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 						fprintf(stderr, "error md5_final for element %li\n", j);
 						exit(EXIT_FAILURE);
 					}
-					if( fclose(image_file) != 0) {
-						fprintf(stderr, "error closing file\n");
-						exit(EXIT_FAILURE);
-					}
-					
-					if(  new_hash[0] == old_hash[0]
-						&& new_hash[1] == old_hash[1]
-						&& new_hash[2] == old_hash[2]
-						&& new_hash[3] == old_hash[3]
-						&& new_hash[4] == old_hash[4]
-						&& new_hash[5] == old_hash[5]
-						&& new_hash[6] == old_hash[6]
-						&& new_hash[7] == old_hash[7]
-						&& new_hash[8] == old_hash[8]
-						&& new_hash[9] == old_hash[9]
-						&& new_hash[10]== old_hash[10]
-						&& new_hash[11]== old_hash[11]
-						&& new_hash[12]== old_hash[12]
-						&& new_hash[13]== old_hash[13]
-						&& new_hash[14]== old_hash[14]
-						&& new_hash[15]== old_hash[15]) {
+					m_fclose(image_file);
+
+					if( memcmp(new_hash, old_hash, MD5_DIGEST_LENGTH) == 0 ) {
 						if(debug) fprintf(stdout, "filehashes are EQUAL\n");
 					} else {
 						fprintf(stderr, "file hashes mismatch, mark file (%s) as invalid\n", buf);
@@ -335,11 +237,12 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 			}
 		}
 	}
-	fflush(invalid_file);
-	fclose(invalid_file);
-	fclose(filesizes_file);
-	fclose(filenames_file);
-	fclose(timestamps_file);
-	fclose(filehashes_file);
+	m_fflush(invalid_file);
+	m_fclose(invalid_file);
+	m_fclose(filesizes_file);
+	m_fclose(filenames_file);
+	m_fclose(timestamps_file);
+	m_fclose(filehashes_file);
+
 	return 0;
 }

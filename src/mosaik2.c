@@ -324,7 +324,7 @@ void print_help() {
 "  -q          Quiet output\n"
 "  -h          Print this help and exit\n"
 "  -v          Print program version and exit\n"
-"  -d          Fast but not complete reduction of duplicates processor cout)\n"
+"  -d          Fast but not complete reduction of duplicates processor count\n"
 "  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
 "  -e NUM      operate only on the NUMth database element\n"
 "  -i          Ignore old invalid images\n"

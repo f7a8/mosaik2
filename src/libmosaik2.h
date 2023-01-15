@@ -56,7 +56,7 @@ void init_mosaik2_project(mosaik2_project *mp, char *thumbs_db_name, char *dest_
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height);
 void mosaik2_database_read_database_id(mosaik2_database *md);
 void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint64_t element_number);
-char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number);
+char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, FILE *filenames_index_file);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
 
@@ -101,7 +101,7 @@ int File_Copy(char FileSource[], char FileDestination[]);
 
 
 uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
-gdImagePtr myLoadPng(char *filename, char *origin_name);
+gdImagePtr read_image_from_file(char *filename);
 void trim_spaces(char *buf);
 void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
 void show_mnote_tag(ExifData *d, unsigned tag);
@@ -123,5 +123,8 @@ void m_fread(void *ptr, size_t nmemb, FILE *stream);
 void m_fwrite(const void *ptr, size_t nmemb, FILE *stream);
 void *m_malloc(size_t size);
 void *m_calloc(size_t nmemb, size_t size);
-int m_fseeko(FILE *stream, off_t offset);
-int m_fseekow(FILE *stream, off_t offset, int whence);
+int m_fseeko(FILE *stream, off_t offset, int whence);
+int m_fflush(FILE *stream);
+int m_stat(const char *pathname, struct stat *statbuf);
+int m_sysinfo(struct sysinfo *info);
+void m_access(const char *pathname, int mode);

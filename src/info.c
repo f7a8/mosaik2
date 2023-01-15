@@ -90,10 +90,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	printf("mosaik2db=%s\n", mosaik2_db_name);
 	printf("src-image=%s\n", args->src_image);
 
-
-	FILE *src_image = m_fopen(args->src_image, "r");
-	gdImagePtr im = gdImageCreateFromJpeg(src_image); // inefficient but solid, TODO from exif
-	m_fclose(src_image);
+	gdImagePtr im = read_image_from_file(args->src_image); // inefficient but solid, TODO from exif
 
 	uint32_t image_width = gdImageSX(im);
 	uint32_t image_height = gdImageSY(im);
