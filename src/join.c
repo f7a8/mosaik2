@@ -2,9 +2,9 @@
 //TODO unique_tiles 
 
 /*
-            _
-           (_)      _       
-           | | ___ (_) _ _  
+      _
+     (_)      _       
+     | | ___ (_) _ _  
 	  _/ |/ _ \| || ' \
 	 |__/ \___/|_||_||_|
 */
@@ -79,7 +79,7 @@ if(debug) fprintf(stderr, "init\n");
 		}
 
 		off_t primarytiledims_filesize = get_file_size(mp.dest_primarytiledims_filename);
-		unsigned char buf[primarytiledims_filesize];
+		char buf[primarytiledims_filesize];
 		memset(buf, 0, primarytiledims_filesize);
 		m_fread(buf, primarytiledims_filesize, primarytiledims_file);
 
@@ -309,11 +309,12 @@ if(debug) fprintf(stderr, "init\n");
 			if(!args->quiet) fprintf(stdout,".\n");
 		} else {
 
-			if(!args->quiet)
+			if(!args->quiet) {
 				fprintf(stdout,"%i/%i create symlink %s:%li %s\n",
 			        i, total_primary_tile_count,
 			        candidates[i].md->thumbs_db_name, candidates[i].index,
 			        candidates[i].thumbs_db_filenames );
+			}
 				int target_len = strlen(pwd) + 1 + strlen(candidates[i].thumbs_db_filenames) + 1;
 				char target[target_len];
 				memset(target, 0, target_len);
