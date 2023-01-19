@@ -64,7 +64,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		build_filehashes_index(&md1);
 	}
 
-	uint64_t element_count1 = read_thumbs_db_count(&md1);	
+	//uint64_t element_count1 = read_thumbs_db_count(&md1);	
 
 	int debug=0;
 
