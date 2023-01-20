@@ -174,7 +174,7 @@ void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resoluti
 		fprintf(stderr, "database_image_resolution too hig for internal data structure\n");
 		exit(EXIT_FAILURE);
 	}
-	int i=0;
+
 	ti->image_width = image_width;
 	ti->image_height = image_height;
 	ti->short_dim = image_height > image_width ? image_width : image_height;
@@ -511,7 +511,7 @@ void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_elemen
 
 	off_t imagecolors_offset;
 	read_entry(md->image_index_filename, &imagecolors_offset, sizeof(imagecolors_offset), element_number*sizeof(imagecolors_offset));
-	int short_dim = mde->tiledims[0] > mde->tiledims[1] ? mde->tiledims[1] : mde->tiledims[0];
+	//int short_dim = mde->tiledims[0] > mde->tiledims[1] ? mde->tiledims[1] : mde->tiledims[0];
 
 
 	int x0,y0,xl,yl,total_tile_count; 
@@ -1097,13 +1097,11 @@ void mosaik2_project_read_image_dims(mosaik2_project *mp) {
 	file = m_fopen(mp->dest_imagedims_filename, "r");
 	assert( file != NULL);
 
-	unsigned char buf[filesize];
+	char buf[filesize];
 	memset(buf, 0, filesize);
-	int freads_reads = fread(buf, 1, filesize, file);
-	assert(freads_reads == filesize);
+	m_fread(buf, filesize, file);
 
-
-  	char *ptr = NULL;
+	char *ptr = NULL;
 	ptr=strtok(buf,"\t");
 	assert(ptr!=NULL);
 	mp->image_width = atoi( ptr );
@@ -1137,12 +1135,12 @@ mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2
 	FILE *file = m_fopen(mp->dest_result_filename, "rb");
 		
 	off_t filesize = get_file_size(mp->dest_result_filename);
-	unsigned char buf[filesize+1];
+	char buf[filesize+1];
 	memset(buf, 0, filesize+1);
 
 	m_fread(buf, filesize, file);
 	
-  	char *ptr = NULL;
+	char *ptr = NULL;
 	ptr = strtok(buf, "\n\t"); // ignore first column with line index
 	assert(ptr!=NULL);
 
@@ -1358,7 +1356,7 @@ void m_fwrite(const void *ptr, size_t nmemb, FILE *stream) {
 }
 
 int m_fseeko(FILE *stream, off_t offset, int whence) {
-	int val = fseeko(stream, offset, whence);	
+	int val = fseeko(stream, offset, whence);
 	if(val!=0) {
 		fprintf(stderr, "m_fseeko: cannot seek to %li\n", offset);
 		perror("error");
