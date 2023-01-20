@@ -181,14 +181,8 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				duplicates_data1=1;
 				m_fwrite(&duplicates_data1, 1, duplicates_file1);
 
-				//long off0 = 0;
-				//long off1 = -1;
-				//read_filenames_index(filenames_index_file, dup_offset1, &off0);
-				//if(dup_offset1!=element_count1-1) // elements after the last element should not be read
-				//	read_filenames_index(filenames_index_file, dup_offset1+1, &off1);
-				//print_filename(filenames_file, off0, off1);
 				char *filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
-				printf("%s", filename);
+				printf("%s\n", filename);
 				free(filename);
 
 			} // else block ends
