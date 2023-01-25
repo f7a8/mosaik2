@@ -583,10 +583,13 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                   // it is removed by shifting all worse one the left
                   // so if the already one is better (lower) => the new one wont be inserted
                   for (uint32_t i = 0; i < candidates_len[primary_tile_idx]; i++) {
-                    if (candidates_index[offset + i] == idx) {
+
+                    uint32_t dest = offset + i;
+
+                    if (candidates_index[dest] == idx) {
                       if (debug)
                         fprintf(stdout, "same candidate already selected\n");
-                      if (candidates_costs[offset + i] <= diff_color0) {
+                      if (candidates_costs[dest] <= diff_color0) {
                         if (debug)
                           fprintf(stdout, "ignore new candidate new_costs:%f, old_costs:%f\n", diff_color0, candidates_costs[offset + i]);
                         continue_ = 1;
@@ -594,14 +597,14 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                       } else {
                         if (debug)
                           fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[primary_tile_idx]);
-                        for (uint32_t j = i; j < candidates_len[primary_tile_idx] - 1; j++) {
-                          candidates_index[offset + j] = candidates_index[offset + j + 1];
-                          candidates_costs[offset + j] = candidates_costs[offset + j + 1];
-                          candidates_off_x[offset + j] = candidates_off_x[offset + j + 1];
-                          candidates_off_y[offset + j] = candidates_off_y[offset + j + 1];
-                          if (debug)
-                            fprintf(stdout, "remove old candidate %i\n", j);
-                        }
+
+                        uint32_t src = dest + 1;
+                        size_t n = candidates_len[primary_tile_idx]-1-i;
+
+                        memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
+                        memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
+                        memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
+                        memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
                         candidates_len[primary_tile_idx]--;
                       }
                     }
@@ -638,14 +641,14 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                 // position to insert new costs found
                 // shift worse costs to the right
 
-                for (int i = candidates_len[primary_tile_idx] - 1; i > insert_pos; i--) {
+                uint32_t src  = offset + insert_pos;
+                uint32_t dest = src + 1;
+                size_t n = candidates_len[primary_tile_idx] - insert_pos;
 
-                  candidates_index[offset + i] = candidates_index[offset + i - 1];
-                  candidates_costs[offset + i] = candidates_costs[offset + i - 1];
-                  candidates_off_x[offset + i] = candidates_off_x[offset + i - 1];
-                  candidates_off_y[offset + i] = candidates_off_y[offset + i - 1];
-
-                }
+                memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
+                memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
+                memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
+                memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
 
                 // set the new candidate
                 candidates_index[offset + insert_pos] = idx;
@@ -769,9 +772,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
             continue;
           uint32_t offset_i = i * max_candidates_len + candidates_elect[i];
           uint32_t offset_j = j * max_candidates_len + candidates_elect[j];
-          /*if (debug)
-            fprintf(stdout, "i:%i:%i %i j:%i:%i %i idx:%lu %lu costs:%f %f off:%i,%i %i,%i\n", i, i * max_candidates_len, offset_i, j, j * max_candidates_len, offset_j,
-                    candidates_index[offset_i], candidates_index[offset_j], candidates_costs[offset_i], candidates_costs[offset_j], candidates_off_x[offset_i], candidates_off_y[offset_i], candidates_off_x[offset_j], candidates_off_y[offset_j]); */
 
           if (candidates_index[offset_i] == candidates_index[offset_j]) {
             if (candidates_costs[offset_i] >= candidates_costs[offset_j])
@@ -779,17 +779,11 @@ int mosaik2_gathering(mosaik2_arguments *args) {
             else
               candidates_elect[j]++;
 
-	    assert( candidates_elect[i] != total_primary_tile_count); // there were more candidates compared as possible
+            // if there were more candidates compared as possible
+            assert( candidates_elect[i] != total_primary_tile_count);
 
             unique_run = 0;
-            /*if (debug) {
-              for (uint32_t i = 0; i < total_primary_tile_count; i++) {
-                fprintf(stdout, "%i,", candidates_elect[i]);
-              }
-              fprintf(stdout, "\n");
-            }*/
             break; // if the current election is skipped to the next candidate
-                   //
           }
         }
       }
@@ -838,7 +832,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   free(candidates_len);
   free(candidates_elect);
   free(candidates_ins);
-
   return 0;
 }
 
