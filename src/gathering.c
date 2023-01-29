@@ -599,7 +599,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                           fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[primary_tile_idx]);
 
                         uint32_t src = dest + 1;
-                        size_t n = candidates_len[primary_tile_idx]-1-i;
+                        uint32_t n = candidates_len[primary_tile_idx]-i-1;
 
                         memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
                         memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
@@ -641,9 +641,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                 // position to insert new costs found
                 // shift worse costs to the right
 
-                uint32_t src  = offset + insert_pos;
-                uint32_t dest = src + 1;
-                size_t n = candidates_len[primary_tile_idx] - insert_pos;
+                uint32_t dest = offset + insert_pos + 1;
+                uint32_t src  = dest - 1;
+                uint32_t n = candidates_len[primary_tile_idx] - 1 - insert_pos;
 
                 memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
                 memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
