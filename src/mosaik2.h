@@ -225,7 +225,8 @@ struct mosaik2_project_result_struct {
 typedef struct mosaik2_project_result_struct    mosaik2_project_result;
 
 typedef struct mosaik2_database_candidate_struct {
-	uint32_t index;
+	uint32_t primary_tile_idx;
+	uint32_t candidate_idx;
 	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
