@@ -143,6 +143,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
   total_tile_count = tile_x_count * tile_y_count;
   total_primary_tile_count = (tile_x_count / thumbs_tile_count) * (tile_y_count / thumbs_tile_count);
+  const uint32_t SIZE_PRIMARY = total_primary_tile_count;
 
   lx = offset_x + pixel_per_tile * tile_x_count;
   ly = offset_y + pixel_per_tile * tile_y_count;
@@ -169,26 +170,15 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   if (debug)
     fprintf(stdout, "max_candidates_len:%li, total_candidates_count:%li\n", max_candidates_len, total_candidates_count);
 
-  uint32_t *candidates_index = m_calloc(total_candidates_count, sizeof(uint32_t));
-  float *candidates_costs         = m_calloc(total_candidates_count, sizeof(float));
-  unsigned char *candidates_off_x = m_calloc(total_candidates_count, sizeof(unsigned char));
-  unsigned char *candidates_off_y = m_calloc(total_candidates_count, sizeof(unsigned char));
-  unsigned int *candidates_len    = m_calloc(total_primary_tile_count, sizeof(unsigned int));
-  unsigned int *candidates_elect  = m_calloc(total_primary_tile_count, sizeof(unsigned int));
-  unsigned int *candidates_ins    = m_calloc(total_primary_tile_count, sizeof(unsigned int));
+		Heap heap[SIZE_PRIMARY];
+		memset(&heap, 0, sizeof(heap));
+		//allocate only one memory chunk and spread it over the heaps
+		mosaik2_database_candidate *mdc = m_calloc(total_candidates_count+max_candidates_len, sizeof(mosaik2_database_candidate));
 
-  // intialize with -1
-  for (uint32_t i = 0; i < total_candidates_count; i++) {
-    candidates_costs[i] = FLT_MAX;
-  }
+		for(uint32_t i=0;i<SIZE_PRIMARY;i++) {
+			heap_init(&heap[i], mdc+i*(max_candidates_len)+1);
+		}
 
-  if (debug) {
-    fprintf(stdout, "\ncandidates_ins:");
-    for (int i = 0; i < total_primary_tile_count; i++) {
-      fprintf(stdout, "%u,", candidates_ins[i]);
-    }
-    fprintf(stdout, "\n");
-  }
   if (out)
     printf("%04X %04X %02X %02X", width, height, tile_x_count, tile_y_count);
 
@@ -362,7 +352,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   FILE *thumbs_db_invalid_file     = m_fopen(md.invalid_filename, "rb");
   FILE *thumbs_db_duplicates_file  = m_fopen(md.duplicates_filename, "rb");
 
-  const uint32_t SIZE_PRIMARY = total_primary_tile_count;
 
   // buffers for db file reading
   uint8_t tile_dims_buf[BUFSIZ];
@@ -378,6 +367,15 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   m_fclose(primarytiledims_file);
 
   uint32_t idx = 0;
+
+	uint32_t candidates_insert=0;
+	uint32_t candidates_pop=0;
+	uint32_t candidates_pop_uniqueness[SIZE_PRIMARY];
+	memset(& candidates_pop_uniqueness,0, sizeof(candidates_pop_uniqueness));
+	uint32_t candidates_toobad=0;
+	float diff_best=FLT_MAX, diff_worst=0;
+	uint32_t candidates_elect[SIZE_PRIMARY];
+	memset(&candidates_elect,0,sizeof(candidates_elect));
 
   int32_t percent = -1;
   while (1) {
@@ -464,15 +462,32 @@ int mosaik2_gathering(mosaik2_arguments *args) {
         fprintf(stderr, "%u shift_len:%i %i\n", idx, shift_x_len, shift_y_len);
       }
 
-      for (uint8_t shift_y = shift_y_0; shift_y <= shift_y_len; shift_y++) {
-        for (uint8_t shift_x = shift_x_0; shift_x <= shift_x_len; shift_x++) {
 
-          for (uint32_t primary_y = 0; primary_y < primary_tile_y_count; primary_y++) {
-            for (uint32_t primary_x = 0; primary_x < primary_tile_x_count; primary_x++) {
+      mosaik2_database_candidate mdc0, mdc_best, mdc_worst;
 
-              uint32_t primary_tile_idx = primary_tile_x_count * primary_y + primary_x;
+      for (uint32_t primary_y = 0; primary_y < primary_tile_y_count; primary_y++) {
+        for (uint32_t primary_x = 0; primary_x < primary_tile_x_count; primary_x++) {
 
-              float diff_color0 = 0;
+          uint32_t primary_tile_idx = primary_tile_x_count * primary_y + primary_x;
+
+
+          memset(&mdc_best, 0, sizeof(mdc_best));
+	  memset(&mdc_worst, 0, sizeof(mdc_worst));
+
+	  mdc_best.costs = FLT_MAX;
+	  mdc_worst.costs = 0;
+
+          for (uint8_t shift_y = shift_y_0; shift_y <= shift_y_len; shift_y++) {
+            for (uint8_t shift_x = shift_x_0; shift_x <= shift_x_len; shift_x++) {
+
+	      mdc0.candidate_idx = idx;
+	      mdc0.primary_tile_idx = primary_tile_idx;
+	      mdc0.costs = 0;
+	      mdc0.off_x = shift_x;
+	      mdc0.off_y = shift_y;
+
+
+
               int thumbs_total_tile_count = thumbs_tile_count * thumbs_tile_count;
               for (uint32_t k = 0; k < thumbs_total_tile_count; k++) {
 
@@ -513,7 +528,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                   int diff_s_b = abs(((int)stddev_blue_int[colors_idx])  - (int)stddev_buf[j * RGB + B]);
 
                   float diff0 = image_ratio * (diff_c_r + diff_c_g + diff_c_b) + stddev_ratio * ((diff_s_r + diff_s_g + diff_s_b) / 2.0);
-                  diff_color0 += diff0 / total_pixel_per_tile;
+                  mdc0.costs += diff0 / total_pixel_per_tile;
 
                 } else if (color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN) {
 			double diff_c = sqrt(
@@ -528,7 +543,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			);
 			float diff0 = image_ratio * diff_c + stddev_ratio * diff_s;
 			float diff1 = diff0 / total_pixel_per_tile;
-			diff_color0 += diff1;
+			mdc0.costs += diff1;
 
                 } else if (color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_CHEBYSHEV) {
                   int diff_c_r = abs(colors_red_int[colors_idx]   - (int)colors_buf[j * RGB + R]);
@@ -550,161 +565,55 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                     diff_s = diff_s_b;
 
                   float diff0 = image_ratio * diff_c + stddev_ratio * diff_s;
-                  diff_color0 += diff0 / total_pixel_per_tile;
+                  mdc0.costs += diff0 / total_pixel_per_tile;
 
                 } else {
                   fprintf(stderr, "invalid color distance\n");
                   exit(EXIT_FAILURE);
                 }
-              }
+              } // thumbs_total_tile_count end
 
-              if (debug1 && primary_x == 0 && primary_y == 0)
-                printf("\n");
+	      // only the best shift will be saved for this candidate in this primary tile
+	      // unique or none unique
+	      if( mdc0.costs < mdc_best.costs) {
+		      memcpy(&mdc_best, &mdc0, sizeof(mdc_best));
+	      }
+	      if( mdc0.costs > mdc_worst.costs ) {
+		      memcpy(&mdc_worst, &mdc0, sizeof(mdc_worst));
+	      }
+            }     // for shift_x
+          }       // for shift_y
+
+	  if( mdc_worst.costs - mdc_best.costs > diff_worst )
+		  diff_worst = mdc_worst.costs - mdc_best.costs;
+	  if( mdc_worst.costs - mdc_best.costs < diff_best  &&( shift_x_0 < shift_x_len-1 || shift_y_0 < shift_y_len-1 )) // only if theres more than one shift..
+		  diff_best = mdc_worst.costs - mdc_best.costs;
 
               // THIS is the point where the calculated color difference
               // is compared to the already stored ones.
               // If its lower, it is more equal and it should be the new candidate
-              // if(diff_color0 < candidates_costs[primary_tile_idx] ) {
-              // badest costs is saved in the last position, and this position
+              // if(diff_color0 < candidates_costs[primary_tile_idx] ) 
+              // worst costs is saved in the last position, and this position
               // will expand from 0 to total_primary_tile_count
-              uint32_t offset = primary_tile_idx * max_candidates_len;
-              float old_costs = FLT_MAX;
+	      mosaik2_database_candidate max_heap;
+	      int empty = max_heap_peek( &heap[primary_tile_idx], &max_heap );
 
-              if (candidates_len[primary_tile_idx] > 0 && candidates_len[primary_tile_idx] >= max_candidates_len)
-                old_costs = candidates_costs[offset + candidates_len[primary_tile_idx] - 1];
-
-              if (diff_color0 < old_costs) {
-
-                if (debug)
-                  printf("idx:%u primary_tile_idx:%05i diff_color0:%05f,old_costs:%05f,len:%i %li\n", idx, primary_tile_idx, diff_color0, old_costs, candidates_len[primary_tile_idx], max_candidates_len);
-                if (unique == 1) {
-                  int continue_ = 0;
-                  // if there is the same candidate already with a lower costs in it
-                  // it is removed by shifting all worse one the left
-                  // so if the already one is better (lower) => the new one wont be inserted
-                  for (uint32_t i = 0; i < candidates_len[primary_tile_idx]; i++) {
-
-                    uint32_t dest = offset + i;
-
-                    if (candidates_index[dest] == idx) {
-                      if (debug)
-                        fprintf(stdout, "same candidate already selected\n");
-                      if (candidates_costs[dest] <= diff_color0) {
-                        if (debug)
-                          fprintf(stdout, "ignore new candidate new_costs:%f, old_costs:%f\n", diff_color0, candidates_costs[offset + i]);
-                        continue_ = 1;
-                        break;
-                      } else {
-                        if (debug)
-                          fprintf(stdout, "removing old candidate, shift from %i to %i the right\n", i, candidates_len[primary_tile_idx]);
-
-                        uint32_t src = dest + 1;
-                        size_t n = candidates_len[primary_tile_idx]-1-i;
-
-                        memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(uint32_t));
-                        memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
-                        memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
-                        memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
-                        candidates_len[primary_tile_idx]--;
-                      }
-                    }
-                  }
-
-                  if (continue_ == 1) {
-                    if (debug)
-                      fprintf(stdout, "continue\n");
-                    continue;
-                  }
-                }
-                candidates_ins[primary_tile_idx]++;
-                // the better costs are the lower ones and they are stored at the beginning
-
-                int insert_pos = 0;
-                for (; insert_pos < candidates_len[primary_tile_idx]; insert_pos++) {
-                  if (diff_color0 < candidates_costs[offset + insert_pos])
-                    // the right insert position is found
-                    break;
-                }
-
-                if (debug)
-                  fprintf(stdout, "thumbs_db_idx:%u primary_tile_idx:%i insert pos found:%i\n", idx, primary_tile_idx, insert_pos);
-
-                if (candidates_len[primary_tile_idx] < total_primary_tile_count && candidates_len[primary_tile_idx] < max_candidates_len) {
-                  // if there is any space left in the candidates list
-                  // it increases its usage space until the max len (total_primary_tile_count)
-                  // is reached.
-                  candidates_len[primary_tile_idx]++;
-                }
-                if (debug)
-                  fprintf(stdout, "primary_tile_idx:%i inspos:%i, diff_color0:%f, idx:%u, off:%i %i, len:%i\n", primary_tile_idx, insert_pos, diff_color0, idx, candidates_off_x[offset + insert_pos], candidates_off_y[offset + insert_pos], candidates_len[primary_tile_idx]);
-
-                // position to insert new costs found
-                // shift worse costs to the right
-
-                uint32_t src  = offset + insert_pos;
-                uint32_t dest = src + 1;
-                size_t n = candidates_len[primary_tile_idx] - insert_pos;
-
-                memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(uint32_t));
-                memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
-                memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
-                memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
-
-                // set the new candidate
-                candidates_index[offset + insert_pos] = idx;
-                candidates_costs[offset + insert_pos] = diff_color0;
-                candidates_off_x[offset + insert_pos] = shift_x;
-                candidates_off_y[offset + insert_pos] = shift_y;
-
-                if (debug) {
-                  fprintf(stdout, "candidates_index[%i:%i-%li]:{", primary_tile_idx, 0, max_candidates_len);
-                  for (int i = 0; i < max_candidates_len; i++) {
-                    if (candidates_len[primary_tile_idx] == i)
-                      fprintf(stdout, "}");
-                    fprintf(stdout, "%u,", candidates_index[offset + i]);
-                  }
-                  fprintf(stdout, "\ncandidates_costs[%i:%i-%li]:{", primary_tile_idx, 0, max_candidates_len);
-                  //									fprintf(stdout, "%05lli ", candidates_costs[primary_tile_idx + insert_pos ], diff_color0);
-                  for (int i = 0; i < max_candidates_len; i++) {
-                    if (candidates_len[primary_tile_idx] == i)
-                      fprintf(stdout, "}");
-                    fprintf(stdout, "%f,", candidates_costs[offset + i]);
-                  }
-                  fprintf(stdout, "\ncandidates_off[%i:%i-%li]:{", primary_tile_idx, 0, max_candidates_len);
-                  for (int i = 0; i < max_candidates_len; i++) {
-                    if (candidates_len[primary_tile_idx] == i)
-                      fprintf(stdout, "}");
-                    fprintf(stdout, "%i %i,", candidates_off_x[offset + i], candidates_off_y[offset + i]);
-                  }
-                  fprintf(stdout, "\ncandidates_ins:");
-                  for (int i = 0; i < total_primary_tile_count; i++) {
-                    fprintf(stdout, "%d,", candidates_ins[i]);
-                  }
-                  fprintf(stdout, "\n");
-                }
-
-                /*if (args->unique == 0 && (idx % 10000 == 0 && primary_x == 0 && primary_y == 0 && shift_x == 0 && shift_y == 0)) {
-                  FILE *mosaik2_result = m_fopen(mp.dest_result_filename, "wb");
-
-                  for (uint32_t i = 0; i < SIZE_PRIMARY; i++) {
-                    // TODO dont know why, somewhere in this program a routine seems to change the offsets. Can anybody identify this error source?
-                    if (candidates_off_x[i * max_candidates_len] != 0 && candidates_off_y[i * max_candidates_len] != 0) {
-                      fprintf(stderr, "*** #%lu one offset should be zero cid: %lu: off:%i %i\n", idx, candidates_index[i * max_candidates_len], candidates_off_x[i * max_candidates_len], candidates_off_y[i * max_candidates_len]);
-                      fprintf(stderr, "%i	%li	%f	%i	%i\n", i, candidates_index[i * max_candidates_len], candidates_costs[i * max_candidates_len], candidates_off_x[i * max_candidates_len], candidates_off_y[i * max_candidates_len]);
-
-                      m_fclose(mosaik2_result);
-                      exit(EXIT_FAILURE);
-                    }
-                    fprintf(mosaik2_result, "%i	%li	%f	%i	%i\n", i, candidates_index[i * max_candidates_len], candidates_costs[i * max_candidates_len], candidates_off_x[i * max_candidates_len], candidates_off_y[i * max_candidates_len]);
-                  }
-                  m_fclose(mosaik2_result);
-                } */ // save intermediate result
-              }   // better candidate found
-            }     // for thumb_tile_count
-          }       // for primary_x
-        }         // for primary_y
-      }           // for shift_x
-    }             // for shift_y
+	      if(heap[primary_tile_idx].last < max_candidates_len || max_heap.costs > mdc_best.costs || empty == 1) {
+		      if( heap[primary_tile_idx].count >= max_candidates_len ) {
+				mosaik2_database_candidate c;
+				max_heap_pop( &heap[primary_tile_idx], &c);
+				candidates_pop++;
+			}
+		      candidates_insert++;
+			max_heap_insert(&heap[primary_tile_idx], &mdc_best);
+		}
+	      else {
+		      candidates_toobad++;
+	      }
+                 // better candidate found
+        }         // for primary_x
+      }           // for primary_y
+    }             // for idx
 
     if (len < BUFSIZ) {
       break;
@@ -725,112 +634,83 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   free(stddev_green_int);
   free(stddev_blue_int);
 
-  if (debug) {
-    for (int primary_tile_idx = 0; primary_tile_idx < total_primary_tile_count; primary_tile_idx++) {
-
-      uint32_t offset = primary_tile_idx * max_candidates_len;
-
-      fprintf(stdout, "candidates_index[%i]:{", primary_tile_idx);
-      for (int i = 0; i < max_candidates_len; i++) {
-        if (candidates_len[primary_tile_idx] == i)
-          fprintf(stdout, "}");
-        fprintf(stdout, "%u,", candidates_index[offset + i]);
-      }
-      fprintf(stdout, "\ncandidates_costs[%i]:{", primary_tile_idx);
-      //									fprintf(stdout, "%05lli ", candidates_costs[primary_tile_idx + insert_pos ], diff_color0);
-      for (int i = 0; i < max_candidates_len; i++) {
-        if (candidates_len[primary_tile_idx] == i)
-          fprintf(stdout, "}");
-        fprintf(stdout, "%f,", candidates_costs[offset + i]);
-      }
-      fprintf(stdout, "\ncandidates_off[%i]:{", primary_tile_idx);
-      for (int i = 0; i < max_candidates_len; i++) {
-        if (candidates_len[primary_tile_idx] == i)
-          fprintf(stdout, "}");
-        fprintf(stdout, "%i %i,", candidates_off_x[offset + i], candidates_off_y[offset + i]);
-      }
-      fprintf(stdout, "\n");
-    }
-  }
+		//transform the max_heap to an ordered array
+		mosaik2_database_candidate mdc_tmp[max_candidates_len];
+		for(uint32_t i=0;i<SIZE_PRIMARY;i++) {
+			for(int32_t j=max_candidates_len-1;j>=0;j--) {
+				max_heap_pop(&heap[i], &mdc_tmp[j]);
+			}
+			// with mdc it uses the old max heap memory
+			memcpy(&mdc[max_candidates_len*i], &mdc_tmp, sizeof(mdc_tmp));
+		}
 
   /*
-     search the best unique candidates
-     initial all best images are set. the array candidates_ele is set to zero in all spaces.
-     it works like this
-     candidates are sorted from best (candidates[0]) to worst (candidates[primary_tile_count). if an image is the best at multiple positions, it its only selected where it fits most, because of its candidates_score[n]. The other candidates are marked as unwanted through counting their candidates_elect[n] number plus one. At those positions now the second bests candidates are choose. This is repeated until every position has a unqiue candidates (candidate_index). The worst case is, that in every election round there is a multiple appearance of one candidate. This algorithm needs a lot of memory. For every position the number of all possible final mosaic images must be saved. 
+   * search the best unique candidate. this is not a very sophisticated algorithm, but is has not very much overhead and is not a huge bottleneck in the gathering program.
+   * candidates are checked with each other if there are duplicates. If there are the duplicate with the higher cost is popped, so the next candidate at its position will be compared also to all others. This is repeated until there is no duplicate any more.
   */
-  if (unique == 1) { // if not unique candidates_elect stays at first entry: 0
-    int unique_run;
 
-    do {
+	if (unique == 1) {
+		int unique_run;
+		do {
+			unique_run = 1;
+			for (uint32_t i = 0; i < SIZE_PRIMARY - 1; i++) {
+				for (uint32_t j = 0; j < SIZE_PRIMARY; j++) { // starting at 0 is attended. 
+					if (i == j)
+						continue;
+					uint32_t offset_i = i * max_candidates_len + candidates_elect[i];
+					uint32_t offset_j = j * max_candidates_len + candidates_elect[j];
 
-      unique_run = 1;
-      for (uint32_t i = 0; i < total_primary_tile_count - 1; i++) {
-        for (uint32_t j = 0; j < total_primary_tile_count; j++) { // starting at 0 is attended. 
-          if (i == j)
-            continue;
-          uint32_t offset_i = i * max_candidates_len + candidates_elect[i];
-          uint32_t offset_j = j * max_candidates_len + candidates_elect[j];
+					if (mdc[offset_i].candidate_idx == mdc[offset_j].candidate_idx) {
+  						if (mdc[offset_i].costs >= mdc[offset_j].costs) {
+    							candidates_elect[i]++;
+							candidates_pop_uniqueness[i]++;
+						} else {
+    							candidates_elect[j]++;
+							candidates_pop_uniqueness[j]++;
+						}
 
-          if (candidates_index[offset_i] == candidates_index[offset_j]) {
-            if (candidates_costs[offset_i] >= candidates_costs[offset_j])
-              candidates_elect[i]++;
-            else
-              candidates_elect[j]++;
-
-            // if there were more candidates compared as possible
-            assert( candidates_elect[i] != total_primary_tile_count);
-
-            unique_run = 0;
-            break; // if the current election is skipped to the next candidate
-          }
-        }
-      }
-      // if a do while round has any replacement => it is not unique yet
-      if (debug)
-        fprintf(stdout, ".");
-    } while (unique_run == 0);
-    if (debug) {
-      fprintf(stdout, "\ncandidates_elect:");
-
-      for (uint32_t i = 0; i < total_primary_tile_count; i++) {
-        fprintf(stdout, "%i,", candidates_elect[i]);
-      }
-      fprintf(stdout, "\n");
-    }
-  }
+						// if there were more candidates compared as possible
+						assert( candidates_elect[i] != total_primary_tile_count);
+						unique_run = 0;
+					}
+        			}
+			}
+			// if a do while round has any replacement => it is not unique yet
+			// if a do while round has any replacement => it is not unique yet
+		} while (unique_run == 0);
+	}
 
   // intialize with -1
   FILE *mosaik2_result = m_fopen(mp.dest_result_filename, "wb");
-
+  float candidate_best_costs = FLT_MAX, candidate_worst_costs=0;
   for (uint32_t i = 0; i < SIZE_PRIMARY; i++) {
-    // total_primary_tile_count * max_candidates_len
     uint32_t offset = i * max_candidates_len + candidates_elect[i];
-    fprintf(mosaik2_result, "%i	%i	%f	%i	%i\n", i, candidates_index[offset], candidates_costs[offset], candidates_off_x[offset], candidates_off_y[offset]);
+    if(mdc[offset].costs<candidate_best_costs)
+	    candidate_best_costs = mdc[offset].costs;
+    if(mdc[offset].costs>candidate_worst_costs)
+	    candidate_worst_costs = mdc[offset].costs;
+    fprintf(mosaik2_result, "%i	%i	%f	%i	%i\n", i, mdc[offset].candidate_idx, mdc[offset].costs, mdc[offset].off_x, mdc[offset].off_y);
   }
   m_fclose(mosaik2_result);
 
-  if(args->unique == 1 ) {
-    unsigned long long sum_ins = 0u;
-    unsigned long long sum_elect = 0u;
-    unsigned long long max_elect = 0u;
-	
-    for (int i = 0; i < total_primary_tile_count; i++) {
-      sum_ins += candidates_ins[i];
-      sum_elect += candidates_elect[i];
-      if( max_elect < candidates_elect[i])
-        max_elect = candidates_elect[i];
+    if(args->quiet != 1) {
+      printf("candidate heap list insert:%i pop:%i toobad:%i\n", candidates_insert, candidates_pop, candidates_toobad);
+      printf("best/worst candidate costs:%f, %f\n", candidate_best_costs, candidate_worst_costs);
+      printf("shifted candidates best/worst difference between shifts:%f, %f\n", diff_best, diff_worst);
     }
-    if(args->quiet != 1)fprintf(stdout, "election operations to create uniqueness:%llu, max value on one position:%llu possible maximum:%i\n", sum_elect, max_elect, total_primary_tile_count);
-  }
+    if(args->quiet != 1 && unique) {
+      uint64_t sum_elect = 0u;
+      uint32_t max_elect = 0u;
+      for (int i = 0; i < total_primary_tile_count; i++) {
+        sum_elect += candidates_pop_uniqueness[i];
+        if( max_elect < candidates_pop_uniqueness[i])
+          max_elect = candidates_pop_uniqueness[i];
+      }
+      printf("create uniqueness pop:%li max primary tile value pop:%i possible maximum:%li\n", sum_elect, max_elect, max_candidates_len);
+    }
 
-  free(candidates_index);
-  free(candidates_costs);
-  free(candidates_off_x);
-  free(candidates_off_y);
-  free(candidates_len);
-  free(candidates_elect);
-  free(candidates_ins);
+
+  free(mdc);
   return 0;
 }
 

@@ -128,3 +128,30 @@ int m_fflush(FILE *stream);
 int m_stat(const char *pathname, struct stat *statbuf);
 int m_sysinfo(struct sysinfo *info);
 void m_access(const char *pathname, int mode);
+
+
+
+/* Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
+/* Adaption: Element types are changed from int to mosaik2_database_candidate -------------------------------------------- */
+typedef struct {
+   int last;
+   uint32_t count;
+   mosaik2_database_candidate* keys;
+} Heap;
+void swap(Heap* h, int n, int m);
+void heap_init(Heap* h, mosaik2_database_candidate* storage);
+void heap_dump(Heap *h);
+void mdc_dump(mosaik2_database_candidate *mdc0);
+void max_heap_bubble_up(Heap* h, int n);
+void max_heap_insert(Heap* h, mosaik2_database_candidate *key);
+void max_heap_sift_down(Heap* h, int n);
+int max_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
+int max_heap_pop(Heap* h, mosaik2_database_candidate *key);
+int max_heap_peek(Heap *h, mosaik2_database_candidate *key);
+void min_heap_bubble_up(Heap* h, int n);
+void min_heap_insert(Heap* h, mosaik2_database_candidate *key);
+void min_heap_sift_down(Heap* h, int n);
+int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
+int min_heap_pop(Heap* h, mosaik2_database_candidate *k);
+int min_heap_peek(Heap *h, mosaik2_database_candidate *k);
+/* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */

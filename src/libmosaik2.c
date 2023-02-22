@@ -1373,3 +1373,174 @@ void m_access(const char *pathname, int mode) {
 		exit(EXIT_FAILURE);
 	}
 }
+
+
+/* Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
+/* Adaption: Element types are changed from int to mosaik2_database_candidate -------------------------------------------- */
+
+void swap(Heap* h, int n, int m) {
+   mosaik2_database_candidate tmp;
+  memcpy(&tmp, &h->keys[n], sizeof(mosaik2_database_candidate));
+  memcpy(&h->keys[n], &h->keys[m], sizeof(mosaik2_database_candidate));
+  memcpy(&h->keys[m], &tmp, sizeof(mosaik2_database_candidate));
+}
+
+void heap_init(Heap* h, mosaik2_database_candidate* storage) {
+   h->last = 0;
+   h->keys = storage - 1;
+}
+
+void heap_dump(Heap *h) {
+	printf("dump heap count:%i\n", h->last-1);
+	for(uint32_t i=1;i<h->last+1;i++) {
+		printf(" %i tidx:%u cidx:%u c:%f off:%i %i\n", i-1, h->keys[i].primary_tile_idx, h->keys[i].candidate_idx, h->keys[i].costs, h->keys[i].off_x, h->keys[i].off_y);
+	}
+}
+void mdc_dump(mosaik2_database_candidate *mdc0) {
+	printf("   tidx:%u cidx:%u c:%f off:%i %i\n", mdc0->primary_tile_idx, mdc0->candidate_idx, mdc0->costs, mdc0->off_x, mdc0->off_y);
+}
+
+void max_heap_bubble_up(Heap* h, int n) {
+   int parent;
+
+   while(n > 1) {
+      parent = n/2;
+      if (h->keys[parent].costs > h->keys[n].costs)
+         break;
+      swap(h, parent, n);
+      n = parent;
+   }
+}
+
+void max_heap_insert(Heap* h, mosaik2_database_candidate *key) {
+   h->last += 1;
+   h->count++;
+   memcpy(&(h->keys[h->last]), key, sizeof(mosaik2_database_candidate));
+
+
+   max_heap_bubble_up(h, h->last);
+}
+
+void max_heap_sift_down(Heap* h, int n) {
+   int last = h->last;
+
+   while (1) {
+      int max   = n;
+      int left  = n * 2;
+      int right = left + 1;
+
+      if (left <= last && h->keys[left].costs > h->keys[max].costs)
+         max = left;
+      if (right <= last && h->keys[right].costs > h->keys[max].costs)
+         max = right;
+
+      if (n == max)
+         break;
+
+      swap(h, max, n);
+      n = max;
+   }
+}
+
+int max_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
+   h->count--;
+
+	memcpy(d, &h->keys[n], sizeof(mosaik2_database_candidate));
+   h->keys[n] = h->keys[h->last];
+   h->last -= 1;
+
+   if (n >= h->last)
+	   return 0;
+
+   if (n > 1 && h->keys[n].costs > h->keys[n/2].costs)
+      max_heap_bubble_up(h, n);
+   else
+      max_heap_sift_down(h, n);
+
+   return 0;
+}
+
+int max_heap_pop(Heap* h, mosaik2_database_candidate *d) {
+   return max_heap_delete(h, 1, d);
+}
+int max_heap_peek(Heap *h, mosaik2_database_candidate *d){
+	if(h->last > 0) {
+		memcpy(d, &h->keys[1], sizeof(mosaik2_database_candidate));
+		return 0;
+	} 
+	return 1;
+}
+
+void min_heap_bubble_up(Heap* h, int n) {
+   int parent;
+
+   while(n > 1) {
+      parent = n/2;
+      if (h->keys[parent].costs < h->keys[n].costs)
+         break;
+      swap(h, parent, n);
+      n = parent;
+   }
+}
+
+void min_heap_insert(Heap* h, mosaik2_database_candidate *key) {
+   h->last += 1;
+   h->count++;
+   memcpy(&h->keys[h->last], key, sizeof(mosaik2_database_candidate));
+
+   min_heap_bubble_up(h, h->last);
+}
+
+void min_heap_sift_down(Heap* h, int n) {
+   int last = h->last;
+
+   while (1) {
+      int min   = n;
+      int left  = n * 2;
+      int right = left + 1;
+
+      if (left <= last && h->keys[left].costs < h->keys[min].costs)
+         min = left;
+      if (right <= last && h->keys[right].costs < h->keys[min].costs)
+         min = right;
+
+      if (n == min)
+         break;
+
+      swap(h, min, n);
+      n = min;
+   }
+}
+
+int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
+   h->count--;
+
+   memcpy(d, &(h->keys[n]), sizeof(mosaik2_database_candidate));
+   memcpy(&(h->keys[n]), &(h->keys[h->last]), sizeof(mosaik2_database_candidate));
+   h->last -= 1;
+
+   if (n >= h->last) {
+   	return 0;
+   }
+
+
+   if (n > 1 && h->keys[n].costs < h->keys[n/2].costs) {
+      min_heap_bubble_up(h, n); 
+   } else {
+      min_heap_sift_down(h, n);
+   }
+
+   return 0;
+}
+
+int min_heap_pop(Heap* h, mosaik2_database_candidate *d) {
+   return min_heap_delete(h, 1, d);
+}
+int min_heap_peek(Heap *h, mosaik2_database_candidate *d) {
+	if(&h->last>0) {
+		memcpy(d, &h->keys[1], sizeof(mosaik2_database_candidate));
+		return 0;
+	}
+	return 1;
+}
+/* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */

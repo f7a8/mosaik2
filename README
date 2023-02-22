@@ -45,3 +45,8 @@ IV.  The provided motive image "source_image.jpeg" is used to find find best
      matching candidates.
 V.   The results of (multiple) gatherings are merged here and the final
      candidate images are loaded to the final mosaic image together.
+
+
+Integrated third party software
+
+Min-Heap and Max-Heap into libmosaik2.h and libmosaik2.c from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0. The payload data type was changed from int to mosaik2_database_candidate.
