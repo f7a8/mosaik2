@@ -176,7 +176,7 @@ if(debug) fprintf(stderr, "init\n");
 
 	if(debug)
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			fprintf(stderr,"%s:%li\n", candidates[i].md->thumbs_db_name, candidates[i].index);
+			fprintf(stderr,"%s:%i\n", candidates[i].md->thumbs_db_name, candidates[i].index);
 		}
 
 	
@@ -189,7 +189,7 @@ if(debug) fprintf(stderr, "init\n");
 	
 	if(debug)
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			printf("%i	%li	%f	%i	%i	%s\n",
+			printf("%i	%i	%f	%i	%i	%s\n",
 			candidates[i].sortorder, 
 			candidates[i].index, 
 			candidates[i].costs, 
@@ -294,7 +294,7 @@ if(debug) fprintf(stderr, "init\n");
 	//download part
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
 		if( access( candidates[i].temp_filename, F_OK ) == 0 ) {
-			if(!args->quiet)printf("%i/%i already exist %s:%li\n", i,total_primary_tile_count,candidates[i].md->thumbs_db_name,candidates[i].index );
+			if(!args->quiet)printf("%i/%i already exist %s:%i\n", i,total_primary_tile_count,candidates[i].md->thumbs_db_name,candidates[i].index );
 			// TODO check hash
 			continue;
 		}
@@ -309,13 +309,13 @@ if(debug) fprintf(stderr, "init\n");
 
 		//TODO
 		if(local_cache==1) {
-			if(!args->quiet)fprintf(stdout,"%i/%i copy %s:%li %s", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			if(!args->quiet)fprintf(stdout,"%i/%i copy %s:%i %s", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 			File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
 			if(!args->quiet) fprintf(stdout,".\n");
 		} else {
 
 			if(!args->quiet) {
-				fprintf(stdout,"%i/%i create symlink %s:%li %s\n",
+				fprintf(stdout,"%i/%i create symlink %s:%i %s\n",
 			        i, total_primary_tile_count,
 			        candidates[i].md->thumbs_db_name, candidates[i].index,
 			        candidates[i].thumbs_db_filenames );
@@ -336,7 +336,7 @@ if(debug) fprintf(stderr, "init\n");
 			}
 
 		} else {
-			printf("%i/%i downloading %s:%li %s\n", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
+			printf("%i/%i downloading %s:%i %s\n", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 
 			CURL *curl_handle;
 			FILE *pagefile;

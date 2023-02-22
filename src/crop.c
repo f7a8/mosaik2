@@ -16,7 +16,7 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	check_thumbs_db(&md);
 	int database_image_resolution = read_thumbs_conf_tilecount(&md); // standard value should be 16
 
-	uint64_t element_count = read_thumbs_db_count(&md);
+	uint32_t element_count = read_thumbs_db_count(&md);
 	if( element_number >= element_count ) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);

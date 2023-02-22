@@ -287,7 +287,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
 		args->num_tiles);
 		if(args->has_element_number) {
-			fprintf(stderr, "element_number = %li\n", args->element_number);
+			fprintf(stderr, "element_number = %i\n", args->element_number);
 		} else {
 			fprintf(stderr, "element_number = none\n");
 		}

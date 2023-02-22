@@ -41,11 +41,11 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 	time_t lastmodified = read_thumbs_db_lastmodified(md);
 	printf("db-size=%li\n", read_thumbs_db_size(md));
 	printf("last-modified=%s", ctime( &lastmodified));
-	printf("element-count=%li\n", read_thumbs_db_count(md));
-	printf("duplicates-count=%li\n", read_thumbs_db_duplicates_count(md));
-	printf("invalid-count=%li\n", read_thumbs_db_invalid_count(md));
-	printf("valid-count=%li\n", read_thumbs_db_valid_count(md));
-	printf("tileoffsets-count=%li\n", read_thumbs_db_tileoffset_count(md));
+	printf("element-count=%i\n", read_thumbs_db_count(md));
+	printf("duplicates-count=%i\n", read_thumbs_db_duplicates_count(md));
+	printf("invalid-count=%i\n", read_thumbs_db_invalid_count(md));
+	printf("valid-count=%i\n", read_thumbs_db_valid_count(md));
+	printf("tileoffsets-count=%i\n", read_thumbs_db_tileoffset_count(md));
 
 	read_thumbs_db_histogram(md);
 	

@@ -32,9 +32,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
   check_dest_filename(dest_filename);
   uint8_t thumbs_tile_count = read_thumbs_conf_tilecount(&md);
-  uint64_t thumbs_count = read_thumbs_db_count(&md);
+  uint32_t thumbs_count = read_thumbs_db_count(&md);
 
-  if (thumbs_tile_count * thumbs_tile_count * (6 * 256) > UINT32_MAX) {
+  if (thumbs_tile_count * thumbs_tile_count * (2 * RGB * UINT8_MAX) > UINT32_MAX) {
     // can candidates_costs contain the badest possible costs?
     fprintf(stderr, "thumb tile size too high for internal data structure\n");
     exit(EXIT_FAILURE);
@@ -151,7 +151,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
     printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", width, height, primary_tile_x_count, primary_tile_y_count, total_primary_tile_count, tile_x_count, tile_y_count, lx, ly, offset_x, offset_y, pixel_per_primary_tile, pixel_per_tile);
 
   if (unique == 1 && total_primary_tile_count > thumbs_count) {
-    fprintf(stderr, "there are too few candidates (%lu) for unique than needed (%i)\n", thumbs_count, total_primary_tile_count);
+    fprintf(stderr, "there are too few candidates (%u) for unique than needed (%i)\n", thumbs_count, total_primary_tile_count);
     exit(EXIT_FAILURE);
   }
   if(args->quiet == 0) {
@@ -169,7 +169,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   if (debug)
     fprintf(stdout, "max_candidates_len:%li, total_candidates_count:%li\n", max_candidates_len, total_candidates_count);
 
-  unsigned long *candidates_index = m_calloc(total_candidates_count, sizeof(unsigned long));
+  uint32_t *candidates_index = m_calloc(total_candidates_count, sizeof(uint32_t));
   float *candidates_costs         = m_calloc(total_candidates_count, sizeof(float));
   unsigned char *candidates_off_x = m_calloc(total_candidates_count, sizeof(unsigned char));
   unsigned char *candidates_off_y = m_calloc(total_candidates_count, sizeof(unsigned char));
@@ -377,7 +377,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   fprintf(primarytiledims_file, "%i	%i", primary_tile_x_count, primary_tile_y_count);
   m_fclose(primarytiledims_file);
 
-  uint64_t idx = 0;
+  uint32_t idx = 0;
 
   int32_t percent = -1;
   while (1) {
@@ -421,13 +421,13 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		      time_t now;
 		      time(&now);
 		      percent = new_percent;
-		      printf("%i%%, %lu/%lu %s", percent, idx, thumbs_count, ctime(&now));
+		      printf("%i%%, %u/%u %s", percent, idx, thumbs_count, ctime(&now));
 		}
       }
 
       if (invalid_buf[i / 2] != 0) { // valid entries must have 0
         if (debug)
-          fprintf(stderr, "thumb (%lu) is marked as invalid, will be skipped\n", idx);
+          fprintf(stderr, "thumb (%u) is marked as invalid, will be skipped\n", idx);
 
         // in case of invalid entries move the file pointers without reading the colors data
         m_fseeko(thumbs_db_imagecolors_file, thumbs_db_total_tile_count * RGB, SEEK_CUR);
@@ -445,7 +445,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
       uint8_t shift_y_len = thumbs_db_tile_y_count - thumbs_tile_count;
 
       if (shift_x_len != 0 && shift_y_len != 0) {
-        fprintf(stderr, "one shift axis should be zero but: %i %i at thumb_idx: %lu\n", shift_x_len, shift_y_len, idx
+        fprintf(stderr, "one shift axis should be zero but: %i %i at thumb_idx: %u\n", shift_x_len, shift_y_len, idx
                 //, thumbs_db_tile_x_count, thumbs_db_tile_y_count, thumbs_tile_count);
         );
         exit(EXIT_FAILURE);
@@ -461,7 +461,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
       }
 
       if (debug1) {
-        fprintf(stderr, "%lu shift_len:%i %i\n", idx, shift_x_len, shift_y_len);
+        fprintf(stderr, "%u shift_len:%i %i\n", idx, shift_x_len, shift_y_len);
       }
 
       for (uint8_t shift_y = shift_y_0; shift_y <= shift_y_len; shift_y++) {
@@ -576,7 +576,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
               if (diff_color0 < old_costs) {
 
                 if (debug)
-                  printf("idx:%lu primary_tile_idx:%05i diff_color0:%05f,old_costs:%05f,len:%i %li\n", idx, primary_tile_idx, diff_color0, old_costs, candidates_len[primary_tile_idx], max_candidates_len);
+                  printf("idx:%u primary_tile_idx:%05i diff_color0:%05f,old_costs:%05f,len:%i %li\n", idx, primary_tile_idx, diff_color0, old_costs, candidates_len[primary_tile_idx], max_candidates_len);
                 if (unique == 1) {
                   int continue_ = 0;
                   // if there is the same candidate already with a lower costs in it
@@ -601,7 +601,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                         uint32_t src = dest + 1;
                         size_t n = candidates_len[primary_tile_idx]-1-i;
 
-                        memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
+                        memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(uint32_t));
                         memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
                         memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
                         memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
@@ -627,7 +627,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                 }
 
                 if (debug)
-                  fprintf(stdout, "thumbs_db_idx:%lu primary_tile_idx:%i insert pos found:%i\n", idx, primary_tile_idx, insert_pos);
+                  fprintf(stdout, "thumbs_db_idx:%u primary_tile_idx:%i insert pos found:%i\n", idx, primary_tile_idx, insert_pos);
 
                 if (candidates_len[primary_tile_idx] < total_primary_tile_count && candidates_len[primary_tile_idx] < max_candidates_len) {
                   // if there is any space left in the candidates list
@@ -636,7 +636,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                   candidates_len[primary_tile_idx]++;
                 }
                 if (debug)
-                  fprintf(stdout, "primary_tile_idx:%i inspos:%i, diff_color0:%f, idx:%lu, off:%i %i, len:%i\n", primary_tile_idx, insert_pos, diff_color0, idx, candidates_off_x[offset + insert_pos], candidates_off_y[offset + insert_pos], candidates_len[primary_tile_idx]);
+                  fprintf(stdout, "primary_tile_idx:%i inspos:%i, diff_color0:%f, idx:%u, off:%i %i, len:%i\n", primary_tile_idx, insert_pos, diff_color0, idx, candidates_off_x[offset + insert_pos], candidates_off_y[offset + insert_pos], candidates_len[primary_tile_idx]);
 
                 // position to insert new costs found
                 // shift worse costs to the right
@@ -645,7 +645,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                 uint32_t dest = src + 1;
                 size_t n = candidates_len[primary_tile_idx] - insert_pos;
 
-                memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(unsigned long));
+                memmove(&candidates_index[dest], &candidates_index[src], n*sizeof(uint32_t));
                 memmove(&candidates_costs[dest], &candidates_costs[src], n*sizeof(float));
                 memmove(&candidates_off_x[dest], &candidates_off_x[src], n*sizeof(unsigned char));
                 memmove(&candidates_off_y[dest], &candidates_off_y[src], n*sizeof(unsigned char));
@@ -661,7 +661,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                   for (int i = 0; i < max_candidates_len; i++) {
                     if (candidates_len[primary_tile_idx] == i)
                       fprintf(stdout, "}");
-                    fprintf(stdout, "%lu,", candidates_index[offset + i]);
+                    fprintf(stdout, "%u,", candidates_index[offset + i]);
                   }
                   fprintf(stdout, "\ncandidates_costs[%i:%i-%li]:{", primary_tile_idx, 0, max_candidates_len);
                   //									fprintf(stdout, "%05lli ", candidates_costs[primary_tile_idx + insert_pos ], diff_color0);
@@ -683,7 +683,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
                   fprintf(stdout, "\n");
                 }
 
-                // this is for the impatient, an intermediate result will be save every 1000th candidate image.
                 /*if (args->unique == 0 && (idx % 10000 == 0 && primary_x == 0 && primary_y == 0 && shift_x == 0 && shift_y == 0)) {
                   FILE *mosaik2_result = m_fopen(mp.dest_result_filename, "wb");
 
@@ -735,7 +734,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
       for (int i = 0; i < max_candidates_len; i++) {
         if (candidates_len[primary_tile_idx] == i)
           fprintf(stdout, "}");
-        fprintf(stdout, "%lu,", candidates_index[offset + i]);
+        fprintf(stdout, "%u,", candidates_index[offset + i]);
       }
       fprintf(stdout, "\ncandidates_costs[%i]:{", primary_tile_idx);
       //									fprintf(stdout, "%05lli ", candidates_costs[primary_tile_idx + insert_pos ], diff_color0);
@@ -807,7 +806,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
   for (uint32_t i = 0; i < SIZE_PRIMARY; i++) {
     // total_primary_tile_count * max_candidates_len
     uint32_t offset = i * max_candidates_len + candidates_elect[i];
-    fprintf(mosaik2_result, "%i	%li	%f	%i	%i\n", i, candidates_index[offset], candidates_costs[offset], candidates_off_x[offset], candidates_off_y[offset]);
+    fprintf(mosaik2_result, "%i	%i	%f	%i	%i\n", i, candidates_index[offset], candidates_costs[offset], candidates_off_x[offset], candidates_off_y[offset]);
   }
   m_fclose(mosaik2_result);
 

@@ -64,12 +64,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		build_filehashes_index(&md1);
 	}
 
-	//uint64_t element_count1 = read_thumbs_db_count(&md1);	
-
 	int debug=0;
-
-	//uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
-	//uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
 
 	FILE *filehashes_file0       = m_fopen(md0.filehashes_filename, "rb");
 	FILE *filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
@@ -105,7 +100,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	
 	size_t size_read_h0, size_read_h1;
 	uint8_t duplicates_data0=0,duplicates_data1=0;
-	uint64_t i0=0, j0=0;
+	uint32_t i0=0, j0=0;
 	uint8_t compare_same_file=strncmp(md0.filehashes_filename, md1.filehashes_filename, strlen(md0.filehashes_filename)) == 0;
 
 	/* idea:
@@ -250,9 +245,9 @@ void build_filehashes_index(mosaik2_database *md) {
 		exit(EXIT_FAILURE);
 	}
 	int dataset_len = MD5_DIGEST_LENGTH + sizeof(size_t);
-	uint64_t nmemb = read_thumbs_db_count(md);
+	uint32_t nmemb = read_thumbs_db_count(md);
 	int loop_size = ceil(nmemb * (dataset_len) / freeram);
-	uint64_t chunk_nmemb[loop_size];
+	uint32_t chunk_nmemb[loop_size];
 	for(int i=0;i<loop_size;i++) {
 		chunk_nmemb[i] = (nmemb / loop_size);
 	}

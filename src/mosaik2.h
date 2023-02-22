@@ -104,7 +104,7 @@ struct mosaik2_indextask_struct {
 	time_t start;
 	time_t end;
 	TASK_STATE state;
-	uint64_t idx;
+	uint32_t idx;
 	char filename[1024]; // trade off, dont want to malloc that much. hoping it fits
 	FILE *file;
 	size_t filesize;
@@ -174,7 +174,7 @@ typedef struct mosaik2_database_struct mosaik2_database;
 
 struct mosaik2_database_element_struct {
 	mosaik2_database *md;
-	uint64_t element_number;
+	uint32_t element_number;
 	unsigned char hash[MD5_DIGEST_LENGTH];
 	char *filename;
 	ssize_t filesize;
@@ -214,7 +214,7 @@ struct mosaik2_project_result_struct {
 	uint32_t sortorder;
 	mosaik2_database *md;
 	uint8_t hash[16];
-	uint64_t index; // index in thumbs_db
+	uint32_t index; // index in thumbs_db
 	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
@@ -247,7 +247,7 @@ struct arguments_struct {
 	int ignore_old_invalids;
 	int no_hash_cmp;
 	int color_distance;
-	uint64_t element_number;
+	uint32_t element_number;
 	int has_element_number;
 	char *src_image;
 	int quiet;

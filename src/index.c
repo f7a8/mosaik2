@@ -11,7 +11,7 @@ void check_pid_file(mosaik2_database *md);
 void write_pid_file(mosaik2_database *md);
 void remove_pid_file(mosaik2_database *md);
 void process_input_data(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md);
-void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i,FILE *);
+void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i,FILE *);
 //void signal_handler(int signal);
 void mosaik2_index_add_tiler_pid(mosaik2_context *, pid_t);
 void mosaik2_index_clean_tiler_pids(mosaik2_context *);
@@ -141,8 +141,8 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	//mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
 	md->tilecount = read_thumbs_conf_tilecount(md);
-	size_t i=read_thumbs_db_count(md);
-	size_t maxmemb=-1;
+	uint32_t i=read_thumbs_db_count(md);
+	uint32_t maxmemb=UINT32_MAX;
 	size_t len = 0;
 	char *lineptr = NULL;
 
@@ -158,17 +158,17 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	}
 	free(lineptr);
 	if(exiting == 1) {
-		fprintf(stderr, "received SIGINT, exiting after %li lines\n", i);
+		fprintf(stderr, "received SIGINT, exiting after %i lines\n", i);
 	}
 	if(i>=maxmemb) {
-		fprintf(stderr, "exiting after maximum lines (%li) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
+		fprintf(stderr, "exiting after maximum lines (%i) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
 	}
 		
 	int wstatus=0;
 	wait(&wstatus); //TODO doesnt work always
 }
 
-void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md, char *line, ssize_t i, FILE *file) {
+void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i, FILE *file) {
 
   if(ctx->exiting)
 		fprintf(stdout, "input data is not resumed, EXITing because of SIGTERM.");
@@ -180,7 +180,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 	char *token1 = strtok(NULL, "\t");
 	char *token2 = strtok(NULL, "\n");
 	if(token0 == NULL || token1 == NULL || token2 == NULL ) {
-		errx(EINVAL, "could not split line by tabstop into three token (%s,%s,%s) filename is empty. (linenumber:%li, line:[%s])\n",token0,token1,token2,i, line);
+		errx(EINVAL, "could not split line by tabstop into three token (%s,%s,%s) filename is empty. (linenumber:%i, line:[%s])\n",token0,token1,token2,i, line);
 	}
 
 	if(strlen(token0)>=sizeof(task.filename)) {
@@ -216,7 +216,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 		if(args->quiet == 0 || i == 0 || i % 1000 == 0) {
 			int jobs = ctx->current_tiler_processes + 1;
 			double img_per_min = 60.*i/(time(NULL)-ctx->start_t);
-			fprintf(stdout, "job #%li, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
+			fprintf(stdout, "job #%i, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
 			exit(0);
 		}
 		exit(0);
