@@ -37,11 +37,16 @@ I.   See README.file_list
 II.  initialize a mosaik2 database named first_mosaik2. You can create multiple
      mosaik2 databases to handle a large volume of images by processing them in
      parallel.
-III. The actual indexing process. Here, for the mosaik2 database
+III. The index process scans all images provided from "first_mosaik2.file_list"
+     to the mosaik2 database "first_mosaic". Those informations, like tiny
+     thumbnails, are needed to compute the final mosaic.
      "first_mosaik2", all files from the "first_mosaik2.file_list" are indexed.
-IV.  Just here we are talking about the actual image from which to create a
-     mosaic. Explanation of the parameters:
-  as STDIN the actual image from which a mosaic is to be created.
+IV.  The provided motive image "source_image.jpeg" is used to find find best 
+     matching candidates.
 V.   The results of (multiple) gatherings are merged here and the final
-     candidate images are copied or linked into ~/.mosaik2 and loaded. Then it
-     gets assembled into the final mosaic image and stored in the target image.
+     candidate images are loaded to the final mosaic image together.
+
+
+Integrated third party software
+
+Min-Heap and Max-Heap into libmosaik2.h and libmosaik2.c from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0. The payload data type was changed from int to mosaik2_database_candidate.

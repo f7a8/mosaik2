@@ -94,27 +94,31 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
 	double total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
   
-	int tile_x_count;
-	int tile_y_count;
+	int tile_x_count_int;
+	int tile_y_count_int;
+	
 
 	if(short_dim == width){
-		tile_x_count = tile_count;
-		tile_y_count = height / pixel_per_tile;
+		tile_x_count_int = tile_count;
+		tile_y_count_int = height / pixel_per_tile;
 	} else {
-		tile_x_count = width / pixel_per_tile;
-		tile_y_count = tile_count;
+		tile_x_count_int = width / pixel_per_tile;
+		tile_y_count_int = tile_count;
 	}
 
-	int total_tile_count = tile_x_count * tile_y_count;
-	task->total_tile_count = total_tile_count;
-  
-	if( tile_x_count >= 256 || tile_y_count >= 256 ) {
-  	free(buffer);
+	if( tile_x_count_int >= 256 || tile_y_count_int >= 256 ) {
+  		free(buffer);
 		gdImageDestroy(im);
 
 		fprintf(stderr,"any tile dimension must be < 256\n");
 		exit(EXIT_FAILURE);
 	}
+
+	int total_tile_count = tile_x_count_int * tile_y_count_int;
+	task->total_tile_count = total_tile_count;
+
+	unsigned char tile_x_count = (unsigned char) tile_x_count_int; // cast should be safe after last if
+	unsigned char tile_y_count = (unsigned char) tile_y_count_int; // also
 
 	task->tile_x_count = tile_x_count;
 	task->tile_y_count = tile_y_count;
@@ -160,10 +164,8 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	memset(&colors_stddev_blue,  0, total_tile_count*sizeof(double));
 
 
-	task->colors = calloc(3*total_tile_count, sizeof(uint8_t));
-	if(task->colors==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors\n"); exit(1); }
-	task->colors_stddev = calloc(3*total_tile_count, sizeof(uint8_t));
-	if(task->colors_stddev==NULL) { fprintf(stderr, "cannot allocate memory in tiler for colors_stddev\n"); exit(1); }
+	task->colors = m_calloc(3*total_tile_count, sizeof(uint8_t));
+	task->colors_stddev = m_calloc(3*total_tile_count, sizeof(uint8_t));
 
 	int red0, green0, blue0;
 		for(int j=0,j1=offset_y;j1<ly;j++,j1++){    

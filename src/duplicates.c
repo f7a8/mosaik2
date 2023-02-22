@@ -13,13 +13,11 @@
 int check_filehashes_index(mosaik2_database *md);
 void build_filehashes_index(mosaik2_database *md);
 int qsort_(const void*, const void*);
-void read_filenames_index(FILE *filenames_idx, long element_no, long *filenames_offset);
-void print_filename(FILE *filenames_file, long offset_start, long offset_end);
 
 const int FILEHASHES_INDEX_VALID = 1;
 const int FILEHASHES_INDEX_INVALID = 0;
 
-void p(unsigned char *p0, unsigned char *p1, int nl) {
+/*void p(unsigned char *p0, unsigned char *p1, int nl) {
 		size_t s0,s1;
 		memcpy(&s0, p0+MD5_DIGEST_LENGTH, sizeof(size_t));
 		memcpy(&s1, p1+MD5_DIGEST_LENGTH, sizeof(size_t));
@@ -35,7 +33,7 @@ void p(unsigned char *p0, unsigned char *p1, int nl) {
 
 	if(nl)
 		fprintf(stderr, "\n");
-}
+}*/
 
 
 int mosaik2_duplicates(mosaik2_arguments *args) {
@@ -66,60 +64,16 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		build_filehashes_index(&md1);
 	}
 
-	uint64_t element_count1 = read_thumbs_db_count(&md1);	
-
 	int debug=0;
 
-	//uint64_t mosaik2_database_elems0 = read_thumbs_db_count(&md0);
-	//uint64_t mosaik2_database_elems1 = read_thumbs_db_count(&md1);
-
-	FILE *filehashes_file0 = fopen(md0.filehashes_filename, "rb");
-	if( filehashes_file0 == NULL) {
-		fprintf(stderr, "first filehashes file (%s) could not be opened\n", md0.filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filehashes_file1 = fopen(md1.filehashes_filename, "rb");
-	if( filehashes_file1 == NULL ) {
-		fprintf(stderr, "snd filehashes file (%s) could not be opened\n", md1.filehashes_filename);
-		exit(EXIT_FAILURE);
-	} 
-
-	FILE *filehashes_index_file0 = fopen(md0.filehashes_index_filename, "rb");
-	if( filehashes_index_file0 == NULL) {
-		fprintf(stderr, "first filehashes file (%s) could not be opened\n", md0.filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filehashes_index_file1 = fopen(md1.filehashes_index_filename, "rb");
-	if( filehashes_index_file1 == NULL ) {
-		fprintf(stderr, "snd filehashes file (%s) could not be opened\n", md1.filehashes_filename);
-		exit(EXIT_FAILURE);
-	} 
-
-	FILE *duplicates_file0 = fopen(md0.duplicates_filename, "r");
-	if(duplicates_file0 == NULL) {
-		fprintf(stderr, "first duplicates file (%s) could not be opened\n", md0.duplicates_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *duplicates_file1 = fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
-	if(duplicates_file1 == NULL) {
-		fprintf(stderr, "snd duplicates file (%s) could not be opened\n", md1.duplicates_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filenames_index_file = fopen(md1.filenames_index_filename, "r");
-	if(filenames_index_file==NULL) {
-		fprintf(stderr,"snd filenames index file (%s) could not be opened\n",md1.filenames_index_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *filenames_file = fopen(md1.filenames_filename, "r");
-	if(filenames_file==NULL) {
-		fprintf(stderr, "snd filenames file (%s) could not be opened\n", md1.filenames_filename);
-		exit(EXIT_FAILURE);
-	}
+	FILE *filehashes_file0       = m_fopen(md0.filehashes_filename, "rb");
+	FILE *filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
+	FILE *filehashes_index_file0 = m_fopen(md0.filehashes_index_filename, "rb");
+	FILE *filehashes_index_file1 = m_fopen(md1.filehashes_index_filename, "rb");
+	FILE *duplicates_file0       = m_fopen(md0.duplicates_filename, "r");
+	FILE *duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
+	FILE *filenames_index_file   = m_fopen(md1.filenames_index_filename, "r");
+	FILE *filenames_file         = m_fopen(md1.filenames_filename, "r");
 
 	// DRY RUN operates the same way, data is written to a temporary copy of duplicates file from md1
 	if(dry_run==1) {
@@ -128,19 +82,13 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		size_t bytes;
 		uint8_t buf[BUFSIZ];
 		while ((bytes = fread(&buf, 1, BUFSIZ, duplicates_file1)) != 0) {
-			size_t elems = fwrite(&buf, 1, bytes, tmp_file);
-			if(elems != bytes) {
-				fprintf(stderr, "an unexpected size of data was read\n");
-				exit(EXIT_FAILURE);
-			}
+			m_fwrite(&buf, bytes, tmp_file);
 		}
-		fflush(tmp_file);
+		m_fflush(tmp_file);
 		rewind(tmp_file);	//playback file position to 0
 
 
-		if( fclose(duplicates_file1) != 0 ) {
-			fprintf(stderr, "error closing duplicates file\n");
-		}
+		m_fclose(duplicates_file1);
 		duplicates_file1 = tmp_file;
 		
 	} // dry_run end
@@ -150,10 +98,9 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	unsigned char f0[dataset_len]; // current hash to compare with rest
 	unsigned char f1[dataset_len]; // contains part of the rest
 	
-  size_t size_read_h0, size_read_h1;
-	size_t size_read_d0, size_read_d1;
+	size_t size_read_h0, size_read_h1;
 	uint8_t duplicates_data0=0,duplicates_data1=0;
-	uint64_t i0=0, j0=0;
+	uint32_t i0=0, j0=0;
 	uint8_t compare_same_file=strncmp(md0.filehashes_filename, md1.filehashes_filename, strlen(md0.filehashes_filename)) == 0;
 
 	/* idea:
@@ -180,8 +127,8 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 
 		if(compare_same_file) { 
 			// in the same file the compare partner needs to be off by one
-			fseeko(filehashes_index_file1, ftello(filehashes_index_file0), SEEK_SET);
-			fseeko(duplicates_file1, ftello(filehashes_index_file0), SEEK_SET);
+			m_fseeko(filehashes_index_file1, ftello(filehashes_index_file0), SEEK_SET);
+			m_fseeko(duplicates_file1, ftello(filehashes_index_file0), SEEK_SET);
 		}
 
 
@@ -189,14 +136,11 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 
 		for(;(( size_read_h1 = fread(f1, dataset_len, 1, filehashes_index_file1)) == 1);j0++) {
 			
-			
-
-
 			int qsort = qsort_(f0, f1);
 			
 			if(qsort < 0) {
-				fseeko(filehashes_index_file1,-dataset_len,SEEK_CUR);
-				fseeko(duplicates_file1,-1,SEEK_CUR);
+				m_fseeko(filehashes_index_file1,-dataset_len,SEEK_CUR);
+				m_fseeko(duplicates_file1,-1,SEEK_CUR);
 				break;
 			} else if( qsort > 0) {
 			
@@ -209,14 +153,9 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				size_t dup_offset0;
 				memcpy(&dup_offset0, f0+MD5_DIGEST_LENGTH, sizeof(size_t));
 
-				if(fseeko(duplicates_file0,dup_offset0,SEEK_SET) != 0) {
-					fprintf(stderr, "could not seek duplicates file to current position: %li\n",dup_offset0);
-					exit(EXIT_FAILURE);
-				}
-				if((size_read_d0 = fread(&duplicates_data0,1,1,duplicates_file0))!=1) {
-					fprintf(stderr,"error reading already saved duplicates0: %li\n",size_read_d0);
-					exit(EXIT_FAILURE);
-				}
+				m_fseeko(duplicates_file0,dup_offset0,SEEK_SET);
+				m_fread(&duplicates_data0,1,duplicates_file0);
+
 				if(duplicates_data0==1) {
 					if(debug)fprintf(stdout,"#filehash0 0#%li is already marked as duplicate, ignore it\n", dup_offset0);
 					continue;
@@ -225,58 +164,39 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				size_t dup_offset1;
 				memcpy(&dup_offset1, f1+MD5_DIGEST_LENGTH, sizeof(size_t));
 
-				if( fseeko(duplicates_file1, dup_offset1, SEEK_SET) != 0) {
-					fprintf(stderr, "cannot set file cursor in duplicates_file for reading the old duplicates value\n");
-					exit(EXIT_FAILURE);
-				}
-				if((size_read_d1 = fread(&duplicates_data1,1,1,duplicates_file1)) != 1) {
-					fprintf(stderr,"error reading already saved duplicates1: %li\n",size_read_d1);
-					exit(EXIT_FAILURE);
-				}
+				m_fseeko(duplicates_file1, dup_offset1, SEEK_SET);
+				m_fread(&duplicates_data1,1,duplicates_file1);
+
 				if(duplicates_data1==1) {
 					if(debug)fprintf(stderr,"#filehash1 1#%li is already marked as duplicate, ignore it\n", dup_offset1);
 					continue;
 				}
 
-
-				fseeko(duplicates_file1, dup_offset1, SEEK_SET);
-
+				m_fseeko(duplicates_file1, dup_offset1, SEEK_SET);
 				duplicates_data1=1;
-				
-				if(fwrite(&duplicates_data1, 1, 1, duplicates_file1) != 1 ) {
-					fprintf(stderr, "database element could not be marked as duplicate\n");
-					exit(EXIT_FAILURE);
-				}
+				m_fwrite(&duplicates_data1, 1, duplicates_file1);
 
-				long off0 = 0;
-				long off1 = -1;
-				read_filenames_index(filenames_index_file, dup_offset1, &off0);
-				if(dup_offset1!=element_count1-1) // elements after the last element should not be read
-					read_filenames_index(filenames_index_file, dup_offset1+1, &off1);
-				print_filename(filenames_file, off0, off1);
+				char *filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
+				printf("%s\n", filename);
+				free(filename);
 
 			} // else block ends
 		}
 	}
 
-	fflush(stdout);	
+	m_fflush(stdout);
 	
-	if(fflush(duplicates_file1)!=0) {
-		fprintf(stderr, "cannot flush unsaved data to file (%s)\n", md1.duplicates_filename);
-		exit(EXIT_FAILURE);
-	}
+	m_fflush(duplicates_file1);
 	if(debug)fprintf(stderr,"closing files\n");
-	if( fclose(duplicates_file0) != 0 
-		|| fclose(duplicates_file1) != 0
-		|| fclose(filehashes_file0) != 0
-		|| fclose(filehashes_file1) != 0
-		|| fclose(filehashes_index_file0) != 0
-		|| fclose(filehashes_index_file1) != 0
-		|| fclose(filenames_file) != 0
-		|| fclose(filenames_index_file) != 0 ) {
-			fprintf(stderr, "error closing files\n");
-			exit(EXIT_FAILURE);
-	}
+
+	m_fclose(duplicates_file0);
+	m_fclose(duplicates_file1);
+	m_fclose(filehashes_file0);
+	m_fclose(filehashes_file1);
+	m_fclose(filehashes_index_file0);
+	m_fclose(filehashes_index_file1);
+	m_fclose(filenames_file);
+	m_fclose(filenames_index_file);
 	
 	return 0;
 }
@@ -288,14 +208,9 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
  */
 int check_filehashes_index(mosaik2_database *md) {
 	struct stat lastmodified_file, filehashes_index_file;
-	if( stat(md->lastmodified_filename, &lastmodified_file) != 0) {
-		fprintf(stderr, "cannot stat mosaik2 database file (%s)\n", md->lastmodified_filename);
-		exit(EXIT_FAILURE);
-	}
-	if( stat(md->filehashes_index_filename,&filehashes_index_file) != 0) {
-		fprintf(stderr, "cannot stat mosaik2 database file (%s)\n", md->filehashes_index_filename);
-		exit(EXIT_FAILURE);
-	}
+
+	m_stat(md->lastmodified_filename, &lastmodified_file);
+	m_stat(md->filehashes_index_filename,&filehashes_index_file);
 
 	if( filehashes_index_file.st_ctim.tv_sec > lastmodified_file.st_ctim.tv_sec ||
 			( filehashes_index_file.st_ctim.tv_sec == lastmodified_file.st_ctim.tv_sec &&
@@ -319,17 +234,10 @@ int check_filehashes_index(mosaik2_database *md) {
 void build_filehashes_index(mosaik2_database *md) {
 	//if(debug)fprintf(stderr, "build filehashes index\n");
 
-	FILE *filehashes_index_file = fopen(md->filehashes_index_filename, "w");
-	if(filehashes_index_file == NULL) {
-		fprintf(stderr, "could not open mosaik2 database file (%s)\n", md->filehashes_index_filename);
-		exit(EXIT_FAILURE);
-	}
+	FILE *filehashes_index_file = m_fopen(md->filehashes_index_filename, "w");
 
 	struct sysinfo info;
-	if (sysinfo(&info) != 0) {
-		fprintf(stderr, "sysinfo failed\n");
-		exit(EXIT_FAILURE);
-	}
+	m_sysinfo(&info);
 
 	double freeram = info.freeram * 0.9; // use 90 % of free ram
 	if(freeram<MD5_DIGEST_LENGTH*100) {
@@ -337,9 +245,9 @@ void build_filehashes_index(mosaik2_database *md) {
 		exit(EXIT_FAILURE);
 	}
 	int dataset_len = MD5_DIGEST_LENGTH + sizeof(size_t);
-	uint64_t nmemb = read_thumbs_db_count(md);
+	uint32_t nmemb = read_thumbs_db_count(md);
 	int loop_size = ceil(nmemb * (dataset_len) / freeram);
-	uint64_t chunk_nmemb[loop_size];
+	uint32_t chunk_nmemb[loop_size];
 	for(int i=0;i<loop_size;i++) {
 		chunk_nmemb[i] = (nmemb / loop_size);
 	}
@@ -348,11 +256,7 @@ void build_filehashes_index(mosaik2_database *md) {
 		//if(debug)fprintf(stderr, "nmemb:%i chunk_nmemb:%i\n", nmemb, chunk_nmemb[i]);
 	}
 	
-	unsigned char *buf = malloc(chunk_nmemb[0] * (dataset_len));
-	if(buf==NULL) {
-		fprintf(stderr, "could not malloc buffer (size:%li) for external sort\n", chunk_nmemb[0] * (MD5_DIGEST_LENGTH+sizeof(size_t)));
-		exit(EXIT_FAILURE);
-	}
+	unsigned char *buf = m_malloc(chunk_nmemb[0] * (dataset_len));
 
 	FILE *tfiles[loop_size];
 	for(int i=0;i<loop_size;i++) {
@@ -363,17 +267,9 @@ void build_filehashes_index(mosaik2_database *md) {
 		}
 	}
 
-	FILE *filehashes_file = fopen(md->filehashes_filename, "r");
-	if(filehashes_file == NULL) {
-		fprintf(stderr, "could not open mosaik2 database file (%s) for external sort\n", md->filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
+	FILE *filehashes_file = m_fopen(md->filehashes_filename, "r");
 	for(size_t i=0;i<loop_size;i++) {
-		size_t read_nmemb = fread(buf, MD5_DIGEST_LENGTH, chunk_nmemb[i], filehashes_file);
-		if(read_nmemb != chunk_nmemb[i]) {
-			fprintf(stderr, "read unexpected data length. should %ix%li, but %li elements were read\n", MD5_DIGEST_LENGTH, chunk_nmemb[i], read_nmemb);
-			exit(EXIT_FAILURE);
-		}
+		m_fread(buf, MD5_DIGEST_LENGTH*chunk_nmemb[i], filehashes_file);
 
 		//all hashes were read as a blob, now after every hash the position in the file has to be injected
 		//p(buf,buf+dataset_len,1);
@@ -387,25 +283,14 @@ void build_filehashes_index(mosaik2_database *md) {
 		}
 		memset(buf+MD5_DIGEST_LENGTH, 0, sizeof(size_t)); // set first number to 0
 
-		qsort(buf, read_nmemb, dataset_len, qsort_);
+		qsort(buf, chunk_nmemb[i], dataset_len, qsort_);
 
 		//write all sorted chunks to disk
-		if(fwrite(buf, dataset_len, read_nmemb, tfiles[i]) != read_nmemb) {
-			fprintf(stderr, "wrote unexpected length of sorted data\n");
-			exit(EXIT_FAILURE);
-		}
-
-		if(fseeko(tfiles[i], 0, SEEK_SET) != 0) {
-			fprintf(stderr, "could not reset file cursor\n");
-			exit(EXIT_FAILURE);
-		}
-
+		m_fwrite(buf, dataset_len*chunk_nmemb[i], tfiles[i]);
+		m_fseeko(tfiles[i], 0, SEEK_SET);
 	}
 
-	if(fclose(filehashes_file) != 0) {
-		fprintf(stderr, "could not close mosaik2 database file (%s)\n", md->filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
+	m_fclose(filehashes_file);
 
 
 	//merge all temporary file together
@@ -474,10 +359,7 @@ void build_filehashes_index(mosaik2_database *md) {
 
 		//the smallest possible values is written to the output file
 
-		if(fwrite(&last_data[smallest_index*dataset_len],dataset_len,1,filehashes_index_file) != 1) {
-			fprintf(stderr, "unable to write one element to merge file\n");
-			exit(EXIT_FAILURE);
-		}
+		m_fwrite(&last_data[smallest_index*dataset_len],dataset_len,filehashes_index_file);
 
 		// at its position the next values is loaded
 		size_t freads=fread(&last_data[smallest_index*dataset_len],dataset_len,1,tfiles[smallest_index]);
@@ -494,15 +376,10 @@ void build_filehashes_index(mosaik2_database *md) {
 	}
 
 	for(int i=0;i<loop_size;i++) {
-		fclose(tfiles[i]);// will be unlinked anyway, here no error handling
+		m_fclose(tfiles[i]);// will be unlinked anyway, here no error handling
 	}
 
-	if(fclose(filehashes_index_file) != 0) {
-		fprintf(stderr, "could not close mosaik2 database file (%s)\n", md->filehashes_index_filename);
-		exit(EXIT_FAILURE);
-	}
-
-
+	m_fclose(filehashes_index_file);
 }
 
 
@@ -518,45 +395,4 @@ int qsort_(const void *p0, const void *p1) {
 	}
 
 	return 0;
-}
-
-void read_filenames_index(FILE *filenames_index_file, long element_no, long *filenames_offset) {
-	
-	if(fseeko(filenames_index_file, element_no*sizeof(long), SEEK_SET) != 0) {
-		fprintf(stderr, "could not seek to element_no %li in filenames_idx\n", element_no);
-		exit(EXIT_FAILURE);
-	}
-	if( fread(filenames_offset, sizeof(long), 1, filenames_index_file) != 1 ) {
-	//FOEF returning nonzero if it is set.
-		if(feof(filenames_index_file)==0) // no error, was just the last element
-			return;
-		fprintf(stderr, "could not read filenames offset of element_no:%li\n",element_no);
-		exit(EXIT_FAILURE);
-	}
-
-}
-
-void print_filename(FILE *filenames_file, long offset, long offset_end) {
-	int len = 0;
-	if(offset_end == -1)
-		len = MAX_FILENAME_LEN; // is the case if the last element is printed
-	else
-		len = offset_end - offset;
-	
-	char filename[len+1];
-	memset(filename, 0, len+1);
-	if(fseeko(filenames_file, offset, SEEK_SET)!=0) {
-		fprintf(stderr, "could not seek to filenames offset in filenames file\n");
-		exit(EXIT_FAILURE);
-	}
-	size_t read = fread(filename, 1, len, filenames_file);
-	if(read != len) {
-		if(read > 0) {
-			fprintf(stdout, "%s", filename); //string should contain nl
-			return;
-		} 
-		fprintf(stderr, "could not read filename %s\n", filename);
-		exit(EXIT_FAILURE);
-	}
-	fprintf(stdout, "%s", filename); //string contains nl
 }

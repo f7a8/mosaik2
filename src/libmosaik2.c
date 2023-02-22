@@ -42,6 +42,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( md->pid_filename, 0, 256);
 	memset( md->lock_filename, 0, 256);
 	memset( md->lastmodified_filename, 0, 256);
+	memset( md->tileoffsets_filename, 0, 256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -111,12 +112,29 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( md->lastmodified_filename, thumbs_db_name, l);
 	strncat( md->lastmodified_filename, "/.lastmodified", 14); 
 
+	strncpy( md->tileoffsets_filename, thumbs_db_name, l);
+	strncat( md->tileoffsets_filename, "/tileoffsets.bin", 16);
+	
+	md->imagestddev_sizeof = 3;
+	md->imagecolors_sizeof = 3;
+	md->imagedims_sizeof = 2*sizeof(int);
+	md->image_index_sizeof = sizeof(off_t);
+	md->filenames_index_sizeof = sizeof(off_t);
+	md->filehashes_sizeof = MD5_DIGEST_LENGTH;
+	md->filehashes_index_sizeof = MD5_DIGEST_LENGTH + sizeof(size_t);
+	md->timestamps_sizeof = sizeof(time_t);
+	md->filesizes_sizeof = sizeof(size_t);
+	md->tiledims_sizeof = 2*sizeof(char);
+	md->invalid_sizeof = sizeof(char);
+	md->duplicates_sizeof = sizeof(char);
+	md->tileoffsets_sizeof = 2*sizeof(char);
+	md->lastmodified_sizeof = sizeof(time_t);
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
-
 	size_t mosaik2_database_id_len = strlen(mosaik2_database_id);
 	size_t dest_filename_len = strlen(dest_filename);
+
 
 	strncpy(mp->dest_filename, dest_filename, dest_filename_len);
 	
@@ -128,6 +146,10 @@ void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *
 	strncat(mp->dest_primarytiledims_filename, ".", 1);
 	strncat(mp->dest_primarytiledims_filename, mosaik2_database_id, mosaik2_database_id_len);
 	strncat(mp->dest_primarytiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
+
+	memset(mp->dest_imagedims_filename, 0, 256);
+	strncpy(mp->dest_imagedims_filename, mp->dest_filename, dest_filename_len);
+	strncat(mp->dest_imagedims_filename, ".imagedims.txt", 14);
  
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
@@ -144,6 +166,60 @@ void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *
 	memset(mp->dest_src_filename, 0, 256);
 	strncpy(mp->dest_src_filename, mp->dest_filename, dest_filename_len);
 	strncat(mp->dest_src_filename, ".src", 4);
+}
+
+void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height) {
+
+	if(database_image_resolution*database_image_resolution*(6*256) > UINT32_MAX) {
+		fprintf(stderr, "database_image_resolution too hig for internal data structure\n");
+		exit(EXIT_FAILURE);
+	}
+
+	ti->image_width = image_width;
+	ti->image_height = image_height;
+	ti->short_dim = image_height > image_width ? image_width : image_height;
+
+	ti->src_image_resolution = src_image_resolution; // old:num_tiles;
+	ti->primary_tile_count = src_image_resolution;
+	ti->database_image_resolution = database_image_resolution; // old:thumbs_tile_count
+
+	assert(src_image_resolution > 0);
+	assert(database_image_resolution > 0 && database_image_resolution < 256);
+
+
+	ti->tile_count = src_image_resolution * database_image_resolution;
+	assert(ti->tile_count != 0);
+
+	if(image_width < ti->tile_count || image_height < ti->tile_count ) {
+		fprintf(stderr,"image dimension is too small\n");
+		exit(EXIT_FAILURE);
+	}
+ 
+	ti->pixel_per_tile = ti->short_dim / ti->tile_count; //automatically floored
+	ti->total_pixel_per_tile = ti->pixel_per_tile * ti->pixel_per_tile;
+  
+  
+  	ti->pixel_per_primary_tile = ti->pixel_per_tile * database_image_resolution; 
+  	ti->total_pixel_per_primary_tile = ti->pixel_per_primary_tile * ti->pixel_per_primary_tile;
+  
+	ti->primary_tile_x_count = image_width / ti->pixel_per_primary_tile;
+	ti->primary_tile_y_count = image_height / ti->pixel_per_primary_tile;
+	ti->tile_x_count = ti->primary_tile_x_count * database_image_resolution;
+	ti->tile_y_count = ti->primary_tile_y_count * database_image_resolution;
+	ti->offset_x = (image_width %  ti->pixel_per_primary_tile) / 2;
+	ti->offset_y = (image_height % ti->pixel_per_primary_tile) / 2;
+	
+	ti->total_tile_count = ti->tile_x_count * ti->tile_y_count;
+	ti->total_primary_tile_count = ( ti->tile_x_count / database_image_resolution ) * ( ti->tile_y_count / database_image_resolution );
+
+	ti->lx = ti->offset_x + ti->pixel_per_tile * ti->tile_x_count;
+	ti->ly = ti->offset_y + ti->pixel_per_tile * ti->tile_y_count;
+	
+	ti->total_pixel_count = ti->pixel_per_tile * ti->tile_x_count * ti->pixel_per_tile * ti->tile_y_count;
+	ti->ignored_pixel_count = (image_width * image_height) - ti->total_pixel_count;
+	
+
+
 }
 
 
@@ -268,11 +344,10 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 }
 
 off_t get_file_size(const char *filename) {
-  struct stat st;
-  if( stat(filename, &st) != 0) {
-		fprintf(stderr, "error cannot gather file size from (%s)\n", filename);
-		exit(EXIT_FAILURE);
-	}
+	assert(filename != NULL );
+	assert(strlen(filename)>0);
+	struct stat st;
+	m_stat(filename, &st);
 	off_t size = st.st_size;
 	return size;
 }
@@ -298,51 +373,259 @@ int get_file_type_from_buf(uint8_t *buf, size_t len) {
 	return FT_ERR;
 }
 
-uint64_t read_thumbs_db_count(mosaik2_database *md) {
+uint32_t read_thumbs_db_count(mosaik2_database *md) {
 
 	off_t db_filesizes_size = get_file_size(md->filesizes_filename);
 	if(db_filesizes_size == 0)
 		return 0;
 	// the *.db.filesizes is a binary file that includes the original 
 	// filesizes of the indexed images and its saved as 4 byte integers
-	return db_filesizes_size / sizeof(size_t);
+	return (uint32_t)(db_filesizes_size / sizeof(size_t));
 }
 
 uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
+	FILE *thumbs_conf_tilecount_file = m_fopen(md->tilecount_filename, "rb");
+    	char buf[4];
+	char *rbuf = fgets( buf, 4, thumbs_conf_tilecount_file );
+	if(rbuf==NULL) {
+		fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->tilecount_filename);
+		m_fclose( thumbs_conf_tilecount_file );
+		exit(EXIT_FAILURE);
+	}
 
-    FILE *thumbs_conf_tilecount_file = fopen(md->tilecount_filename, "rb");
-    if( thumbs_conf_tilecount_file == NULL) {
-      fprintf(stderr, "thumbs db file with tile count (%s) could not be opened\n", md->tilecount_filename);
-      exit(EXIT_FAILURE);
-    }
-    char buf[4];
-    char *rbuf = fgets( buf, 4, thumbs_conf_tilecount_file );
-		if(rbuf==NULL) {
-			fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->tilecount_filename);
-			fclose( thumbs_conf_tilecount_file );
-			exit(EXIT_FAILURE);
-		}
-
-    uint8_t thumbs_conf_tilecount = atoi(buf);
-    fclose( thumbs_conf_tilecount_file );
-		return thumbs_conf_tilecount;
+	uint8_t thumbs_conf_tilecount = atoi(buf);
+	m_fclose( thumbs_conf_tilecount_file );
+	return thumbs_conf_tilecount;
 }
 
-void read_database_id(mosaik2_database *md) {
-
-	FILE *id_file = fopen(md->id_filename,"r");
-	if(id_file == NULL ) {
-		fprintf(stderr, "mosaik2 database file with id (%s) could not be opened\n", md->id_filename);
-		exit(EXIT_FAILURE);
+uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
+	FILE *file = m_fopen(md->duplicates_filename, "rb");
+	
+	uint32_t duplicates_count = 0;
+	uint8_t buf[BUFSIZ];
+	while( feof(file) == 0) {
+		size_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i++) {
+			if(buf[i]!=0)
+				duplicates_count++;
+		}
 	}
-	char *rbuf = fgets( md->id, md->id_len, id_file);
+	m_fclose( file );
+	return duplicates_count;
+}
+
+uint32_t read_thumbs_db_invalid_count(mosaik2_database *md) {
+	FILE *file = m_fopen(md->invalid_filename, "rb");
+	uint32_t count = 0;
+	uint8_t buf[BUFSIZ];
+	while( feof(file) == 0) {
+		size_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i++) {
+			if(buf[i]!=0) // only 0 marks a valid entry
+				count++;
+		}
+	}
+	m_fclose( file );
+	return count;
+}
+
+uint32_t read_thumbs_db_valid_count(mosaik2_database *md) {
+  FILE *file  = m_fopen(md->invalid_filename, "rb");
+  FILE *file1 = m_fopen(md->duplicates_filename, "rb");
+
+	size_t file_size = get_file_size(md->invalid_filename);
+	size_t file1_size = get_file_size(md->duplicates_filename);
+
+	assert(file_size == file1_size);
+
+  uint32_t count = 0;
+  unsigned char buf[BUFSIZ];
+  unsigned char buf1[BUFSIZ];
+
+	size_t s = 0, s1 = 0;
+  while( (s = fread(&buf, 1, BUFSIZ, file)) != 0 &&
+	      (s1 = fread(&buf1, 1, BUFSIZ,file1))!= 0 ) {
+    for(int i=0;i<s;i++) {
+      if(!(buf[i]!=0 || buf1[i]!=0)) // only 0s marks a valid entries
+        count++;
+    }
+  }
+
+  m_fclose( file );
+  m_fclose( file1 );
+
+  return count;
+}
+
+uint32_t read_thumbs_db_tileoffset_count(mosaik2_database *md) {
+	FILE *file = m_fopen(md->tileoffsets_filename, "rb");
+	
+	uint32_t count = 0;
+	uint8_t buf[BUFSIZ];
+	while( feof(file) == 0) {
+		size_t s = fread(&buf, 1, BUFSIZ, file);
+		for(int i=0;i<s;i+=2) {
+			if(!( buf[i]==0xFF && buf[i+1]==0xFF)) // 2x 0xFF marks unset, everything else should have a custom value
+				count++;
+		}
+	}
+	m_fclose( file );
+	return count;
+}
+
+void mosaik2_database_read_database_id(mosaik2_database *md) {
+
+	FILE *file = m_fopen(md->id_filename,"r");
+	char *rbuf = fgets( md->id, md->id_len, file);
 	if(rbuf == NULL ) {
 		fprintf(stderr, "mosaik2 datbase file with id (%s) could not be read correctly\n", md->id_filename);
-		fclose(id_file);
 		exit(EXIT_FAILURE);
 	}
+	m_fclose( file );
+}
 
-	fclose( id_file );
+//filename has to be freed in the end
+//md.tilecount must be set before
+void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number) {
+	mde->md = md;
+	mde->element_number = element_number;
+	read_entry(md->filehashes_filename, mde->hash, MD5_DIGEST_LENGTH, element_number*MD5_DIGEST_LENGTH);
+	mde->filename = mosaik2_database_read_element_filename(md, element_number, NULL);
+	read_entry(md->filesizes_filename, &mde->filesize, sizeof(ssize_t), element_number*sizeof(ssize_t));
+	read_entry(md->imagedims_filename, &mde->imagedims, sizeof(int)*2, element_number*2*sizeof(int));
+	read_entry(md->tiledims_filename, &mde->tiledims, sizeof(unsigned char)*2, element_number*2*sizeof(unsigned char));
+	read_entry(md->timestamps_filename, &mde->timestamp, sizeof(time_t), element_number*sizeof(time_t));
+	read_entry(md->duplicates_filename, &mde->duplicate, 1, element_number * 1);
+	read_entry(md->invalid_filename, &mde->invalid, 1, element_number);
+	read_entry(md->tileoffsets_filename, &mde->tileoffsets, sizeof(unsigned char)*2, element_number*2*sizeof(unsigned char));
+
+	off_t imagecolors_offset;
+	read_entry(md->image_index_filename, &imagecolors_offset, sizeof(imagecolors_offset), element_number*sizeof(imagecolors_offset));
+	//int short_dim = mde->tiledims[0] > mde->tiledims[1] ? mde->tiledims[1] : mde->tiledims[0];
+
+
+	int x0,y0,xl,yl,total_tile_count; 
+	float total_tile_count_f;
+	if(mde->tileoffsets[0] == 0xFF && mde->tileoffsets[1] == 0xFF ) { // then undefined
+		x0 = 0;
+		y0 = 0;
+		xl = mde->tiledims[0];
+		yl = mde->tiledims[1];
+		total_tile_count = xl * yl;
+		total_tile_count_f = (float ) total_tile_count;
+	} else { // recognize only cropped area
+		x0 = mde->tileoffsets[0];
+		y0 = mde->tileoffsets[1];
+		xl = x0 + md->tilecount;
+		yl = y0 + md->tilecount;
+		total_tile_count = md->tilecount * md->tilecount;
+		total_tile_count_f = (float) total_tile_count;
+	}
+
+	unsigned char imagecolors[total_tile_count*RGB];
+	unsigned char imagestddev[total_tile_count*RGB];
+	read_entry(md->imagecolors_filename, &imagecolors, total_tile_count*RGB, imagecolors_offset);
+	read_entry(md->imagestddev_filename, &imagestddev, total_tile_count*RGB, imagecolors_offset);
+
+	//fprintf(stderr, "###x0:%i y0:%i xl:%i yl:%i tiledims:%i %i tile_count_f:%f\n", x0, y0, xl, yl, mde->tiledims[0], mde->tiledims[1], total_tile_count_f);
+	for(int x=x0;x<xl;x++) {
+		for(int y=y0;y<yl;y++) {
+			int idx = (x * mde->tiledims[1] + y) * RGB;
+			mde->histogram_color[R] += imagecolors[idx+R] / total_tile_count_f;
+			mde->histogram_color[G] += imagecolors[idx+G] / total_tile_count_f;
+			mde->histogram_color[B] += imagecolors[idx+B] / total_tile_count_f;
+			mde->histogram_stddev[R] += imagestddev[idx+R] / total_tile_count_f;
+			mde->histogram_stddev[G] += imagestddev[idx+G] / total_tile_count_f;
+			mde->histogram_stddev[B] += imagestddev[idx+B] / total_tile_count_f;
+		}
+	}
+}
+
+/**
+ * reads the filename at element_number from the mosaik2_database.
+ * if FILE* is null its opend and closed
+ * the returned char pointer has to freed manually.
+ */
+char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, FILE *filenames_index_file) {
+	off_t offsets[2];
+	int fileobject_was_null = filenames_index_file == NULL;
+	// find starting offset from filenames index file for real filenames file
+	if(fileobject_was_null)
+		filenames_index_file = m_fopen(md->filenames_index_filename, "r");
+
+	m_fseeko(filenames_index_file, element_number*sizeof(off_t), SEEK_SET);	
+	size_t read = fread(offsets, sizeof(off_t), 2, filenames_index_file);
+	if(read == 0) {
+		fprintf(stderr, "could not read filenames offset from filenames index file\n");
+		exit(EXIT_FAILURE);
+	}
+	if(read == 1) { // this was the last entry in the file. so there is no next entry
+		offsets[1] = get_file_size(md->filenames_filename);
+		fprintf(stderr, "next offset from filesize\n");
+	}
+	if(fileobject_was_null)
+		m_fclose(filenames_index_file);
+
+	offsets[1]--;
+	off_t filename_len = offsets[1]-offsets[0];
+
+	char * filename = m_calloc(1,filename_len);
+	read_entry(md->filenames_filename, filename, filename_len, offsets[0]);
+	return filename;
+}
+void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp) {
+	char *filename = mp->dest_primarytiledims_filename;
+
+	FILE *file = m_fopen(filename, "r");
+	off_t filesize = get_file_size(filename);
+	char buf[filesize];
+	memset(buf, 0, filesize);
+
+	m_fread(buf, filesize, file);
+
+  	char *ptr = NULL;
+	ptr=strtok(buf,"\n\t");
+	assert(ptr!=NULL);
+	mp->primary_tile_x_count = atoi( ptr );
+
+	ptr=NULL;
+	ptr=strtok(NULL,"\n");
+	assert(ptr!=NULL);
+	mp->primary_tile_y_count = atoi( ptr );
+
+	m_fclose(file);
+}
+
+size_t read_thumbs_db_size(mosaik2_database *md) {
+	return (size_t)
+    ( get_file_size( md->imagestddev_filename)
+		+ get_file_size( md->imagecolors_filename)
+		+ get_file_size( md->imagedims_filename)
+		+ get_file_size( md->image_index_filename)
+		+ get_file_size( md->filenames_filename)
+		+ get_file_size( md->filenames_index_filename)
+		+ get_file_size( md->filehashes_filename)
+		+ get_file_size( md->filehashes_index_filename)
+		+ get_file_size( md->timestamps_filename)
+		+ get_file_size( md->filesizes_filename)
+		+ get_file_size( md->tiledims_filename)
+		+ get_file_size( md->invalid_filename)
+		+ get_file_size( md->duplicates_filename)
+		+ get_file_size( md->tilecount_filename)
+		+ get_file_size( md->id_filename)
+		+ get_file_size( md->version_filename)
+		+ get_file_size( md->readme_filename)
+		+ get_file_size( md->lastmodified_filename)
+		+ get_file_size( md->tileoffsets_filename));
+}
+
+time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
+
+	FILE *file = m_fopen(md->lastmodified_filename, "rb");
+	time_t lastmodified=0;
+	m_fread(&lastmodified, sizeof(lastmodified), file);
+	m_fclose( file );
+	return lastmodified;
 }
 /**
 void check_thumbs_db_name(char *thumbs_db_name) {
@@ -372,105 +655,56 @@ void check_thumbs_db_name(char *thumbs_db_name) {
 	}	
 
 } */
+void mosaik2_project_check(mosaik2_project *mp) {
+	m_access( mp->dest_filename, F_OK);
+	m_access( mp->dest_primarytiledims_filename, F_OK);
+	m_access( mp->dest_result_filename, F_OK);
+	m_access( mp->dest_imagedims_filename, F_OK);
+}
 
 void check_thumbs_db(mosaik2_database *md) {
 
 	//check_thumbs_db_name( md->thumbs_db_name );
-
-	
-	if( access( md->thumbs_db_name, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database directory (%s) is not accessable\n", md->thumbs_db_name);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->imagecolors_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagecolors_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->imagestddev_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagestddev_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->imagedims_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->imagedims_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->image_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->image_index_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->filenames_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->filenames_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filenames_index_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->filesizes_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filesizes_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->filehashes_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->filehashes_index_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->filehashes_index_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->tiledims_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->tiledims_filename);
-		exit(EXIT_FAILURE);
-	}
-	
-	if( access( md->invalid_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->invalid_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->duplicates_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->duplicates_filename);
-	}
-
-	if( access( md->tilecount_filename, F_OK ) != 0 ) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->tilecount_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->lock_filename, F_OK ) != 0) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lock_filename);
-		exit(EXIT_FAILURE);
-	}
-
-	if( access( md->lastmodified_filename, F_OK ) != 0) {
-		fprintf(stderr, "mosaik2 database file (%s) is not accessable\n", md->lastmodified_filename);
-		exit(EXIT_FAILURE);
-	}
+	m_access( md->thumbs_db_name, F_OK );
+	m_access( md->imagecolors_filename, F_OK );
+	m_access( md->imagestddev_filename, F_OK );
+	m_access( md->imagedims_filename, F_OK );
+	m_access( md->image_index_filename, F_OK );
+	m_access( md->filenames_filename, F_OK );
+	m_access( md->filenames_index_filename, F_OK );
+	m_access( md->filesizes_filename, F_OK );
+	m_access( md->filehashes_filename, F_OK );
+	m_access( md->filehashes_index_filename, F_OK );
+	m_access( md->tiledims_filename, F_OK );
+	m_access( md->invalid_filename, F_OK );
+	m_access( md->duplicates_filename, F_OK );
+	m_access( md->tilecount_filename, F_OK );
+	m_access( md->lock_filename, F_OK);
+	m_access( md->lastmodified_filename, F_OK) ;
+	m_access( md->tileoffsets_filename, F_OK);
 
 	// TODO make more plause checks
-	uint64_t element_count = read_thumbs_db_count(md);
-	if( get_file_size(md->filenames_index_filename) != element_count*sizeof(long)) {
-		fprintf(stderr, "mosaik2 database file (%s) has not the expected size of:%li\n", md->filenames_index_filename, element_count*sizeof(long));
-		exit(EXIT_FAILURE);
-	}
+	uint32_t element_count = read_thumbs_db_count(md);
+	uint8_t database_image_resolution = read_thumbs_conf_tilecount(md);
 
-	if( get_file_size(md->image_index_filename) != element_count*sizeof(long)) {
-		fprintf(stderr, "mosaik2 database file (%s) has not the expected size:%li\n", md->image_index_filename, element_count*sizeof(long));
-		exit(EXIT_FAILURE);
-	}
+	assert(get_file_size(md->imagecolors_filename)     >= element_count * md->imagecolors_sizeof*database_image_resolution*database_image_resolution);
+	assert(get_file_size(md->imagestddev_filename)     >= element_count * md->imagestddev_sizeof*database_image_resolution*database_image_resolution);
+	assert(get_file_size(md->imagecolors_filename)     <= element_count * md->imagecolors_sizeof*256*256);
+	assert(get_file_size(md->imagestddev_filename)     <= element_count * md->imagestddev_sizeof*256*256);
 
-
-	
+	assert(get_file_size(md->imagedims_filename)       == element_count * md->imagedims_sizeof);
+	assert(get_file_size(md->image_index_filename)     == element_count * md->image_index_sizeof);
+	assert(get_file_size(md->filenames_filename)       >= element_count * 2); // at least one character + newline
+	assert(get_file_size(md->filenames_index_filename) == element_count * md->filenames_index_sizeof);
+	assert(get_file_size(md->filesizes_filename)       == element_count * md->filesizes_sizeof);
+	assert(get_file_size(md->filehashes_filename)      == element_count * md->filehashes_sizeof);
+	assert(get_file_size(md->filehashes_index_filename)== element_count * md->filehashes_index_sizeof 
+	    || get_file_size(md->filehashes_index_filename)== 0);
+	assert(get_file_size(md->tiledims_filename)        == element_count * md->tiledims_sizeof);
+	assert(get_file_size(md->invalid_filename)         == element_count * md->invalid_sizeof);
+	assert(get_file_size(md->duplicates_filename)      == element_count * md->duplicates_sizeof);
+	assert(get_file_size(md->lastmodified_filename)    == (element_count > 0 ? md->lastmodified_sizeof : 0));
+	assert(get_file_size(md->tileoffsets_filename)     == element_count * md->tileoffsets_sizeof);
 }
 
 int check_dest_filename(char *dest_filename) {
@@ -529,11 +763,11 @@ void remove_newline(char *str) {
 
 int cmpfunc (const void * a, const void * b) {
 	//fprintf(stderr,".");
-	struct result *a0 = (struct result *)a;
-	struct result *b0 = (struct result *)b;
+	mosaik2_project_result *a0 = (mosaik2_project_result *)a;
+	mosaik2_project_result *b0 = (mosaik2_project_result *)b;
 
 	//fprintf(stderr,"(%s)(%s).",a0->thumbs_db_name,b0->thumbs_db_name);
-	int strcmp0 = strcmp(a0->thumbs_db_name, b0->thumbs_db_name);
+	int strcmp0 = a0->md < b0->md;
 	//fprintf(stderr,"%i.",strcmp0);
 	if(strcmp0 < 0)
 		return -1;
@@ -548,8 +782,8 @@ int cmpfunc (const void * a, const void * b) {
 }
 
 int cmpfunc_back(const void *a, const void *b) {
-	struct result *a0 = (struct result *)a;
-	struct result *b0 = (struct result *)b;
+	mosaik2_project_result *a0 = (mosaik2_project_result *)a;
+	mosaik2_project_result *b0 = (mosaik2_project_result *)b;
 	if(a0->sortorder > b0->sortorder)
 		return 1;
 	if(a0->sortorder < b0->sortorder)
@@ -559,17 +793,9 @@ int cmpfunc_back(const void *a, const void *b) {
 
 int File_Copy(char FileSource[], char FileDestination[])
 {
-    char    c[4096]; // or any other constant you like
-    FILE    *stream_R = fopen(FileSource, "r");
-    FILE    *stream_W = fopen(FileDestination, "w");   //create and write to file
-		if(stream_R == NULL) {
-			fprintf(stderr,"file source (%s) is null\n", FileSource);
-			exit(EXIT_FAILURE);
-		}
-		if(stream_W == NULL) {
-			fprintf(stderr,"file dest (%s) is null\n", FileDestination);
-			exit(EXIT_FAILURE);
-		}	
+    char    c[BUFSIZ]; // or any other constant you like
+    FILE    *stream_R = m_fopen(FileSource, "r");
+    FILE    *stream_W = m_fopen(FileDestination, "w");   //create and write to file
     while (!feof(stream_R)) {
         size_t bytes = fread(c, 1, sizeof(c), stream_R);
         if (bytes) {
@@ -578,8 +804,8 @@ int File_Copy(char FileSource[], char FileDestination[])
     }
 
     //close streams
-    fclose(stream_R);
-    fclose(stream_W);
+    m_fclose(stream_R);
+    m_fclose(stream_W);
 
     return 0;
 }
@@ -628,39 +854,22 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	return ORIENTATION_TOP_LEFT;
 }
 
-gdImagePtr myLoadPng(char *filename, char *origin_name) {
-   FILE *in;
-   struct stat stat_buf;
+gdImagePtr read_image_from_file(char *filename) {
+   FILE *in = m_fopen(filename, "rb");
+   size_t file_size = get_file_size(filename);
    gdImagePtr im;
-   in = fopen(filename, "rb");
-   if (in==NULL) {
-     fprintf(stderr,"image (%s) could not be loaded\n", filename);
-     exit(EXIT_FAILURE);
-   } 
-   if (fstat(fileno(in), &stat_buf) != 0) {
-     fprintf(stderr,"fstat error\n");
-     exit(EXIT_FAILURE);
-   } 
-   /* Read the entire thing into a buffer
-     that we allocate */
-   unsigned char *buffer = malloc(stat_buf.st_size);
-   if (!buffer) { 
-     fprintf(stderr,"could not allocate memory\n");
-     exit(EXIT_FAILURE);
-   } 
-   if (fread(buffer, 1, stat_buf.st_size, in)
-     != stat_buf.st_size) {
-     fprintf(stderr,"data could not be read\n");
-     exit(EXIT_FAILURE);
-   } 
-	 if(EndsWith(origin_name,"png")|| EndsWith(origin_name,"PNG")) {
-   	im = gdImageCreateFromPngPtr(    stat_buf.st_size, buffer);
-	 }else {
-   	im = gdImageCreateFromJpegPtr(    stat_buf.st_size, buffer);
-	 }
+   unsigned char *buffer = m_calloc(1,file_size);
+   m_fread(buffer, file_size, in);
 
+   int file_type = get_file_type_from_buf(buffer, file_size);
+   if( file_type == FT_JPEG ) 
+   	im = gdImageCreateFromJpegPtr( file_size, buffer);
+   else {
+	fprintf(stderr, "wrong image type, only jpegs accepted\n");
+   	exit(EXIT_FAILURE);
+   }
 	
-	uint8_t orientation = get_image_orientation(buffer, stat_buf.st_size);
+	uint8_t orientation = get_image_orientation(buffer, file_size);
 //uint8_t ORIENTATION_TOP_LEFT=0;
 //uint8_t ORIENTATION_RIGHT_TOP=1; 270
 //uint8_t ORIENTATION_BOTTOM_RIGHT=2; 180
@@ -670,7 +879,7 @@ gdImagePtr myLoadPng(char *filename, char *origin_name) {
 		gdImageDestroy(im);
 		im=im2;
 	} else if(orientation == ORIENTATION_RIGHT_TOP) { 
-  	gdImagePtr im2;
+  		gdImagePtr im2;
 		im2 = gdImageRotate270(im); // 270
 		gdImageDestroy(im);
 		im = im2;
@@ -682,10 +891,8 @@ gdImagePtr myLoadPng(char *filename, char *origin_name) {
 		im = im2;
 	}
 
-	
-
    free(buffer);
-   fclose(in);
+   m_fclose(in);
    return im;
  } 
 /* Remove spaces on the right of the string */
@@ -811,27 +1018,11 @@ void check_resolution(uint32_t resolution) {
 
 int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 	if(is_file_local( task->filename )) {
-		FILE *file = fopen( task->filename, "rb");
-		if(file==NULL) {
-			fprintf(stderr, "could not open file (%s)\n", task->filename);
-			return errno;
-		}
-		unsigned char *buf = malloc(task->filesize);
-		if(buf == NULL) {
-			fprintf(stderr, "could not allocate memory for image data\n");
-			fclose(file);
-			return errno;
-		}
-		size_t read = fread(buf,1,task->filesize,file);
-		if(read != task->filesize) {
-			fprintf(stderr,"could not read (%li) the expected (%li) amount of data\n", read, task->filesize);
-			fclose(file);
-			free(buf);
-			return EINVAL;
-		}
-		
+		FILE *file = m_fopen( task->filename, "rb");
+		unsigned char *buf = m_malloc(task->filesize);
+		m_fread(buf,task->filesize,file);
 		task->image_data = buf;
-		fclose(file);
+		m_fclose(file);
 		
 	} else {
 		fprintf(stderr, "only reading of local files is currently implemented\n");
@@ -872,6 +1063,188 @@ unsigned char* read_stdin( size_t *file_size) {
 	return buffer;
 }
 
+	//works only with images generated by ld TODO
+	//read the image size from the internal jpeg data
+	//It is not necessary to load a complete image into memory for this.
+void mosaik2_project_read_image_dims(mosaik2_project *mp) {
+	mp->image_height = 0;
+	mp->image_width = 0;
+
+	off_t filesize = get_file_size(mp->dest_imagedims_filename);
+	FILE *file = NULL;
+	file = m_fopen(mp->dest_imagedims_filename, "r");
+	assert( file != NULL);
+
+	char buf[filesize];
+	memset(buf, 0, filesize);
+	m_fread(buf, filesize, file);
+
+	char *ptr = NULL;
+	ptr=strtok(buf,"\t");
+	assert(ptr!=NULL);
+	mp->image_width = atoi( ptr );
+
+	ptr=strtok(NULL,"\t");
+	assert(ptr!=NULL);
+	mp->image_height = atoi( ptr );
+
+	ptr=NULL;
+	ptr=strtok(NULL,"\t\n");
+	assert(ptr!=NULL);
+	mp->pixel_per_tile = atoi( ptr );
+	mp->primary_tile_x_count = mp->image_width / mp->pixel_per_tile;
+	mp->primary_tile_y_count = mp->image_height / mp->pixel_per_tile;
+	assert( !(mp->image_height == 0 && mp->image_width == 0 && mp->pixel_per_tile == 0));
+
+	m_fclose(file);
+}
+
+mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count) {
+
+      
+	mosaik2_project_result *results = m_calloc(total_primary_tile_count, sizeof( mosaik2_project_result ));
+
+	for(int i=0;i<total_primary_tile_count;i++) {
+		results[i].costs=FLT_MAX;
+	}
+
+	fprintf(stderr,"load result file %s\n", mp->dest_result_filename);
+
+	FILE *file = m_fopen(mp->dest_result_filename, "rb");
+		
+	off_t filesize = get_file_size(mp->dest_result_filename);
+	char buf[filesize+1];
+	memset(buf, 0, filesize+1);
+
+	m_fread(buf, filesize, file);
+	
+	char *ptr = NULL;
+	ptr = strtok(buf, "\n\t"); // ignore first column with line index
+	assert(ptr!=NULL);
+
+	for(int j=0;j<total_primary_tile_count;j++) {	
+		ptr = strtok(NULL, "\n\t"); assert(ptr!=NULL); // ignore first column with line index
+		results[j].index = atoll( ptr ); 	ptr = strtok(NULL, "\n\t"); assert(ptr != NULL);
+		results[j].costs = (float) atof(ptr);	ptr = strtok(NULL, "\n\t"); assert(ptr != NULL);
+		results[j].off_x = atoi( ptr );		ptr = strtok(NULL, "\n\t"); assert(ptr != NULL);
+		results[j].off_y = atoi( ptr );		ptr = strtok(NULL, "\n\t"); assert(ptr != NULL || (ptr == NULL && j == total_primary_tile_count - 1));
+		results[j].md = md;		
+	}
+
+	m_fclose(file);
+	return results;
+
+}
+
+//over all valid and croppd elements
+void read_thumbs_db_histogram(mosaik2_database *md) {
+	uint32_t element_count = read_thumbs_db_count(md);
+	uint32_t valid_count = read_thumbs_db_valid_count(md);
+	float valid_count_f = (float)valid_count;
+
+	memset(md->histogram_color, 0, sizeof(md->histogram_color));
+	memset(md->histogram_stddev, 0, sizeof(md->histogram_stddev));
+
+	if(valid_count == 0)
+	{
+		return; // histogram_colors and ..stddev set to 0
+	}
+
+
+	FILE *tiledims_file = m_fopen(md->tiledims_filename, "r");
+	FILE *imagecolors_file = m_fopen(md->imagecolors_filename, "r");
+	FILE *imagestddev_file = m_fopen(md->imagestddev_filename, "r");
+	FILE *tileoffsets_file = m_fopen(md->tileoffsets_filename, "r");
+	FILE *duplicates_file = m_fopen(md->duplicates_filename, "r");
+	FILE *invalid_file = m_fopen(md->invalid_filename, "r");
+
+	uint8_t tilecount = read_thumbs_conf_tilecount(md);
+	unsigned char tiledims[] = {0,0};
+	
+	float histogram_color0[RGB];
+	float histogram_stddev0[RGB];
+
+	unsigned char duplicates0 = 0;
+	unsigned char invalid0 = 0;
+
+	memset(histogram_color0, 0, sizeof(histogram_color0));
+	memset(histogram_stddev0, 0, sizeof(histogram_stddev0));
+
+	unsigned char imagecolors[256*256*RGB];
+	unsigned char imagestddev[256*256*RGB];
+	unsigned char tileoffsets[2];
+	
+	for(uint32_t i=0;i<element_count;i++) {
+
+		memset(histogram_color0, 0, sizeof(histogram_color0));
+		memset(histogram_stddev0, 0, sizeof(histogram_stddev0));
+
+		m_fread(&tiledims, sizeof(tiledims), tiledims_file);
+		float tilesize = (float) tiledims[0]*tiledims[1];
+
+		m_fread(&duplicates0, sizeof(char), duplicates_file);
+		if(duplicates0 != 0) {
+			m_fseeko(imagecolors_file, tilesize*RGB, SEEK_CUR);
+			m_fseeko(imagestddev_file, tilesize*RGB, SEEK_CUR);
+			m_fseeko(tileoffsets_file, 2*sizeof(char), SEEK_CUR);
+			m_fseeko(invalid_file, sizeof(char), SEEK_CUR);
+			continue;
+		}
+		m_fread(&invalid0, sizeof(char), invalid_file);
+		if(invalid0 != 0) {
+			m_fseeko(imagecolors_file, tilesize*RGB, SEEK_CUR);
+			m_fseeko(imagestddev_file, tilesize*RGB, SEEK_CUR);
+			m_fseeko(tileoffsets_file, 2*sizeof(char), SEEK_CUR);
+			continue;
+		}
+
+		m_fread(imagecolors, tilesize*RGB, imagecolors_file);
+		m_fread(imagestddev, tilesize*RGB, imagestddev_file);
+		m_fread(tileoffsets, 2*sizeof(char), tileoffsets_file);
+
+		int x0,y0,xl,yl;
+		if(tileoffsets[0] == 0xFF && tileoffsets[1] == 0xFF ) { // then undefined
+			x0 = 0;
+			y0 = 0;
+			xl = tiledims[0];
+			yl = tiledims[1];
+		} else { // recognize only cropped area
+			x0 = tileoffsets[0];
+			y0 = tileoffsets[1];
+			xl = x0 + tilecount;
+			yl = y0 + tilecount;
+			tilesize = tilecount * tilecount; // only the cropped square
+		}
+		for(int x=x0;x<xl;x++) {
+			for(int y=y0;y<yl;y++) {
+				int idx = (x * tiledims[1] + y) * RGB;
+				
+				histogram_color0[R] += imagecolors[idx+R] / tilesize;
+				histogram_color0[G] += imagecolors[idx+G] / tilesize;
+				histogram_color0[B] += imagecolors[idx+B] / tilesize;
+				histogram_stddev0[R] += imagestddev[idx+R] / tilesize;
+				histogram_stddev0[G] += imagestddev[idx+G] / tilesize;
+				histogram_stddev0[B] += imagestddev[idx+B] / tilesize;
+
+			}
+		}
+		md->histogram_color[R] += histogram_color0[R] / valid_count_f;
+		md->histogram_color[G] += histogram_color0[G] / valid_count_f;
+		md->histogram_color[B] += histogram_color0[B] / valid_count_f;
+		md->histogram_stddev[R] += histogram_stddev0[R] / valid_count_f;
+		md->histogram_stddev[G] += histogram_stddev0[G] / valid_count_f;
+		md->histogram_stddev[B] += histogram_stddev0[B] / valid_count_f;
+
+	}
+	
+	m_fclose( imagecolors_file );
+	m_fclose( imagestddev_file );
+	m_fclose( tileoffsets_file );
+	m_fclose( duplicates_file );
+	m_fclose( invalid_file );
+       
+}
+
 //include <sys/timeb.h>
 /*void print_usage(char *m) {
 	struct timeb tb;
@@ -886,3 +1259,288 @@ unsigned char* read_stdin( size_t *file_size) {
   );
 }*/
 
+
+void read_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
+	FILE *f = m_fopen(filename, "r");
+	m_fseeko(f, file_offset, SEEK_SET);
+	m_fread(val, val_len, f);
+	m_fclose(f);
+}
+
+void write_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
+	FILE *f = m_fopen(filename, "r+");
+	m_fseeko(f, file_offset, SEEK_SET);
+	m_fwrite(val, val_len, f);
+	m_fclose(f);
+}
+
+FILE *m_fopen(char *filename, char *mode) {
+	FILE *file = NULL;
+	file = fopen(filename, mode);
+	if( file == NULL) {
+		fprintf(stderr, "file (%s) could not be opened\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	return file;
+}
+void m_fclose(FILE *file) {
+	int val = fclose(file);
+	if(val != 0) {
+		fprintf(stderr, "could not close file\n");
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+}
+void m_fread(void *buf, size_t nmemb, FILE *stream) {
+	size_t bytes_read = fread(buf, 1, nmemb, stream);
+	if(nmemb != bytes_read) {
+		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data\n", bytes_read, nmemb);
+		exit(EXIT_FAILURE);
+	}
+}
+
+void m_fwrite(const void *ptr, size_t nmemb, FILE *stream) {
+	size_t bytes_written = fwrite(ptr, 1, nmemb, stream);
+	if(nmemb != bytes_written) {
+		fprintf(stderr, "m_fwrite: could not (%li) write the expexted (%li) amount of data\n", bytes_written, nmemb);
+		exit(EXIT_FAILURE);
+	}
+}
+
+int m_fseeko(FILE *stream, off_t offset, int whence) {
+	int val = fseeko(stream, offset, whence);
+	if(val!=0) {
+		fprintf(stderr, "m_fseeko: cannot seek to %li\n", offset);
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+	return val;
+}
+
+void *m_malloc(size_t size) {
+	void *buf = malloc(size);
+	if(buf == NULL) {
+		fprintf(stderr, "could not allocate memory\n");
+		exit(EXIT_FAILURE);
+	}
+	return buf;
+}
+
+void *m_calloc(size_t nmemb, size_t size) {
+	void *buf = calloc(nmemb, size);
+	if(buf == NULL) {
+		fprintf(stderr, "could not allocate memory: %lix %li bytes\n", nmemb, size);
+		exit(EXIT_FAILURE);
+	}
+	return buf;
+}
+
+int m_fflush(FILE *stream) {
+	int val = fflush(stream);
+	if(val!=0) {
+		fprintf(stderr, "m_fflush: could not flush\n");
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+	return val;
+}
+
+int m_stat(const char *pathname, struct stat *statbuf) {
+	int val = stat(pathname, statbuf);
+	if(val != 0) {
+		fprintf(stderr, "m_stat: could not stat file (%s)\n", pathname);
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+	return val;
+}
+
+int m_sysinfo(struct sysinfo *info) {
+	int val = sysinfo(info);
+	if( val != 0) {
+		fprintf(stderr, "m_sysinfo: could not call sysinfo\n");
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+	return val;
+}
+
+void m_access(const char *pathname, int mode) {
+	int val = access(pathname, mode);
+	if(val != 0) {
+		fprintf(stderr, "m_access: cannot access file (%s) with mode: %i\n", pathname, mode);
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+}
+
+
+/* Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
+/* Adaption: Element types are changed from int to mosaik2_database_candidate -------------------------------------------- */
+
+void swap(Heap* h, int n, int m) {
+   mosaik2_database_candidate tmp;
+  memcpy(&tmp, &h->keys[n], sizeof(mosaik2_database_candidate));
+  memcpy(&h->keys[n], &h->keys[m], sizeof(mosaik2_database_candidate));
+  memcpy(&h->keys[m], &tmp, sizeof(mosaik2_database_candidate));
+}
+
+void heap_init(Heap* h, mosaik2_database_candidate* storage) {
+   h->last = 0;
+   h->keys = storage - 1;
+}
+
+void heap_dump(Heap *h) {
+	printf("dump heap count:%i\n", h->last-1);
+	for(uint32_t i=1;i<h->last+1;i++) {
+		printf(" %i tidx:%u cidx:%u c:%f off:%i %i\n", i-1, h->keys[i].primary_tile_idx, h->keys[i].candidate_idx, h->keys[i].costs, h->keys[i].off_x, h->keys[i].off_y);
+	}
+}
+void mdc_dump(mosaik2_database_candidate *mdc0) {
+	printf("   tidx:%u cidx:%u c:%f off:%i %i\n", mdc0->primary_tile_idx, mdc0->candidate_idx, mdc0->costs, mdc0->off_x, mdc0->off_y);
+}
+
+void max_heap_bubble_up(Heap* h, int n) {
+   int parent;
+
+   while(n > 1) {
+      parent = n/2;
+      if (h->keys[parent].costs > h->keys[n].costs)
+         break;
+      swap(h, parent, n);
+      n = parent;
+   }
+}
+
+void max_heap_insert(Heap* h, mosaik2_database_candidate *key) {
+   h->last += 1;
+   h->count++;
+   memcpy(&(h->keys[h->last]), key, sizeof(mosaik2_database_candidate));
+
+
+   max_heap_bubble_up(h, h->last);
+}
+
+void max_heap_sift_down(Heap* h, int n) {
+   int last = h->last;
+
+   while (1) {
+      int max   = n;
+      int left  = n * 2;
+      int right = left + 1;
+
+      if (left <= last && h->keys[left].costs > h->keys[max].costs)
+         max = left;
+      if (right <= last && h->keys[right].costs > h->keys[max].costs)
+         max = right;
+
+      if (n == max)
+         break;
+
+      swap(h, max, n);
+      n = max;
+   }
+}
+
+int max_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
+   h->count--;
+
+	memcpy(d, &h->keys[n], sizeof(mosaik2_database_candidate));
+   h->keys[n] = h->keys[h->last];
+   h->last -= 1;
+
+   if (n >= h->last)
+	   return 0;
+
+   if (n > 1 && h->keys[n].costs > h->keys[n/2].costs)
+      max_heap_bubble_up(h, n);
+   else
+      max_heap_sift_down(h, n);
+
+   return 0;
+}
+
+int max_heap_pop(Heap* h, mosaik2_database_candidate *d) {
+   return max_heap_delete(h, 1, d);
+}
+int max_heap_peek(Heap *h, mosaik2_database_candidate *d){
+	if(h->last > 0) {
+		memcpy(d, &h->keys[1], sizeof(mosaik2_database_candidate));
+		return 0;
+	} 
+	return 1;
+}
+
+void min_heap_bubble_up(Heap* h, int n) {
+   int parent;
+
+   while(n > 1) {
+      parent = n/2;
+      if (h->keys[parent].costs < h->keys[n].costs)
+         break;
+      swap(h, parent, n);
+      n = parent;
+   }
+}
+
+void min_heap_insert(Heap* h, mosaik2_database_candidate *key) {
+   h->last += 1;
+   h->count++;
+   memcpy(&h->keys[h->last], key, sizeof(mosaik2_database_candidate));
+
+   min_heap_bubble_up(h, h->last);
+}
+
+void min_heap_sift_down(Heap* h, int n) {
+   int last = h->last;
+
+   while (1) {
+      int min   = n;
+      int left  = n * 2;
+      int right = left + 1;
+
+      if (left <= last && h->keys[left].costs < h->keys[min].costs)
+         min = left;
+      if (right <= last && h->keys[right].costs < h->keys[min].costs)
+         min = right;
+
+      if (n == min)
+         break;
+
+      swap(h, min, n);
+      n = min;
+   }
+}
+
+int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
+   h->count--;
+
+   memcpy(d, &(h->keys[n]), sizeof(mosaik2_database_candidate));
+   memcpy(&(h->keys[n]), &(h->keys[h->last]), sizeof(mosaik2_database_candidate));
+   h->last -= 1;
+
+   if (n >= h->last) {
+   	return 0;
+   }
+
+
+   if (n > 1 && h->keys[n].costs < h->keys[n/2].costs) {
+      min_heap_bubble_up(h, n); 
+   } else {
+      min_heap_sift_down(h, n);
+   }
+
+   return 0;
+}
+
+int min_heap_pop(Heap* h, mosaik2_database_candidate *d) {
+   return min_heap_delete(h, 1, d);
+}
+int min_heap_peek(Heap *h, mosaik2_database_candidate *d) {
+	if(&h->last>0) {
+		memcpy(d, &h->keys[1], sizeof(mosaik2_database_candidate));
+		return 0;
+	}
+	return 1;
+}
+/* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
