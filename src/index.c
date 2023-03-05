@@ -140,7 +140,7 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	
 	//mosaik2_indextask task_list[ctx->max_tiler_processes];
 	
-	md->tilecount = read_thumbs_conf_tilecount(md);
+	md->database_image_resolution = read_database_image_resolution(md);
 	uint32_t i=read_thumbs_db_count(md);
 	uint32_t maxmemb=UINT32_MAX;
 	size_t len = 0;

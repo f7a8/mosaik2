@@ -33,8 +33,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( (*md).tiledims_filename,0,256);
 	memset( (*md).invalid_filename,0,256);
 	memset( (*md).duplicates_filename,0,256);
-	memset( (*md).tilecount_filename,0,256);
-	memset( md->tilecount_filename, 0, 256);
+	memset( (*md).database_image_resolution_filename,0,256);
+	memset( md->database_image_resolution_filename, 0, 256);
 	memset( md->id_filename, 0, 256);
 	memset( md->id,0, 14);
 	memset( md->version_filename, 0, 256);
@@ -89,8 +89,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( (*md).duplicates_filename,thumbs_db_name,l);
 	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
-	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
-	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
+	strncpy( (*md).database_image_resolution_filename,thumbs_db_name,l);
+	strncat( (*md).database_image_resolution_filename,"/database_image_resolution.txt",30);
 
 	strncpy( (*md).id_filename,thumbs_db_name,l);
 	strncat( (*md).id_filename,"/id.txt",7);
@@ -383,19 +383,19 @@ uint32_t read_thumbs_db_count(mosaik2_database *md) {
 	return (uint32_t)(db_filesizes_size / sizeof(size_t));
 }
 
-uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
-	FILE *thumbs_conf_tilecount_file = m_fopen(md->tilecount_filename, "rb");
-    	char buf[4];
-	char *rbuf = fgets( buf, 4, thumbs_conf_tilecount_file );
+uint8_t read_database_image_resolution(mosaik2_database *md) {
+	FILE *database_image_resolution_file = m_fopen(md->database_image_resolution_filename, "rb");
+	char buf[4];
+	char *rbuf = fgets( buf, 4, database_image_resolution_file );
 	if(rbuf==NULL) {
-		fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->tilecount_filename);
-		m_fclose( thumbs_conf_tilecount_file );
+		fprintf(stderr, "database image resolution file (%s) could not be read correctly\n", md->database_image_resolution_filename);
+		m_fclose( database_image_resolution_file );
 		exit(EXIT_FAILURE);
 	}
 
-	uint8_t thumbs_conf_tilecount = atoi(buf);
-	m_fclose( thumbs_conf_tilecount_file );
-	return thumbs_conf_tilecount;
+	uint8_t database_image_resolution = atoi(buf);
+	m_fclose( database_image_resolution_file );
+	return database_image_resolution;
 }
 
 uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
@@ -485,7 +485,7 @@ void mosaik2_database_read_database_id(mosaik2_database *md) {
 }
 
 //filename has to be freed in the end
-//md.tilecount must be set before
+//md.database_image_resolution must be set before
 void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number) {
 	mde->md = md;
 	mde->element_number = element_number;
@@ -516,9 +516,9 @@ void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_elemen
 	} else { // recognize only cropped area
 		x0 = mde->tileoffsets[0];
 		y0 = mde->tileoffsets[1];
-		xl = x0 + md->tilecount;
-		yl = y0 + md->tilecount;
-		total_tile_count = md->tilecount * md->tilecount;
+		xl = x0 + md->database_image_resolution;
+		yl = y0 + md->database_image_resolution;
+		total_tile_count = md->database_image_resolution * md->database_image_resolution;
 		total_tile_count_f = (float) total_tile_count;
 	}
 
@@ -611,7 +611,7 @@ size_t read_thumbs_db_size(mosaik2_database *md) {
 		+ get_file_size( md->tiledims_filename)
 		+ get_file_size( md->invalid_filename)
 		+ get_file_size( md->duplicates_filename)
-		+ get_file_size( md->tilecount_filename)
+		+ get_file_size( md->database_image_resolution_filename)
 		+ get_file_size( md->id_filename)
 		+ get_file_size( md->version_filename)
 		+ get_file_size( md->readme_filename)
@@ -678,14 +678,14 @@ void check_thumbs_db(mosaik2_database *md) {
 	m_access( md->tiledims_filename, F_OK );
 	m_access( md->invalid_filename, F_OK );
 	m_access( md->duplicates_filename, F_OK );
-	m_access( md->tilecount_filename, F_OK );
+	m_access( md->database_image_resolution_filename, F_OK );
 	m_access( md->lock_filename, F_OK);
 	m_access( md->lastmodified_filename, F_OK) ;
 	m_access( md->tileoffsets_filename, F_OK);
 
 	// TODO make more plause checks
 	uint32_t element_count = read_thumbs_db_count(md);
-	uint8_t database_image_resolution = read_thumbs_conf_tilecount(md);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
 
 	assert(get_file_size(md->imagecolors_filename)     >= element_count * md->imagecolors_sizeof*database_image_resolution*database_image_resolution);
 	assert(get_file_size(md->imagestddev_filename)     >= element_count * md->imagestddev_sizeof*database_image_resolution*database_image_resolution);
@@ -1168,7 +1168,7 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 	FILE *duplicates_file = m_fopen(md->duplicates_filename, "r");
 	FILE *invalid_file = m_fopen(md->invalid_filename, "r");
 
-	uint8_t tilecount = read_thumbs_conf_tilecount(md);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
 	unsigned char tiledims[] = {0,0};
 	
 	float histogram_color0[RGB];
@@ -1221,9 +1221,9 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 		} else { // recognize only cropped area
 			x0 = tileoffsets[0];
 			y0 = tileoffsets[1];
-			xl = x0 + tilecount;
-			yl = y0 + tilecount;
-			tilesize = tilecount * tilecount; // only the cropped square
+			xl = x0 + database_image_resolution;
+			yl = y0 + database_image_resolution;
+			tilesize = database_image_resolution * database_image_resolution; // only the cropped square
 		}
 		for(int x=x0;x<xl;x++) {
 			for(int y=y0;y<yl;y++) {

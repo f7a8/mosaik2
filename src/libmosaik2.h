@@ -76,7 +76,7 @@ off_t get_file_size(const char *filename);
 int get_file_type(const char *dest_filename);
 int get_file_type_from_buf(uint8_t *buf, size_t len);
 uint32_t read_thumbs_db_count(mosaik2_database *md);
-uint8_t read_thumbs_conf_tilecount(mosaik2_database *md);
+uint8_t read_database_image_resolution(mosaik2_database *md);
 uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md);
 uint32_t read_thumbs_db_invalid_count(mosaik2_database *md);
 uint32_t read_thumbs_db_valid_count(mosaik2_database *md);

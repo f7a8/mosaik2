@@ -10,9 +10,8 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	}
 	//print_usage("t read1");
 
-	uint8_t tile_count = md->tilecount;
 	uint32_t file_size = task->filesize;
-	check_resolution(tile_count);
+	check_resolution(md->database_image_resolution);
 
 	int min_file_size = 10000;
 	int max_file_size = 100000000; 
@@ -80,18 +79,18 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	task->width = width;
 	task->height = height;
 
-	if(width < tile_count || height < tile_count) {
+	if(width < md->database_image_resolution || height < md->database_image_resolution) {
   	free(buffer);
 		gdImageDestroy(im);
 
-		fprintf(stderr,"image is too small, at least one dimension is smaller than the tile_count\n");
+		fprintf(stderr,"image is too small, at least one dimension is smaller than the database_image_resolution\n");
 		exit(EXIT_FAILURE);
 	}
 
 	int short_dim = width<height?width:height;
 	//int long_dim  = width<height?height:width;
 
-	int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
+	int pixel_per_tile = ( short_dim - (short_dim % md->database_image_resolution) ) / md->database_image_resolution;
 	double total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
   
 	int tile_x_count_int;
@@ -99,11 +98,11 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	
 
 	if(short_dim == width){
-		tile_x_count_int = tile_count;
+		tile_x_count_int = md->database_image_resolution;
 		tile_y_count_int = height / pixel_per_tile;
 	} else {
 		tile_x_count_int = width / pixel_per_tile;
-		tile_y_count_int = tile_count;
+		tile_y_count_int = md->database_image_resolution;
 	}
 
 	if( tile_x_count_int >= 256 || tile_y_count_int >= 256 ) {
@@ -187,7 +186,7 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 			//int green0 = color >> 8 & 0xff;;
 			//int blue0 = color & 0xff;
 
-			if(debug)printf("%i,%i,[%i %i],x:%i,y:%i,idx:%i,tile_count:%i,%i,px_tile:%i,lxy:%i,%i  r:%i,g:%i,b:%i    r:%f,g:%f,b:%f\n",i,j,i1,j1,tile_x,tile_y,tile_idx,tile_x_count,tile_y_count,pixel_per_tile,lx,ly,red0,green0,blue0, red0/total_pixel_per_tile, green0/total_pixel_per_tile, blue0/total_pixel_per_tile); 
+			if(debug)printf("%i,%i,[%i %i],x:%i,y:%i,idx:%i,database_image_resolution:%i,%i,px_tile:%i,lxy:%i,%i  r:%i,g:%i,b:%i    r:%f,g:%f,b:%f\n",i,j,i1,j1,tile_x,tile_y,tile_idx,tile_x_count,tile_y_count,pixel_per_tile,lx,ly,red0,green0,blue0, red0/total_pixel_per_tile, green0/total_pixel_per_tile, blue0/total_pixel_per_tile); 
 			//add only fractions to prevent overflow in very large pixel_per_tile settings
 			colors_red[tile_idx] +=   red0   / (total_pixel_per_tile);
 //		if(debug && tile_idx==0) printf("avg_green:%f ", colors_green[tile_idx]);
@@ -237,7 +236,7 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 
 	gdImageDestroy(im);
 
-	if(debug1)printf("dim:%i %i,off:%i %i,l:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n",width,height,offset_x,offset_y,lx,ly,tile_x_count,tile_y_count,pixel_per_tile,total_pixel_per_tile);
+	if(debug1)printf("dim:%i %i,off:%i %i,l:%i %i,database_image_resolution:%i %i,pixel_per_tile:%i %f\n",width,height,offset_x,offset_y,lx,ly,tile_x_count,tile_y_count,pixel_per_tile,total_pixel_per_tile);
 	if(html)printf("<html><head><style>table{ width:851px;height:566px; border-collapse: collapse;}td{padding:0;height:0.2em;width:0.2em;}</style></head><body><table>");
 
 

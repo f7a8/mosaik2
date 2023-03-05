@@ -14,7 +14,7 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
 	check_thumbs_db(&md);
-	int database_image_resolution = read_thumbs_conf_tilecount(&md); // standard value should be 16
+	int database_image_resolution = read_database_image_resolution(&md); // standard value should be 16
 
 	uint32_t element_count = read_thumbs_db_count(&md);
 	if( element_number >= element_count ) {

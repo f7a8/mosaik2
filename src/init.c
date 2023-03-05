@@ -77,13 +77,13 @@ void create_mosaik2_database_file_int(char *filename, int value, int print) {
 int mosaik2_init(mosaik2_arguments *args) {
 	
 	char *mosaik2_database_name = args->mosaik2db;
-	int tilecount = args->database_image_resolution;
+	int database_image_resolution = args->database_image_resolution;
 
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);
 
-	check_resolution(tilecount);
+	check_resolution(database_image_resolution);
 
 	if( mkdir(mosaik2_database_name, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
 		fprintf(stderr,"mosaik2 database directory (%s) could not be created: %s\n", mosaik2_database_name, strerror(errno));
@@ -104,14 +104,14 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.image_index_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.invalid_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.duplicates_filename, 1, args->verbose);
-	create_mosaik2_database_file(md.tilecount_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.database_image_resolution_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lock_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastmodified_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tileoffsets_filename, 1, args->verbose);
 
 	create_mosaik2_database_file_id(md.id_filename, args->verbose);
 	create_mosaik2_database_file_int(md.version_filename, MOSAIK2_DATABASE_FORMAT_VERSION, args->verbose);
-	create_mosaik2_database_file_int(md.tilecount_filename, tilecount, args->verbose);
+	create_mosaik2_database_file_int(md.database_image_resolution_filename, database_image_resolution, args->verbose);
 	create_mosaik2_database_file_readme(md.readme_filename, args->verbose);
 
 	return 0;

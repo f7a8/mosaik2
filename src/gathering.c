@@ -30,11 +30,11 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	float image_ratio;
 	float stddev_ratio;
 	int color_distance = args->color_distance;
-	uint8_t thumbs_tile_count;
+	uint8_t database_image_resolution;
 	uint32_t thumbs_count;
 	uint32_t tile_count;
-	uint32_t width;
-	uint32_t height;
+	uint32_t image_width;
+	uint32_t image_height;
 	uint32_t short_dim;
 	uint32_t pixel_per_tile;
 	double total_pixel_per_tile;
@@ -99,10 +99,10 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	check_thumbs_db(&md);
 
 	check_dest_filename(dest_filename);
-	thumbs_tile_count = read_thumbs_conf_tilecount(&md);
+	database_image_resolution = read_database_image_resolution(&md);
 	thumbs_count = read_thumbs_db_count(&md);
 
-	if (thumbs_tile_count * thumbs_tile_count * (2 * RGB * UINT8_MAX) > UINT32_MAX) {
+	if (database_image_resolution * database_image_resolution * (2 * RGB * UINT8_MAX) > UINT32_MAX) {
 		// can candidates_costs contain the badest possible costs?
 		fprintf(stderr, "thumb tile size too high for internal data structure\n");
 		exit(EXIT_FAILURE);
@@ -126,34 +126,38 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	init_mosaik2_project(&mp, md.id, dest_filename);
 
 	if (debug)
-		printf("primary_tile_count:%i,thumbs_tile_count:%i\n", primary_tile_count, thumbs_tile_count);
+		printf("primary_tile_count:%i,database_image_resolution:%i\n", primary_tile_count, database_image_resolution);
 
 	unsigned char *buf = read_stdin(&mp.file_size);
 	m_fclose(stdin);
 
-	gdImagePtr im = read_image_from_buf(buf, mp.file_size); // inefficient but solid, TODO from exif
+	gdImagePtr im = read_image_from_buf(buf, mp.file_size);
 	free(buf);
+
+	image_width = gdImageSX(im);
+	image_height = gdImageSY(im);
+	int src_image_resolution = args->num_tiles;
+
+	mosaik2_tile_infos ti;
+	memset(&ti, 0, sizeof(ti));
+	mosaik2_tile_infos_init(&ti, database_image_resolution, src_image_resolution, image_width, image_height);
 
 	//       640        = 40                * 16;
 	// tile_count on shorter side
-	tile_count = primary_tile_count * thumbs_tile_count;
+	tile_count = primary_tile_count * database_image_resolution;
 
-	//       6000
-	width = gdImageSX(im);
-	//       4000
-	height = gdImageSY(im);
 
 	// 6000  < 640        || 4000   < 640
-	if (width < tile_count || height < tile_count) {
+	if (image_width < tile_count || image_height < tile_count) {
 		fprintf(stderr, "image too small\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (width < height) {
-		short_dim = width;
-		// long_dim = height;
+	if (image_width < image_height) {
+		short_dim = image_width;
+		// long_dim = image_height;
 	} else {
-		short_dim = height;
+		short_dim = image_height;
 		// long_dim = width;
 	}
 
@@ -166,25 +170,25 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
 
 	//                          96 = 6 * 16
-	pixel_per_primary_tile = pixel_per_tile * thumbs_tile_count;
+	pixel_per_primary_tile = pixel_per_tile * database_image_resolution;
 	//                            9216 = 96 * 96
 
-	primary_tile_x_count = width / pixel_per_primary_tile;
-	primary_tile_y_count = height / pixel_per_primary_tile;
-	tile_x_count = primary_tile_x_count * thumbs_tile_count;
-	tile_y_count = primary_tile_y_count * thumbs_tile_count;
-	offset_x = (width % primary_tile_x_count) / 2;
-	offset_y = (height % primary_tile_y_count) / 2;
+	primary_tile_x_count = image_width / pixel_per_primary_tile;
+	primary_tile_y_count = image_height / pixel_per_primary_tile;
+	tile_x_count = primary_tile_x_count * database_image_resolution;
+	tile_y_count = primary_tile_y_count * database_image_resolution;
+	offset_x = (image_width % primary_tile_x_count) / 2;
+	offset_y = (image_height % primary_tile_y_count) / 2;
 
 	total_tile_count = tile_x_count * tile_y_count;
-	total_primary_tile_count = (tile_x_count / thumbs_tile_count) * (tile_y_count / thumbs_tile_count);
+	total_primary_tile_count = (tile_x_count / database_image_resolution) * (tile_y_count / database_image_resolution);
 	SIZE_PRIMARY = total_primary_tile_count;
 
 	lx = offset_x + pixel_per_tile * tile_x_count;
 	ly = offset_y + pixel_per_tile * tile_y_count;
 
 	if (debug)
-		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", width, height, primary_tile_x_count, primary_tile_y_count, total_primary_tile_count, tile_x_count, tile_y_count, lx, ly, offset_x, offset_y, pixel_per_primary_tile, pixel_per_tile);
+		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", image_width, image_height, primary_tile_x_count, primary_tile_y_count, total_primary_tile_count, tile_x_count, tile_y_count, lx, ly, offset_x, offset_y, pixel_per_primary_tile, pixel_per_tile);
 
 	valid_md_element_count = read_thumbs_db_valid_count(&md);
 	needed_md_element_count = unique ? total_primary_tile_count : 1;
@@ -218,7 +222,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	}
 
 	if (out)
-		printf("%04X %04X %02X %02X", width, height, tile_x_count, tile_y_count);
+		printf("%04X %04X %02X %02X", image_width, image_height, tile_x_count, tile_y_count);
 
 	colors_red            = m_calloc(total_tile_count, sizeof(double));
 	colors_green          = m_calloc(total_tile_count, sizeof(double));
@@ -284,7 +288,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	}
 
 	if (debug)
-		printf("dim:%i %i,off:%i %i,l:%i %i,primary_tile_cout:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n", width, height, offset_x, offset_y, lx, ly, primary_tile_x_count, primary_tile_y_count, tile_x_count, tile_y_count, pixel_per_tile, total_pixel_per_tile);
+		printf("dim:%i %i,off:%i %i,l:%i %i,primary_tile_cout:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n", image_width, image_height, offset_x, offset_y, lx, ly, primary_tile_x_count, primary_tile_y_count, tile_x_count, tile_y_count, pixel_per_tile, total_pixel_per_tile);
 	if (html)
 		printf("<html><head><style>table{ width:851px;height:566px; border-collapse: collapse;}td{padding:0;height:0.2em;width:0.2em;}</style></head><body><table>");
 
@@ -471,12 +475,12 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			m_fread(colors_buf, thumbs_db_total_tile_count * RGB, thumbs_db_imagecolors_file);
 			m_fread(stddev_buf, thumbs_db_total_tile_count * RGB, thumbs_db_imagestddev_file);
 
-			uint8_t shift_x_len = thumbs_db_tile_x_count - thumbs_tile_count;
-			uint8_t shift_y_len = thumbs_db_tile_y_count - thumbs_tile_count;
+			uint8_t shift_x_len = thumbs_db_tile_x_count - database_image_resolution;
+			uint8_t shift_y_len = thumbs_db_tile_y_count - database_image_resolution;
 
 			if (shift_x_len != 0 && shift_y_len != 0) {
 				fprintf(stderr, "one shift axis should be zero but: %i %i at thumb_idx: %u\n", shift_x_len, shift_y_len, idx
-						//, thumbs_db_tile_x_count, thumbs_db_tile_y_count, thumbs_tile_count);
+						//, thumbs_db_tile_x_count, thumbs_db_tile_y_count, database_image_resolution);
 					);
 				exit(EXIT_FAILURE);
 			}
@@ -520,7 +524,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 
 
-							int thumbs_total_tile_count = thumbs_tile_count * thumbs_tile_count;
+							int thumbs_total_tile_count = database_image_resolution * database_image_resolution;
 							for (uint32_t k = 0; k < thumbs_total_tile_count; k++) {
 
 								// how to find 64 (8x8 for example) tiles of the primary tile?
@@ -546,9 +550,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 								//       PLUS
 								// 0,8,16,...400  => PRIMARY_TILE_IDX*8+(PRIMARY_TILE_IDX/50)*50*8*8
 
-								uint32_t colors_idx = k % thumbs_tile_count + (k / thumbs_tile_count) * primary_tile_x_count * thumbs_tile_count + (primary_tile_idx % primary_tile_x_count) * thumbs_tile_count + (primary_tile_idx / primary_tile_x_count) * primary_tile_x_count * thumbs_tile_count * thumbs_tile_count;
+								uint32_t colors_idx = k % database_image_resolution + (k / database_image_resolution) * primary_tile_x_count * database_image_resolution + (primary_tile_idx % primary_tile_x_count) * database_image_resolution + (primary_tile_idx / primary_tile_x_count) * primary_tile_x_count * database_image_resolution * database_image_resolution;
 
-								uint32_t j = k % thumbs_tile_count + (k / thumbs_tile_count) * thumbs_db_tile_x_count + shift_x + shift_y * thumbs_db_tile_x_count;
+								uint32_t j = k % database_image_resolution + (k / database_image_resolution) * thumbs_db_tile_x_count + shift_x + shift_y * thumbs_db_tile_x_count;
 
 								if (color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN) {
 									int diff_c_r = abs(colors_red_int[colors_idx]   - (int)colors_buf[j * RGB + R]);
