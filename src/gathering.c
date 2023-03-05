@@ -151,10 +151,13 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	if (debug)
 		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", width, height, primary_tile_x_count, primary_tile_y_count, total_primary_tile_count, tile_x_count, tile_y_count, lx, ly, offset_x, offset_y, pixel_per_primary_tile, pixel_per_tile);
 
-	if (unique == 1 && total_primary_tile_count > thumbs_count) {
-		fprintf(stderr, "there are too few candidates (%u) for unique than needed (%i)\n", thumbs_count, total_primary_tile_count);
+	uint32_t valid_count = read_thumbs_db_valid_count(&md);
+	uint32_t needed_count = unique ? total_primary_tile_count : 1;
+	if( valid_count < needed_count ) {
+		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_count, unique ? "for unique ":"", needed_count);
 		exit(EXIT_FAILURE);
 	}
+
 	if(args->quiet == 0) {
 		printf("src-image-resolution:%ix%i\n", primary_tile_x_count, primary_tile_y_count);
 	}
@@ -419,13 +422,14 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 					time_t now;
 					time(&now);
 					percent = new_percent;
-					printf("%i%%, %u/%u %s", percent, idx, thumbs_count, ctime(&now));
+					printf("%3i%%, %u/%u %s", percent, idx, thumbs_count, ctime(&now));
 				}
 			}
 
-			if (invalid_buf[i / 2] != 0) { // valid entries must have 0
+			// ignore invalid entries and ignore duplicate entries if the image has unique option
+			if (invalid_buf[i / 2] != 0 || ( duplicates_buf[i / 2] != 0)) { // valid entries must have 0
 				if (debug)
-					fprintf(stderr, "thumb (%u) is marked as invalid, will be skipped\n", idx);
+					fprintf(stderr, "md entry (%u) is marked as invalid or duplicates, will be skipped\n", idx);
 
 				// in case of invalid entries move the file pointers without reading the colors data
 				m_fseeko(thumbs_db_imagecolors_file, thumbs_db_total_tile_count * RGB, SEEK_CUR);

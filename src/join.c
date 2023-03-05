@@ -17,7 +17,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-void inject_exif_comment(FILE *out, char *comment, size_t comment_len);
+void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len);
 
 int mosaik2_join(mosaik2_arguments *args) {
 
@@ -525,24 +525,37 @@ if(debug) fprintf(stderr, "init\n");
 	gdImageDestroy(out_im);
 	m_fclose(html_out);
 	m_fclose(src_out);
+	m_fclose(out);
 	float costs = total_costs / (total_primary_tile_count*tile_count*tile_count*1.0);
 
+	out = m_fopen(dest_filename, "r+");
 	char comment[100];
 	memset(comment, 0, 100);	
 	snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, tile_count, costs);
+	off_t out_file_size = get_file_size(dest_filename);
+	inject_exif_comment(out, out_file_size, comment, strlen(comment));
 	m_fclose(out);
+
 	free(candidates);
 	if(args->quiet != 1)fprintf(stdout, "total candidate costs: %f,\n per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
 
 	return 0;
 }
 
-void inject_exif_comment(FILE *out, char *comment, size_t comment_len) {
-		unsigned char buf[BUFSIZ];
+void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len) {
+		uint32_t buflen = out_file_size < BUFSIZ ? out_file_size : BUFSIZ;
+		unsigned char buf[buflen];
 
 		rewind(out);
-		if( fread(&buf, BUFSIZ, 1, out) != 1) {
-			fprintf(stderr, "could not read first %i bytes of already written dest-file\n", BUFSIZ);
+		//              size   nmeb
+		size_t read_nmemb = fread(&buf, buflen, 1, out);
+		if( read_nmemb != 1) {
+			for(int i=0;i<buflen;i++) {
+				fprintf(stderr, "%i ", buf[i]);
+				if(i%80==0&&i>0)
+					fprintf(stderr, "\n");
+			}
+			fprintf(stderr, "could not read first %i bytes of already written dest-file\n", buflen);
 			exit(EXIT_FAILURE);
 		}
 
@@ -551,7 +564,7 @@ void inject_exif_comment(FILE *out, char *comment, size_t comment_len) {
 
 		int exif_offset=-1;
 		int exif_length=-1;
-		for(int i=0;i<BUFSIZ-2;i++) {
+		for(int i=0;i<buflen-2;i++) {
 			if(exif_offset == -1 && buf[i]== 0xFF && buf[i+1] == 0xFE)
 				exif_offset = i + 4;
 			if(exif_offset != -1 && exif_length == -1 && buf[i] == 0x0A && buf[i+1] == 0xFF) {
