@@ -23,6 +23,74 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	int ratio = args->color_stddev_ratio;
 	int unique = args->unique;
 	char *mosaik2_db_name = args->mosaik2db;
+	uint8_t debug = 0;
+	uint8_t debug1 = 0;
+	const uint8_t html = 0;
+	const uint8_t out = 0;
+	float image_ratio;
+	float stddev_ratio;
+	int color_distance = args->color_distance;
+	uint8_t thumbs_tile_count;
+	uint32_t thumbs_count;
+	uint32_t tile_count;
+	uint32_t width;
+	uint32_t height;
+	uint32_t short_dim;
+	uint32_t pixel_per_tile;
+	double total_pixel_per_tile;
+	uint32_t pixel_per_primary_tile;
+	uint32_t tile_x_count;
+	uint32_t tile_y_count;
+	uint32_t primary_tile_x_count;
+	uint32_t primary_tile_y_count;
+	uint32_t offset_x;
+	uint32_t offset_y;
+	uint32_t total_tile_count;
+	uint32_t total_primary_tile_count;
+	uint32_t SIZE_PRIMARY; // alias for  total_primary_tile_count
+	uint32_t lx;
+	uint32_t ly;
+	uint32_t valid_md_element_count;
+	uint32_t needed_md_element_count;
+	size_t max_candidates_len;
+	size_t total_candidates_count;
+	double *colors_red;
+	double *colors_green;
+	double *colors_blue;
+	long double *colors_abw_red;
+	long double *colors_abw_green;
+	long double *colors_abw_blue;
+	int *colors_red_int;
+	int *colors_green_int;
+	int *colors_blue_int;
+	int *stddev_red_int;
+	int *stddev_green_int;
+	int *stddev_blue_int;
+
+
+	FILE *thumbs_db_tiledims_file;
+	FILE *thumbs_db_tileoffsets_file;
+	FILE *thumbs_db_imagecolors_file;
+	FILE *thumbs_db_imagestddev_file;
+	FILE *thumbs_db_invalid_file;
+	FILE *thumbs_db_duplicates_file;
+	uint8_t tile_dims_buf[BUFSIZ];
+	unsigned char tileoffsets_buf[BUFSIZ];
+	unsigned char colors_buf[BUFSIZ];
+	unsigned char stddev_buf[BUFSIZ];
+	unsigned char invalid_buf[BUFSIZ];
+	unsigned char duplicates_buf[BUFSIZ];
+	FILE *primarytiledims_file;
+	uint32_t idx = 0;
+	uint32_t candidates_insert=0;
+	uint32_t candidates_pop=0;
+	uint32_t candidates_toobad=0;
+	float diff_best=FLT_MAX, diff_worst=0;
+
+	FILE *mosaik2_result;
+	float candidate_best_costs = FLT_MAX, candidate_worst_costs=0;
+
+
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -31,8 +99,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	check_thumbs_db(&md);
 
 	check_dest_filename(dest_filename);
-	uint8_t thumbs_tile_count = read_thumbs_conf_tilecount(&md);
-	uint32_t thumbs_count = read_thumbs_db_count(&md);
+	thumbs_tile_count = read_thumbs_conf_tilecount(&md);
+	thumbs_count = read_thumbs_db_count(&md);
 
 	if (thumbs_tile_count * thumbs_tile_count * (2 * RGB * UINT8_MAX) > UINT32_MAX) {
 		// can candidates_costs contain the badest possible costs?
@@ -50,51 +118,30 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
-	float image_ratio = ratio / 100;
-	float stddev_ratio = 1.0 - image_ratio;
-
-	int color_distance = args->color_distance;
+	image_ratio = ratio / 100;
+	stddev_ratio = 1.0 - image_ratio;
 
 	mosaik2_project mp = {.ratio = ratio, .unique = unique, .primary_tile_count = primary_tile_count};
 
 	init_mosaik2_project(&mp, md.id, dest_filename);
 
-	//	printf("analyze master image\n");
-
-	uint8_t debug = 0;
-	uint8_t debug1 = 0;
-	const uint8_t html = 0;
-	const uint8_t out = 0;
-	// const uint8_t duplicates_allowed = 0;
-
 	if (debug)
 		printf("primary_tile_count:%i,thumbs_tile_count:%i\n", primary_tile_count, thumbs_tile_count);
 
-	unsigned char *buffer = read_stdin(&mp.file_size);
+	unsigned char *buf = read_stdin(&mp.file_size);
 	m_fclose(stdin);
 
-	gdImagePtr im;
-	int ft = get_file_type_from_buf(buffer, mp.file_size);
-
-	if (ft == FT_JPEG)
-		im = gdImageCreateFromJpegPtrEx(mp.file_size, buffer, 0);
-	else if (ft == FT_PNG)
-		im = gdImageCreateFromPngPtr(mp.file_size, buffer);
-	else {
-		free(buffer);
-		fprintf(stderr, "image could not be instanciated\n");
-		exit(EXIT_FAILURE);
-	}
-	free(buffer);
+	gdImagePtr im = read_image_from_buf(buf, mp.file_size); // inefficient but solid, TODO from exif
+	free(buf);
 
 	//       640        = 40                * 16;
 	// tile_count on shorter side
-	uint32_t tile_count = primary_tile_count * thumbs_tile_count;
+	tile_count = primary_tile_count * thumbs_tile_count;
 
 	//       6000
-	uint32_t width = gdImageSX(im);
+	width = gdImageSX(im);
 	//       4000
-	uint32_t height = gdImageSY(im);
+	height = gdImageSY(im);
 
 	// 6000  < 640        || 4000   < 640
 	if (width < tile_count || height < tile_count) {
@@ -102,7 +149,6 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
-	uint32_t short_dim; //, long_dim;
 	if (width < height) {
 		short_dim = width;
 		// long_dim = height;
@@ -113,26 +159,15 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	//       6                    = ( 4000      - (4000      % 640       ) ) / 640       ;
 	//       6                    =   3480 / 640
-	uint32_t pixel_per_tile = short_dim / tile_count; // automatically floored
+	pixel_per_tile = short_dim / tile_count; // automatically floored
 	if (debug)
 		fprintf(stdout, "pixel_per_tile=short_dim / tile_count => %i = %i / %i\n", pixel_per_tile, short_dim, tile_count);
 	//     36                   = 6              * 6             ;
-	double total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
+	total_pixel_per_tile = pixel_per_tile * pixel_per_tile;
 
 	//                          96 = 6 * 16
-	uint32_t pixel_per_primary_tile = pixel_per_tile * thumbs_tile_count;
+	pixel_per_primary_tile = pixel_per_tile * thumbs_tile_count;
 	//                            9216 = 96 * 96
-	// double total_pixel_per_primary_tile = pixel_per_primary_tile * pixel_per_primary_tile;
-
-	uint32_t tile_x_count;
-	uint32_t tile_y_count;
-	uint32_t primary_tile_x_count;
-	uint32_t primary_tile_y_count;
-	uint32_t offset_x;
-	uint32_t offset_y;
-	uint32_t total_tile_count;
-	uint32_t total_primary_tile_count;
-	uint32_t lx, ly;
 
 	primary_tile_x_count = width / pixel_per_primary_tile;
 	primary_tile_y_count = height / pixel_per_primary_tile;
@@ -143,7 +178,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	total_tile_count = tile_x_count * tile_y_count;
 	total_primary_tile_count = (tile_x_count / thumbs_tile_count) * (tile_y_count / thumbs_tile_count);
-	const uint32_t SIZE_PRIMARY = total_primary_tile_count;
+	SIZE_PRIMARY = total_primary_tile_count;
 
 	lx = offset_x + pixel_per_tile * tile_x_count;
 	ly = offset_y + pixel_per_tile * tile_y_count;
@@ -151,10 +186,10 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	if (debug)
 		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", width, height, primary_tile_x_count, primary_tile_y_count, total_primary_tile_count, tile_x_count, tile_y_count, lx, ly, offset_x, offset_y, pixel_per_primary_tile, pixel_per_tile);
 
-	uint32_t valid_count = read_thumbs_db_valid_count(&md);
-	uint32_t needed_count = unique ? total_primary_tile_count : 1;
-	if( valid_count < needed_count ) {
-		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_count, unique ? "for unique ":"", needed_count);
+	valid_md_element_count = read_thumbs_db_valid_count(&md);
+	needed_md_element_count = unique ? total_primary_tile_count : 1;
+	if( valid_md_element_count < needed_md_element_count ) {
+		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_md_element_count, unique ? "for unique ":"", needed_md_element_count);
 		exit(EXIT_FAILURE);
 	}
 
@@ -167,8 +202,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	   For each tile are stored as many candidates as there are primarys tiles. With the largest possible number of multiple selected tiles, a later reduction procedure can lead to only once (best) used tiles, without there being too few alternatives.
 	   */
 
-	size_t max_candidates_len = unique == 1 ? total_primary_tile_count : 1;
-	size_t total_candidates_count = total_primary_tile_count * max_candidates_len;
+	max_candidates_len = unique == 1 ? total_primary_tile_count : 1;
+	total_candidates_count = total_primary_tile_count * max_candidates_len;
 
 	if (debug)
 		fprintf(stdout, "max_candidates_len:%li, total_candidates_count:%li\n", max_candidates_len, total_candidates_count);
@@ -185,19 +220,19 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	if (out)
 		printf("%04X %04X %02X %02X", width, height, tile_x_count, tile_y_count);
 
-	double *colors_red            = m_calloc(total_tile_count, sizeof(double));
-	double *colors_green          = m_calloc(total_tile_count, sizeof(double));
-	double *colors_blue           = m_calloc(total_tile_count, sizeof(double));
-	long double *colors_abw_red   = m_calloc(total_tile_count, sizeof(long double));
-	long double *colors_abw_green = m_calloc(total_tile_count, sizeof(long double));
-	long double *colors_abw_blue  = m_calloc(total_tile_count, sizeof(long double));
+	colors_red            = m_calloc(total_tile_count, sizeof(double));
+	colors_green          = m_calloc(total_tile_count, sizeof(double));
+	colors_blue           = m_calloc(total_tile_count, sizeof(double));
+	colors_abw_red   = m_calloc(total_tile_count, sizeof(long double));
+	colors_abw_green = m_calloc(total_tile_count, sizeof(long double));
+	colors_abw_blue  = m_calloc(total_tile_count, sizeof(long double));
 
-	int *colors_red_int   = m_calloc(total_tile_count, sizeof(int));
-	int *colors_green_int = m_calloc(total_tile_count, sizeof(int));
-	int *colors_blue_int  = m_calloc(total_tile_count, sizeof(int));
-	int *stddev_red_int   = m_calloc(total_tile_count, sizeof(int));
-	int *stddev_green_int = m_calloc(total_tile_count, sizeof(int));
-	int *stddev_blue_int  = m_calloc(total_tile_count, sizeof(int));
+	colors_red_int   = m_calloc(total_tile_count, sizeof(int));
+	colors_green_int = m_calloc(total_tile_count, sizeof(int));
+	colors_blue_int  = m_calloc(total_tile_count, sizeof(int));
+	stddev_red_int   = m_calloc(total_tile_count, sizeof(int));
+	stddev_green_int = m_calloc(total_tile_count, sizeof(int));
+	stddev_blue_int  = m_calloc(total_tile_count, sizeof(int));
 
 	for (int j = 0, j1 = offset_y; j1 < ly; j++, j1++) {
 		for (int i = 0, i1 = offset_x; i1 < lx; i++, i1++) {
@@ -348,36 +383,29 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	free(colors_abw_green);
 	free(colors_abw_blue);
 
-	FILE *thumbs_db_tiledims_file    = m_fopen(md.tiledims_filename, "rb");
-	FILE *thumbs_db_tileoffsets_file = m_fopen(md.tileoffsets_filename, "rb");
-	FILE *thumbs_db_imagecolors_file = m_fopen(md.imagecolors_filename, "rb");
-	FILE *thumbs_db_imagestddev_file = m_fopen(md.imagestddev_filename, "rb");
-	FILE *thumbs_db_invalid_file     = m_fopen(md.invalid_filename, "rb");
-	FILE *thumbs_db_duplicates_file  = m_fopen(md.duplicates_filename, "rb");
+	thumbs_db_tiledims_file    = m_fopen(md.tiledims_filename, "rb");
+	thumbs_db_tileoffsets_file = m_fopen(md.tileoffsets_filename, "rb");
+	thumbs_db_imagecolors_file = m_fopen(md.imagecolors_filename, "rb");
+	thumbs_db_imagestddev_file = m_fopen(md.imagestddev_filename, "rb");
+	thumbs_db_invalid_file     = m_fopen(md.invalid_filename, "rb");
+	thumbs_db_duplicates_file  = m_fopen(md.duplicates_filename, "rb");
 
-
-	// buffers for db file reading
-	uint8_t tile_dims_buf[BUFSIZ];
-	unsigned char tileoffsets_buf[BUFSIZ];
-	unsigned char colors_buf[BUFSIZ];
-	unsigned char stddev_buf[BUFSIZ];
-	unsigned char invalid_buf[BUFSIZ];
-	unsigned char duplicates_buf[BUFSIZ];
 
 	// SAVING PRIMARY TILE DIMENSIONS
-	FILE *primarytiledims_file = m_fopen(mp.dest_primarytiledims_filename, "w");
+	primarytiledims_file = m_fopen(mp.dest_primarytiledims_filename, "w");
 	fprintf(primarytiledims_file, "%i	%i", primary_tile_x_count, primary_tile_y_count);
 	m_fclose(primarytiledims_file);
 
-	uint32_t idx = 0;
+	idx = 0;
 
-	uint32_t candidates_insert=0;
-	uint32_t candidates_pop=0;
+	candidates_insert=0;
+	candidates_pop=0;
+	candidates_toobad=0;
+	diff_best=FLT_MAX, diff_worst=0;
+
 	uint32_t candidates_pop_uniqueness[SIZE_PRIMARY];
-	memset(& candidates_pop_uniqueness,0, sizeof(candidates_pop_uniqueness));
-	uint32_t candidates_toobad=0;
-	float diff_best=FLT_MAX, diff_worst=0;
 	uint32_t candidates_elect[SIZE_PRIMARY];
+	memset(& candidates_pop_uniqueness,0, sizeof(candidates_pop_uniqueness));
 	memset(&candidates_elect,0,sizeof(candidates_elect));
 
 	int32_t percent = -1;
@@ -685,8 +713,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	}
 
 	// intialize with -1
-	FILE *mosaik2_result = m_fopen(mp.dest_result_filename, "wb");
-	float candidate_best_costs = FLT_MAX, candidate_worst_costs=0;
+	mosaik2_result = m_fopen(mp.dest_result_filename, "wb");
+	candidate_best_costs = FLT_MAX;
+	candidate_worst_costs=0;
 	for (uint32_t i = 0; i < SIZE_PRIMARY; i++) {
 		uint32_t offset = i * max_candidates_len + candidates_elect[i];
 		if(mdc[offset].costs<candidate_best_costs)

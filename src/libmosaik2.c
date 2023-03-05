@@ -854,22 +854,29 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	return ORIENTATION_TOP_LEFT;
 }
 
-gdImagePtr read_image_from_file(char *filename) {
-   FILE *in = m_fopen(filename, "rb");
-   size_t file_size = get_file_size(filename);
-   gdImagePtr im;
-   unsigned char *buffer = m_calloc(1,file_size);
-   m_fread(buffer, file_size, in);
 
-   int file_type = get_file_type_from_buf(buffer, file_size);
+gdImagePtr read_image_from_file(char *filename) {
+	FILE *in = m_fopen(filename, "rb");
+	size_t file_size = get_file_size(filename);
+	unsigned char *buf = m_calloc(1, file_size);
+	m_fread(buf, file_size, in);
+	gdImagePtr im = read_image_from_buf(buf, file_size);
+	free(buf);
+	m_fclose(in);
+	return im;
+}
+
+gdImagePtr read_image_from_buf(unsigned char *buf, size_t file_size) {
+   gdImagePtr im;
+   int file_type = get_file_type_from_buf(buf, file_size);
    if( file_type == FT_JPEG ) 
-   	im = gdImageCreateFromJpegPtr( file_size, buffer);
+		im = gdImageCreateFromJpegPtr( file_size, buf);
    else {
 	fprintf(stderr, "wrong image type, only jpegs accepted\n");
    	exit(EXIT_FAILURE);
    }
 	
-	uint8_t orientation = get_image_orientation(buffer, file_size);
+	uint8_t orientation = get_image_orientation(buf, file_size);
 //uint8_t ORIENTATION_TOP_LEFT=0;
 //uint8_t ORIENTATION_RIGHT_TOP=1; 270
 //uint8_t ORIENTATION_BOTTOM_RIGHT=2; 180
@@ -891,10 +898,9 @@ gdImagePtr read_image_from_file(char *filename) {
 		im = im2;
 	}
 
-   free(buffer);
-   m_fclose(in);
    return im;
- } 
+ }
+
 /* Remove spaces on the right of the string */
 //static void trim_spaces(char *buf) {
 void trim_spaces(char *buf) {
@@ -1031,6 +1037,10 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 	return 0;
 }
 void mosai2_indextask_deconst(mosaik2_indextask *task) {
+	
+}
+
+void mosaik2_tile_image(mosaik2_tile_infos *ti, gdImagePtr *im, double *colors, double *stddev) {
 	
 }
 
