@@ -48,10 +48,10 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 	printf("tileoffsets-count=%i\n", read_thumbs_db_tileoffset_count(md));
 
 	read_thumbs_db_histogram(md);
-	
+
 	printf("histogram-color=%f %f %f\nhistogram-stddev=%f %f %f\n",
-		md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
-		md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
+			md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
+			md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
 }
 
 void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint64_t element_number) {
@@ -113,7 +113,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	printf("total-primary-tiles=%i\n", ti.primary_tile_x_count * ti.primary_tile_y_count);
 	printf("tile-dim=%ix%i\n", ti.tile_x_count, ti.tile_y_count);
 	printf("pixel-per-primary-tile=%i\n", ti.pixel_per_primary_tile);
-	
+
 	printf("pixel-per-tile=%i\n",ti.pixel_per_tile);
 
 	double total_pixel_count_f = (double) ti.total_pixel_count;
@@ -123,7 +123,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	memset(&histogram_color,  0, sizeof(histogram_color));
 	memset(&histogram_stddev, 0, sizeof(histogram_stddev));
 
-       	for(int x = ti.offset_x; x< ti.lx; x++) {
+	for(int x = ti.offset_x; x< ti.lx; x++) {
 		for(int y= ti.offset_y;y<ti.ly;y++) {
 
 			int color =  gdImageTrueColorPixel(im,x,y);
@@ -135,12 +135,12 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 			histogram_color[G] += green0 / total_pixel_count_f;
 			histogram_color[B] += blue0 / total_pixel_count_f;
 			//printf("%i : %i %i %i / %f = %f %f %f\n", color, red0, green0, blue0, total_pixel_count_f, histogram_color[R], histogram_color[G], histogram_color[B]);
-	//printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
+			//printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 		}
 	}
 	printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 
-	
+
 	for(int x = ti.offset_x; x < ti.lx; x++ ) {
 		for(int y = ti.offset_y;y<ti.ly;y++) {
 			int color = gdImageTrueColorPixel(im,x,y);
