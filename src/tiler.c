@@ -37,41 +37,8 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	}
 
 	//print_usage("t_create0");
-	gdImagePtr im;
-	if(file_type == FT_JPEG)
-		im = gdImageCreateFromJpegPtrEx(file_size, buffer, 0);
-	else {
-		fprintf(stderr, "illegal image type 1\n");
-		exit(EXIT_FAILURE);
-	}
-	//print_usage("t_create1");
+	gdImagePtr im = read_image_from_buf(buffer, file_size);
 
-	if(im == NULL ) {
-		free(buffer);
-
-		fprintf(stderr,"image could not be instanciated\n");
-		exit(EXIT_FAILURE);
-	}
-
-	gdImagePtr im2;
-	uint8_t orientation = get_image_orientation(buffer, file_size);
-	if(orientation == ORIENTATION_BOTTOM_RIGHT) {
-		im2 = gdImageRotate180(im);
-		gdImageDestroy(im);
-		im = im2;
-	} else if(orientation == ORIENTATION_RIGHT_TOP) {
-		im2 = gdImageRotate270(im); // 270
-		gdImageDestroy(im);
-		im = im2;
-		//	case ORIENTATION_BOTTOM_RIGHT: im = gdImageRotate90(im,0); break;//180
-		//	case ORIENTATION_LEFT_BOTTOM: im = gdImageRotate90(im,0); break;
-	} else if( orientation == ORIENTATION_LEFT_BOTTOM) {
-		im2 = gdImageRotate90(im);
-		gdImageDestroy(im);
-		im = im2;
-	}
-
-	//	print_usage("t_orientat");
 
 	int width = gdImageSX(im);
 	int height = gdImageSY(im);
