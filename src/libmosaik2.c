@@ -869,11 +869,15 @@ gdImagePtr read_image_from_file(char *filename) {
 gdImagePtr read_image_from_buf(unsigned char *buf, size_t file_size) {
    gdImagePtr im;
    int file_type = get_file_type_from_buf(buf, file_size);
-   if( file_type == FT_JPEG ) 
-		im = gdImageCreateFromJpegPtr( file_size, buf);
-   else {
+   if( file_type == FT_JPEG ) {
+	   im = gdImageCreateFromJpegPtr( file_size, buf);
+   } else {
 	fprintf(stderr, "wrong image type, only jpegs accepted\n");
    	exit(EXIT_FAILURE);
+   }
+   if(im ==NULL){
+	   fprintf(stderr,"image could not be instanciated\n");
+	   exit(EXIT_FAILURE);
    }
 	
 	uint8_t orientation = get_image_orientation(buf, file_size);
