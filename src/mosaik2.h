@@ -140,7 +140,7 @@ struct mosaik2_database_struct {
 	char tiledims_filename[256];
 	char invalid_filename[256];
 	char duplicates_filename[256];
-	char tilecount_filename[256];
+	char database_image_resolution_filename[256];
 	char id_filename[256];
 	char id[14];
 	size_t id_len;
@@ -166,7 +166,7 @@ struct mosaik2_database_struct {
 	int tileoffsets_sizeof;
 	int lastmodified_sizeof;
 
-	uint8_t tilecount;
+	uint8_t database_image_resolution;
 	float histogram_color[3]; // all valid entries
 	float histogram_stddev[3];
 };

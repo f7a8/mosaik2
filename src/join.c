@@ -17,7 +17,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-void inject_exif_comment(FILE *out, char *comment, size_t comment_len);
+void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len);
 
 int mosaik2_join(mosaik2_arguments *args) {
 
@@ -55,7 +55,7 @@ int mosaik2_join(mosaik2_arguments *args) {
 	int primary_tile_y_count=0;// = atoi(argv[3]);
 
 	
-	uint8_t tile_count = 0;
+	uint8_t database_image_resolution = 0;
 	uint64_t candidates_count = 0;
 
 
@@ -101,27 +101,27 @@ if(debug) fprintf(stderr, "init\n");
 		if( i > argv_start_idx_thumbs_db_names
 				&& (primary_tile_x_count != primary_tile_x_count_local
 				|| primary_tile_y_count != primary_tile_y_count_local)) {
-			fprintf(stderr,"cannot mix different primary tile resolutions. sorry. make sure running gathering program with same tile_count\n");
+			fprintf(stderr,"cannot mix different primary tile resolutions. sorry. make sure running gathering program with same database_image_resolution\n");
 			exit(EXIT_FAILURE);
 		}
 		primary_tile_x_count = primary_tile_x_count_local;
 		primary_tile_y_count = primary_tile_y_count_local;
 
-		uint8_t tile_count_local = read_thumbs_conf_tilecount( &mds[i0] );
+		uint8_t database_image_resolution_local = read_database_image_resolution( &mds[i0] );
 		if(i == argv_start_idx_thumbs_db_names) {
-			tile_count = tile_count_local;
+			database_image_resolution = database_image_resolution_local;
 		} else {
-			if( tile_count != tile_count_local ) {
-				fprintf(stderr, "cannot mix different thumbs db tile_count resolutions. sorry. make sure initialize your thumbs dbs with the same tile_count\n");
+			if( database_image_resolution != database_image_resolution_local ) {
+				fprintf(stderr, "cannot mix different database_image_resolution. sorry. make sure initialize your mosaik2 dbs with the same database_image_resolution\n");
 				exit(EXIT_FAILURE);
 			}	
 		}
-		if(debug)	fprintf(stderr,"tile_count read from parameter %i (%s) => %i\n", i, args->mosaik2dbs[i], tile_count_local);
+		if(debug)	fprintf(stderr,"database_image_resolution read from parameter %i (%s) => %i\n", i, args->mosaik2dbs[i], database_image_resolution_local);
 	}
 
 	uint32_t total_primary_tile_count = primary_tile_x_count * primary_tile_y_count;
 	if(debug) fprintf(stderr,"primary_tile_count:%i*%i=%i\n", primary_tile_x_count, primary_tile_y_count, total_primary_tile_count);
-	if(debug) fprintf(stderr, "tile_count:%i\n", tile_count);
+	if(debug) fprintf(stderr, "database_image_resolution:%i\n", database_image_resolution);
 	mosaik2_project_result *candidates = m_calloc(total_primary_tile_count, sizeof( mosaik2_project_result ));
 
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
@@ -459,17 +459,17 @@ if(debug) fprintf(stderr, "init\n");
 			int short_dim = width<height?width:height;
 			//int long_dim  = width<height?height:width;
 			 
-			int pixel_per_tile = ( short_dim - (short_dim % tile_count) ) / tile_count;
+			int pixel_per_tile = ( short_dim - (short_dim % database_image_resolution) ) / database_image_resolution;
 			
 			int tile_x_count;
 			int tile_y_count;
 			 
 			if(short_dim == width){
-			  tile_x_count = tile_count;
+			  tile_x_count = database_image_resolution;
 			  tile_y_count = height / pixel_per_tile;
 			} else {
 			  tile_x_count = width / pixel_per_tile;
-			  tile_y_count = tile_count;
+			  tile_y_count = database_image_resolution;
 			}
  
 			int offset_x = ((width - tile_x_count * pixel_per_tile)/2);
@@ -497,8 +497,8 @@ if(debug) fprintf(stderr, "init\n");
 			int srcY = offset_y+candidates[primary_tile_idx].off_y*pixel_per_tile;
 			int dstW = dest_tile_width;
 			int dstH = dest_tile_width;
-			int srcW = tile_count*pixel_per_tile;
-			int srcH = tile_count * pixel_per_tile;
+			int srcW = database_image_resolution*pixel_per_tile;
+			int srcH = database_image_resolution * pixel_per_tile;
 
 			gdImageCopyResized ( 
 					out_im, im,
@@ -512,7 +512,7 @@ if(debug) fprintf(stderr, "init\n");
 		fprintf(html_out, "</tr>");
 	}
 
-	fprintf(html_out, "</table><p>total costs:%f<br/>costs per tile:%f</p></body></html>", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	fprintf(html_out, "</table><p>total costs:%f<br/>costs per tile:%f</p></body></html>", total_costs, (total_costs/(total_primary_tile_count*database_image_resolution*database_image_resolution*1.0)));
 
 	if(debug)
 	       fprintf(stderr,"writing file to disk %i %i \n", out_im==NULL, out==NULL);
@@ -525,24 +525,37 @@ if(debug) fprintf(stderr, "init\n");
 	gdImageDestroy(out_im);
 	m_fclose(html_out);
 	m_fclose(src_out);
-	float costs = total_costs / (total_primary_tile_count*tile_count*tile_count*1.0);
+	m_fclose(out);
+	float costs = total_costs / (total_primary_tile_count*database_image_resolution*database_image_resolution*1.0);
 
+	out = m_fopen(dest_filename, "r+");
 	char comment[100];
 	memset(comment, 0, 100);	
-	snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, tile_count, costs);
+	snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, database_image_resolution, costs);
+	off_t out_file_size = get_file_size(dest_filename);
+	inject_exif_comment(out, out_file_size, comment, strlen(comment));
 	m_fclose(out);
+
 	free(candidates);
-	if(args->quiet != 1)fprintf(stdout, "total candidate costs: %f,\n per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*tile_count*tile_count*1.0)));
+	if(args->quiet != 1)fprintf(stdout, "total candidate costs: %f,\n per tile:%f\n", total_costs, (total_costs/(total_primary_tile_count*database_image_resolution*database_image_resolution*1.0)));
 
 	return 0;
 }
 
-void inject_exif_comment(FILE *out, char *comment, size_t comment_len) {
-		unsigned char buf[BUFSIZ];
+void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len) {
+		uint32_t buflen = out_file_size < BUFSIZ ? out_file_size : BUFSIZ;
+		unsigned char buf[buflen];
 
 		rewind(out);
-		if( fread(&buf, BUFSIZ, 1, out) != 1) {
-			fprintf(stderr, "could not read first %i bytes of already written dest-file\n", BUFSIZ);
+		//              size   nmeb
+		size_t read_nmemb = fread(&buf, buflen, 1, out);
+		if( read_nmemb != 1) {
+			for(int i=0;i<buflen;i++) {
+				fprintf(stderr, "%i ", buf[i]);
+				if(i%80==0&&i>0)
+					fprintf(stderr, "\n");
+			}
+			fprintf(stderr, "could not read first %i bytes of already written dest-file\n", buflen);
 			exit(EXIT_FAILURE);
 		}
 
@@ -551,7 +564,7 @@ void inject_exif_comment(FILE *out, char *comment, size_t comment_len) {
 
 		int exif_offset=-1;
 		int exif_length=-1;
-		for(int i=0;i<BUFSIZ-2;i++) {
+		for(int i=0;i<buflen-2;i++) {
 			if(exif_offset == -1 && buf[i]== 0xFF && buf[i+1] == 0xFE)
 				exif_offset = i + 4;
 			if(exif_offset != -1 && exif_length == -1 && buf[i] == 0x0A && buf[i+1] == 0xFF) {
