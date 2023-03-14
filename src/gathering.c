@@ -336,7 +336,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	memset(& candidates_pop_uniqueness,0, sizeof(candidates_pop_uniqueness));
 	memset(&candidates_elect,0,sizeof(candidates_elect));
 
-	int32_t percent = -1;
+	int32_t old_percent = -1;
+	time_t old_time = 0;
+
 	while (1) {
 		size_t len = fread(invalid_buf, 1, BUFSIZ / 2, thumbs_db_invalid_file);
 		if (len == 0) {
@@ -373,12 +375,12 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 				float new_percent_f = idx / (thumbs_count * 1.0);
 				uint8_t new_percent = round(new_percent_f * 100);
+				time_t new_time = time(NULL);
 
-				if (new_percent != percent) {
-					time_t now;
-					time(&now);
-					percent = new_percent;
-					printf("%3i%%, %u/%u %s", percent, idx, thumbs_count, ctime(&now));
+				if (new_percent != old_percent && new_time != old_time) {
+					old_percent = new_percent;
+					old_time = new_time;
+					printf("%3i%%, %u/%u %s", old_percent, idx, thumbs_count, ctime(&new_time));
 				}
 			}
 
