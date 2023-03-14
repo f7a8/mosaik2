@@ -7,13 +7,9 @@
 */
 #include "libmosaik2.h"
 
-uint8_t DRY_RUN = 0;
-
 /* automatically invalid detection is written to the first bit and preserves existing user defined invalid states in other bits */
 void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
 
-	if(DRY_RUN == 1) 
-		return;
 	// need to be an opend file	
 	m_fseeko(invalid_file, nmemb, SEEK_SET);
 	int old_value=0;
@@ -51,7 +47,8 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	int no_hash_cmp = args->no_hash_cmp;
 	int debug = args->verbose;
 	int has_element_number = args->has_element_number;
-	int element_number = args->element_number - 1;
+	uint32_t element_number = args->element_number - 1;
+	uint32_t invalid_count = 0;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -65,8 +62,6 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	if(dry_run < 0 || dry_run > 1) {
 		fprintf(stderr, "dry_run must be 0 or 1\n");
 		exit(EXIT_FAILURE);
-	} else {
-		DRY_RUN = dry_run;
 	}
 
 	if(no_hash_cmp < 0 || no_hash_cmp > 1 ) {
@@ -146,7 +141,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				// NOT READABLE => INVALID
 				if(debug)fprintf(stderr, "%li. file (%s) cannot be accessed => %s\n", j, buf, strerror(errno));
 				print_invalid_(buf,access_code);
-				mark_invalid(invalid_file,j,md.invalid_filename);
+				if(!dry_run) {
+					mark_invalid(invalid_file,j,md.invalid_filename);
+					invalid_count++;
+				}
 				continue;
 			} else {
 
@@ -174,7 +172,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				} else {
 					if(debug)fprintf(stdout, "file version with different timestamps for (%s) available, mark this file as invalid\n",buf);
 					print_invalid( buf, cur_filesize, cur_timestamp );	
-					mark_invalid(invalid_file, j,md.invalid_filename);
+					if(!dry_run) {
+						mark_invalid(invalid_file, j,md.invalid_filename);
+						invalid_count++;
+					}
 					continue;
 				}
 				
@@ -188,7 +189,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					
 					fprintf(stderr, "file (%s) version with different filesize (old:%li cur:%li) available => invalid\n",buf, old_filesize, cur_filesize);
 					print_invalid(buf, cur_filesize, cur_timestamp );
-					mark_invalid(invalid_file,j,md.invalid_filename);
+					if(!dry_run) {
+						mark_invalid(invalid_file,j,md.invalid_filename);
+						invalid_count++;
+					}
 					
 				} else {
 					
@@ -231,7 +235,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					} else {
 						fprintf(stderr, "file hashes mismatch, mark file (%s) as invalid\n", buf);
 						print_invalid( buf, cur_filesize, cur_timestamp );
-						mark_invalid(invalid_file,j,md.invalid_filename);
+						if(!dry_run) {
+							mark_invalid(invalid_file,j,md.invalid_filename);
+							invalid_count++;
+						}
 					}
 				}
 			}
@@ -243,6 +250,13 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	m_fclose(filenames_file);
 	m_fclose(timestamps_file);
 	m_fclose(filehashes_file);
+
+	if(invalid_count>0) {
+		FILE *lastmodified_file = m_fopen(md.lastmodified_filename, "w");
+		time_t now = time(NULL);
+		m_fwrite(&now, md.lastmodified_sizeof, lastmodified_file);
+		m_fclose(lastmodified_file);
+	}
 
 	return 0;
 }
