@@ -38,9 +38,14 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 	printf("id=%s\n", md->id);
 	printf("db-format-version=%i\n", MOSAIK2_DATABASE_FORMAT_VERSION);
 	printf("database-image-resolution=%i\n", read_database_image_resolution(md));
+	time_t createdat = read_thumbs_db_createdat(md);
+	time_t lastindexed = read_thumbs_db_lastindexed(md);
 	time_t lastmodified = read_thumbs_db_lastmodified(md);
+
 	printf("db-size=%li\n", read_thumbs_db_size(md));
-	printf("last-modified=%s", ctime( &lastmodified));
+	printf("created-at=%s", ctime( &createdat));
+	printf("last-indexed=%s", lastindexed>0?ctime( &lastindexed):"-\n");
+	printf("last-modified=%s", lastmodified>0?ctime( &lastmodified):"-\n");
 	printf("element-count=%i\n", read_thumbs_db_count(md));
 	printf("duplicates-count=%i\n", read_thumbs_db_duplicates_count(md));
 	printf("invalid-count=%i\n", read_thumbs_db_invalid_count(md));
