@@ -200,6 +200,7 @@ struct mosaik2_project_struct {
 	char dest_imagedims_filename[256];
 	uint8_t ratio;
 	uint8_t unique;
+	uint8_t fast_unique;
 	size_t file_size;
 	uint8_t primary_tile_count;
 	char dest_html_filename[ 256 ]; 
@@ -251,6 +252,7 @@ struct arguments_struct {
 	int has_num_tiles;
 	int max_load, max_jobs;
 	int unique;
+	int fast_unique;
 	int color_stddev_ratio;
 	int pixel_per_tile;
 	int duplicate_reduction;

@@ -1539,6 +1539,7 @@ void max_heap_sift_down(Heap* h, int n) {
 int max_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
    h->count--;
 
+   if(d!=NULL)
 	memcpy(d, &h->keys[n], sizeof(mosaik2_database_candidate));
    h->keys[n] = h->keys[h->last];
    h->last -= 1;
