@@ -65,25 +65,24 @@ void create_mosaik2_database_file_readme(char *filename, int print) {
 	m_fclose( file);
 }
 
-void create_mosaik2_database_file_int(char *filename, int value, int print) {
+void create_mosaik2_database_file_val(char *filename, void *ptr, size_t len, int print) {
 	FILE *file = create_mosaik2_database_file(filename, 0, print);
-	if ( fprintf(file, "%i", value) < 1 ) {
-		fprintf(stderr, "could not write mosaik2 database file (%s)\n", filename);
-		exit(EXIT_FAILURE);
-	}
+	m_fwrite(ptr, len, file);
 	m_fclose(file);
 }
 
 int mosaik2_init(mosaik2_arguments *args) {
 	
 	char *mosaik2_database_name = args->mosaik2db;
-	int tilecount = args->database_image_resolution;
+	int database_image_resolution = args->database_image_resolution;
+	time_t n = time(NULL);
+	int mdfv = MOSAIK2_DATABASE_FORMAT_VERSION;
 
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_database_name);
 
-	check_resolution(tilecount);
+	check_resolution(database_image_resolution);
 
 	if( mkdir(mosaik2_database_name, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
 		fprintf(stderr,"mosaik2 database directory (%s) could not be created: %s\n", mosaik2_database_name, strerror(errno));
@@ -108,11 +107,14 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.lock_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastmodified_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tileoffsets_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.lastindexed_filename, 1, args->verbose);
 
 	create_mosaik2_database_file_id(md.id_filename, args->verbose);
-	create_mosaik2_database_file_int(md.version_filename, MOSAIK2_DATABASE_FORMAT_VERSION, args->verbose);
-	create_mosaik2_database_file_int(md.database_image_resolution_filename, tilecount, args->verbose);
+	create_mosaik2_database_file_val(md.version_filename, &mdfv, sizeof(mdfv),  args->verbose);
+	create_mosaik2_database_file_val(md.database_image_resolution_filename, &database_image_resolution, sizeof(database_image_resolution), args->verbose);
+	create_mosaik2_database_file_val(md.createdat_filename, &n, md.createdat_sizeof, args->verbose);
 	create_mosaik2_database_file_readme(md.readme_filename, args->verbose);
+
 
 	return 0;
 }

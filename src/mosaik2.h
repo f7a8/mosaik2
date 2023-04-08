@@ -109,18 +109,17 @@ struct mosaik2_indextask_struct {
 	FILE *file;
 	size_t filesize;
 	time_t lastmodified;
+	time_t lastindexed;
 	uint8_t tile_count;
 	unsigned char *image_data;
 
-	int width;
-	int height;
-	unsigned char tile_x_count;
-	unsigned char tile_y_count;
+	int imagedims[2];
+	uint8_t tiledims[2];
 	unsigned char hash[MD5_DIGEST_LENGTH];
 
 	uint32_t total_tile_count;	
 	uint8_t *colors;
-	uint8_t *colors_stddev;
+	uint8_t *stddev;
 };
 
 typedef struct mosaik2_indextask_struct mosaik2_indextask;
@@ -148,8 +147,10 @@ struct mosaik2_database_struct {
 	char readme_filename[256];
 	char pid_filename[256];
 	char lock_filename[256];
-	char lastmodified_filename[256];
 	char tileoffsets_filename[256];
+	char lastmodified_filename[256];
+	char lastindexed_filename[256];
+	char createdat_filename[256];
 
 	int imagestddev_sizeof;
 	int imagecolors_sizeof;
@@ -165,10 +166,13 @@ struct mosaik2_database_struct {
 	int duplicates_sizeof;
 	int tileoffsets_sizeof;
 	int lastmodified_sizeof;
+	int lastindexed_sizeof;
+	int createdat_sizeof;
 
-	uint8_t tilecount;
+	uint8_t database_image_resolution;
 	float histogram_color[3]; // all valid entries
 	float histogram_stddev[3];
+	uint32_t element_count;
 };
 typedef struct mosaik2_database_struct mosaik2_database;
 
@@ -196,6 +200,7 @@ struct mosaik2_project_struct {
 	char dest_imagedims_filename[256];
 	uint8_t ratio;
 	uint8_t unique;
+	uint8_t fast_unique;
 	size_t file_size;
 	uint8_t primary_tile_count;
 	char dest_html_filename[ 256 ]; 
@@ -247,6 +252,7 @@ struct arguments_struct {
 	int has_num_tiles;
 	int max_load, max_jobs;
 	int unique;
+	int fast_unique;
 	int color_stddev_ratio;
 	int pixel_per_tile;
 	int duplicate_reduction;

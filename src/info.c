@@ -17,7 +17,7 @@ int mosaik2_info(mosaik2_arguments *args) {
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
 	check_thumbs_db(&md);
-	md.tilecount = read_thumbs_conf_tilecount(&md);
+	md.database_image_resolution = read_database_image_resolution(&md);
 
 	if( args->has_element_number==1) {
 		print_element(args, mosaik2_db_name, &md, element_number-1);
@@ -37,10 +37,15 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 	printf("path=%s\n", mosaik2_db_name);
 	printf("id=%s\n", md->id);
 	printf("db-format-version=%i\n", MOSAIK2_DATABASE_FORMAT_VERSION);
-	printf("database-image-resolution=%i\n", read_thumbs_conf_tilecount(md));
+	printf("database-image-resolution=%i\n", read_database_image_resolution(md));
+	time_t createdat = read_thumbs_db_createdat(md);
+	time_t lastindexed = read_thumbs_db_lastindexed(md);
 	time_t lastmodified = read_thumbs_db_lastmodified(md);
+
 	printf("db-size=%li\n", read_thumbs_db_size(md));
-	printf("last-modified=%s", ctime( &lastmodified));
+	printf("created-at=%s", ctime( &createdat));
+	printf("last-indexed=%s", lastindexed>0?ctime( &lastindexed):"-\n");
+	printf("last-modified=%s", lastmodified>0?ctime( &lastmodified):"-\n");
 	printf("element-count=%i\n", read_thumbs_db_count(md));
 	printf("duplicates-count=%i\n", read_thumbs_db_duplicates_count(md));
 	printf("invalid-count=%i\n", read_thumbs_db_invalid_count(md));
@@ -48,10 +53,10 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 	printf("tileoffsets-count=%i\n", read_thumbs_db_tileoffset_count(md));
 
 	read_thumbs_db_histogram(md);
-	
+
 	printf("histogram-color=%f %f %f\nhistogram-stddev=%f %f %f\n",
-		md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
-		md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
+			md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
+			md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
 }
 
 void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint64_t element_number) {
@@ -94,7 +99,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 
 	uint32_t image_width = gdImageSX(im);
 	uint32_t image_height = gdImageSY(im);
-	uint8_t database_image_resolution = read_thumbs_conf_tilecount(md);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
 	int src_image_resolution = args->num_tiles;
 
 	mosaik2_tile_infos ti;
@@ -113,7 +118,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	printf("total-primary-tiles=%i\n", ti.primary_tile_x_count * ti.primary_tile_y_count);
 	printf("tile-dim=%ix%i\n", ti.tile_x_count, ti.tile_y_count);
 	printf("pixel-per-primary-tile=%i\n", ti.pixel_per_primary_tile);
-	
+
 	printf("pixel-per-tile=%i\n",ti.pixel_per_tile);
 
 	double total_pixel_count_f = (double) ti.total_pixel_count;
@@ -123,7 +128,7 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	memset(&histogram_color,  0, sizeof(histogram_color));
 	memset(&histogram_stddev, 0, sizeof(histogram_stddev));
 
-       	for(int x = ti.offset_x; x< ti.lx; x++) {
+	for(int x = ti.offset_x; x< ti.lx; x++) {
 		for(int y= ti.offset_y;y<ti.ly;y++) {
 
 			int color =  gdImageTrueColorPixel(im,x,y);
@@ -135,12 +140,12 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 			histogram_color[G] += green0 / total_pixel_count_f;
 			histogram_color[B] += blue0 / total_pixel_count_f;
 			//printf("%i : %i %i %i / %f = %f %f %f\n", color, red0, green0, blue0, total_pixel_count_f, histogram_color[R], histogram_color[G], histogram_color[B]);
-	//printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
+			//printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 		}
 	}
 	printf("histogram-color:%f %f %f\n", histogram_color[R], histogram_color[G], histogram_color[B]);
 
-	
+
 	for(int x = ti.offset_x; x < ti.lx; x++ ) {
 		for(int y = ti.offset_y;y<ti.ly;y++) {
 			int color = gdImageTrueColorPixel(im,x,y);
@@ -159,8 +164,6 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	histogram_stddev[G] = sqrt(histogram_stddev[G] / (total_pixel_count_f - 1));
 	histogram_stddev[B] = sqrt(histogram_stddev[B] / (total_pixel_count_f - 1));
 	printf("histogram-stddev:%f %f %f\n", histogram_stddev[R], histogram_stddev[G], histogram_stddev[B]);
-	//	mosaik2_database_read_database_id(md);
-	//print_xdatabase(args, mosaik2_db_name, md);
 	read_thumbs_db_histogram(md);
 
 	printf("histogram-color-similarity=%f\n",

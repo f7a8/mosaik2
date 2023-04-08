@@ -43,6 +43,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( md->lock_filename, 0, 256);
 	memset( md->lastmodified_filename, 0, 256);
 	memset( md->tileoffsets_filename, 0, 256);
+	memset( md->lastindexed_filename, 0, 256);
+	memset( md->createdat_filename, 0,256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -90,7 +92,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
 	strncpy( (*md).database_image_resolution_filename,thumbs_db_name,l);
-	strncat( (*md).database_image_resolution_filename,"/tilecount.txt",14);
+	strncat( (*md).database_image_resolution_filename,"/database_image_resolution.txt",30);
 
 	strncpy( (*md).id_filename,thumbs_db_name,l);
 	strncat( (*md).id_filename,"/id.txt",7);
@@ -115,6 +117,12 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( md->tileoffsets_filename, thumbs_db_name, l);
 	strncat( md->tileoffsets_filename, "/tileoffsets.bin", 16);
 	
+	strncpy( md->lastindexed_filename, thumbs_db_name, l);
+	strncat( md->lastindexed_filename, "/.lastindexed", 13);
+
+	strncpy( md->createdat_filename, thumbs_db_name, l);
+	strncat( md->createdat_filename, "/.createdat", 11);
+
 	md->imagestddev_sizeof = 3;
 	md->imagecolors_sizeof = 3;
 	md->imagedims_sizeof = 2*sizeof(int);
@@ -129,6 +137,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	md->duplicates_sizeof = sizeof(char);
 	md->tileoffsets_sizeof = 2*sizeof(char);
 	md->lastmodified_sizeof = sizeof(time_t);
+	md->lastindexed_sizeof = sizeof(time_t);
+	md->createdat_sizeof = sizeof(time_t);
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -170,8 +180,11 @@ void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *
 
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height) {
 
-	if(database_image_resolution*database_image_resolution*(6*256) > UINT32_MAX) {
-		fprintf(stderr, "database_image_resolution too hig for internal data structure\n");
+	assert(src_image_resolution > 0);
+	assert(database_image_resolution > 0 && database_image_resolution < UINT8_MAX);
+
+	if(database_image_resolution*database_image_resolution*(2*RGB*UINT8_MAX) > UINT32_MAX) {
+		fprintf(stderr, "database_image_resolution too high for internal data structure\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -182,10 +195,6 @@ void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resoluti
 	ti->src_image_resolution = src_image_resolution; // old:num_tiles;
 	ti->primary_tile_count = src_image_resolution;
 	ti->database_image_resolution = database_image_resolution; // old:thumbs_tile_count
-
-	assert(src_image_resolution > 0);
-	assert(database_image_resolution > 0 && database_image_resolution < 256);
-
 
 	ti->tile_count = src_image_resolution * database_image_resolution;
 	assert(ti->tile_count != 0);
@@ -217,9 +226,52 @@ void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resoluti
 	
 	ti->total_pixel_count = ti->pixel_per_tile * ti->tile_x_count * ti->pixel_per_tile * ti->tile_y_count;
 	ti->ignored_pixel_count = (image_width * image_height) - ti->total_pixel_count;
+}
+
+void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int image_width, int image_height) {
+
+	ti->database_image_resolution = database_image_resolution; // old:thumbs_tile_count
+
+	assert(database_image_resolution > 0 && database_image_resolution < UINT8_MAX);
+
+	if(database_image_resolution*database_image_resolution*(6*256) > UINT32_MAX) {
+		fprintf(stderr, "database_image_resolution too high for internal data structure\n");
+		exit(EXIT_FAILURE);
+	}
+
+	ti->image_width = image_width;
+	ti->image_height = image_height;
+
+	if(ti->image_width < database_image_resolution || ti->image_height < database_image_resolution) {
+		fprintf(stderr,"image is too small, at least one dimension is smaller than the database_image_resolution\n");
+		exit(EXIT_FAILURE);
+	}
 	
+	ti->short_dim = ti->image_width<ti->image_height?ti->image_width:ti->image_height;
+	ti->pixel_per_tile = ( ti->short_dim - (ti->short_dim % database_image_resolution) ) / database_image_resolution;
+	ti->total_pixel_per_tile = ti->pixel_per_tile * ti->pixel_per_tile;
 
 
+	if(ti->short_dim == ti->image_width){
+			ti->tile_x_count = database_image_resolution;
+			ti->tile_y_count = ti->image_height / ti->pixel_per_tile;
+	} else {
+			ti->tile_x_count = ti->image_width / ti->pixel_per_tile;
+			ti->tile_y_count = database_image_resolution;
+	}
+
+	if( ti->tile_x_count >= UINT8_MAX || ti->tile_y_count >= UINT8_MAX ) {
+		fprintf(stderr,"any tile dimension (x:%u, y:%u)must be < %u\n", ti->tile_x_count, ti->tile_y_count, UINT8_MAX);
+		exit(EXIT_FAILURE);
+	}
+
+	ti->total_tile_count = ti->tile_x_count * ti->tile_y_count;
+
+	ti->offset_x = ((ti->image_width - ti->tile_x_count * ti->pixel_per_tile)/2);
+	ti->offset_y = ((ti->image_height - ti->tile_y_count * ti->pixel_per_tile)/2);
+
+	ti->lx = ti->offset_x + ti->pixel_per_tile * ti->tile_x_count;
+	ti->ly = ti->offset_y + ti->pixel_per_tile * ti->tile_y_count;
 }
 
 
@@ -343,6 +395,17 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 					fprintf(stderr, "8\n");
 }
 
+int is_same_file(const char *filename0, const char *filename1) {
+	assert(filename0!=NULL);
+	assert(filename1!=NULL);
+	struct stat st;
+	m_stat(filename0, &st);
+	ino_t i0 = st.st_ino;
+	m_stat(filename1, &st);
+	ino_t i1 = st.st_ino;
+	return i0 == i1;
+}
+
 off_t get_file_size(const char *filename) {
 	assert(filename != NULL );
 	assert(strlen(filename)>0);
@@ -383,19 +446,17 @@ uint32_t read_thumbs_db_count(mosaik2_database *md) {
 	return (uint32_t)(db_filesizes_size / sizeof(size_t));
 }
 
-uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
-	FILE *thumbs_conf_tilecount_file = m_fopen(md->database_image_resolution_filename, "rb");
-    	char buf[4];
-	char *rbuf = fgets( buf, 4, thumbs_conf_tilecount_file );
-	if(rbuf==NULL) {
-		fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->database_image_resolution_filename);
-		m_fclose( thumbs_conf_tilecount_file );
+uint8_t read_database_image_resolution(mosaik2_database *md) {
+	FILE *database_image_resolution_file = m_fopen(md->database_image_resolution_filename, "rb");
+	int32_t database_image_resolution=0;
+	m_fread(&database_image_resolution, sizeof(database_image_resolution), database_image_resolution_file);
+
+	if(database_image_resolution <= 0 || database_image_resolution > UINT8_MAX) {
+		fprintf(stderr, "illegal image resolution\n");
 		exit(EXIT_FAILURE);
 	}
-
-	uint8_t thumbs_conf_tilecount = atoi(buf);
-	m_fclose( thumbs_conf_tilecount_file );
-	return thumbs_conf_tilecount;
+	m_fclose( database_image_resolution_file );
+	return database_image_resolution;
 }
 
 uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
@@ -485,7 +546,7 @@ void mosaik2_database_read_database_id(mosaik2_database *md) {
 }
 
 //filename has to be freed in the end
-//md.tilecount must be set before
+//md.database_image_resolution must be set before
 void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number) {
 	mde->md = md;
 	mde->element_number = element_number;
@@ -516,9 +577,9 @@ void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_elemen
 	} else { // recognize only cropped area
 		x0 = mde->tileoffsets[0];
 		y0 = mde->tileoffsets[1];
-		xl = x0 + md->tilecount;
-		yl = y0 + md->tilecount;
-		total_tile_count = md->tilecount * md->tilecount;
+		xl = x0 + md->database_image_resolution;
+		yl = y0 + md->database_image_resolution;
+		total_tile_count = md->database_image_resolution * md->database_image_resolution;
 		total_tile_count_f = (float) total_tile_count;
 	}
 
@@ -619,13 +680,31 @@ size_t read_thumbs_db_size(mosaik2_database *md) {
 		+ get_file_size( md->tileoffsets_filename));
 }
 
-time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
-
-	FILE *file = m_fopen(md->lastmodified_filename, "rb");
-	time_t lastmodified=0;
-	m_fread(&lastmodified, sizeof(lastmodified), file);
+time_t read_thumbs_db_createdat(mosaik2_database *md) {
+	FILE *file = m_fopen(md->createdat_filename, "rb");
+	time_t t=0;
+	m_fread(&t, sizeof(t), file);
 	m_fclose( file );
-	return lastmodified;
+	return t;
+}
+time_t read_thumbs_db_lastindexed(mosaik2_database *md) {
+	time_t t=0;
+
+	if(get_file_size(md->lastindexed_filename)== sizeof(t) ) {
+		FILE *file = m_fopen(md->lastindexed_filename, "rb");
+		m_fread(&t, sizeof(t), file);
+		m_fclose( file );
+	}
+	return t;
+}
+time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
+	time_t t=0;
+	if(get_file_size(md->lastmodified_filename)==sizeof(t)) {
+		FILE *file = m_fopen(md->lastmodified_filename, "rb");
+		m_fread(&t, sizeof(t), file);
+		m_fclose( file );
+	}
+	return t;
 }
 /**
 void check_thumbs_db_name(char *thumbs_db_name) {
@@ -685,9 +764,10 @@ void check_thumbs_db(mosaik2_database *md) {
 
 	// TODO make more plause checks
 	uint32_t element_count = read_thumbs_db_count(md);
-	uint8_t database_image_resolution = read_thumbs_conf_tilecount(md);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
 
 	assert(get_file_size(md->imagecolors_filename)     >= element_count * md->imagecolors_sizeof*database_image_resolution*database_image_resolution);
+
 	assert(get_file_size(md->imagestddev_filename)     >= element_count * md->imagestddev_sizeof*database_image_resolution*database_image_resolution);
 	assert(get_file_size(md->imagecolors_filename)     <= element_count * md->imagecolors_sizeof*256*256);
 	assert(get_file_size(md->imagestddev_filename)     <= element_count * md->imagestddev_sizeof*256*256);
@@ -698,12 +778,12 @@ void check_thumbs_db(mosaik2_database *md) {
 	assert(get_file_size(md->filenames_index_filename) == element_count * md->filenames_index_sizeof);
 	assert(get_file_size(md->filesizes_filename)       == element_count * md->filesizes_sizeof);
 	assert(get_file_size(md->filehashes_filename)      == element_count * md->filehashes_sizeof);
-	assert(get_file_size(md->filehashes_index_filename)== element_count * md->filehashes_index_sizeof 
-	    || get_file_size(md->filehashes_index_filename)== 0);
+//TODO	assert(get_file_size(md->filehashes_index_filename)== element_count * md->filehashes_index_sizeof
+	   // || get_file_size(md->filehashes_index_filename)== 0);
 	assert(get_file_size(md->tiledims_filename)        == element_count * md->tiledims_sizeof);
 	assert(get_file_size(md->invalid_filename)         == element_count * md->invalid_sizeof);
 	assert(get_file_size(md->duplicates_filename)      == element_count * md->duplicates_sizeof);
-	assert(get_file_size(md->lastmodified_filename)    == (element_count > 0 ? md->lastmodified_sizeof : 0));
+	assert(get_file_size(md->lastindexed_filename)    == (element_count > 0 ? md->lastindexed_sizeof : 0));
 	assert(get_file_size(md->tileoffsets_filename)     == element_count * md->tileoffsets_sizeof);
 }
 
@@ -854,22 +934,33 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	return ORIENTATION_TOP_LEFT;
 }
 
-gdImagePtr read_image_from_file(char *filename) {
-   FILE *in = m_fopen(filename, "rb");
-   size_t file_size = get_file_size(filename);
-   gdImagePtr im;
-   unsigned char *buffer = m_calloc(1,file_size);
-   m_fread(buffer, file_size, in);
 
-   int file_type = get_file_type_from_buf(buffer, file_size);
-   if( file_type == FT_JPEG ) 
-   	im = gdImageCreateFromJpegPtr( file_size, buffer);
-   else {
+gdImagePtr read_image_from_file(char *filename) {
+	FILE *in = m_fopen(filename, "rb");
+	size_t file_size = get_file_size(filename);
+	unsigned char *buf = m_calloc(1, file_size);
+	m_fread(buf, file_size, in);
+	gdImagePtr im = read_image_from_buf(buf, file_size);
+	free(buf);
+	m_fclose(in);
+	return im;
+}
+
+gdImagePtr read_image_from_buf(unsigned char *buf, size_t file_size) {
+   gdImagePtr im;
+   int file_type = get_file_type_from_buf(buf, file_size);
+   if( file_type == FT_JPEG ) {
+	   im = gdImageCreateFromJpegPtr( file_size, buf);
+   } else {
 	fprintf(stderr, "wrong image type, only jpegs accepted\n");
    	exit(EXIT_FAILURE);
    }
+   if(im ==NULL){
+	   fprintf(stderr,"image could not be instanciated\n");
+	   exit(EXIT_FAILURE);
+   }
 	
-	uint8_t orientation = get_image_orientation(buffer, file_size);
+	uint8_t orientation = get_image_orientation(buf, file_size);
 //uint8_t ORIENTATION_TOP_LEFT=0;
 //uint8_t ORIENTATION_RIGHT_TOP=1; 270
 //uint8_t ORIENTATION_BOTTOM_RIGHT=2; 180
@@ -891,10 +982,9 @@ gdImagePtr read_image_from_file(char *filename) {
 		im = im2;
 	}
 
-   free(buffer);
-   m_fclose(in);
    return im;
- } 
+ }
+
 /* Remove spaces on the right of the string */
 //static void trim_spaces(char *buf) {
 void trim_spaces(char *buf) {
@@ -1034,6 +1124,10 @@ void mosai2_indextask_deconst(mosaik2_indextask *task) {
 	
 }
 
+void mosaik2_tile_image(mosaik2_tile_infos *ti, gdImagePtr *im, double *colors, double *stddev) {
+	
+}
+
 unsigned char* read_stdin( size_t *file_size) {
 
 	unsigned char *buffer0[BUFSIZ];
@@ -1158,7 +1252,7 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 	FILE *duplicates_file = m_fopen(md->duplicates_filename, "r");
 	FILE *invalid_file = m_fopen(md->invalid_filename, "r");
 
-	uint8_t tilecount = read_thumbs_conf_tilecount(md);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
 	unsigned char tiledims[] = {0,0};
 	
 	float histogram_color0[RGB];
@@ -1211,9 +1305,9 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 		} else { // recognize only cropped area
 			x0 = tileoffsets[0];
 			y0 = tileoffsets[1];
-			xl = x0 + tilecount;
-			yl = y0 + tilecount;
-			tilesize = tilecount * tilecount; // only the cropped square
+			xl = x0 + database_image_resolution;
+			yl = y0 + database_image_resolution;
+			tilesize = database_image_resolution * database_image_resolution; // only the cropped square
 		}
 		for(int x=x0;x<xl;x++) {
 			for(int y=y0;y<yl;y++) {
@@ -1445,6 +1539,7 @@ void max_heap_sift_down(Heap* h, int n) {
 int max_heap_delete(Heap* h, int n, mosaik2_database_candidate *d) {
    h->count--;
 
+   if(d!=NULL)
 	memcpy(d, &h->keys[n], sizeof(mosaik2_database_candidate));
    h->keys[n] = h->keys[h->last];
    h->last -= 1;

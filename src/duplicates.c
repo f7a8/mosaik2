@@ -17,25 +17,6 @@ int qsort_(const void*, const void*);
 const int FILEHASHES_INDEX_VALID = 1;
 const int FILEHASHES_INDEX_INVALID = 0;
 
-/*void p(unsigned char *p0, unsigned char *p1, int nl) {
-		size_t s0,s1;
-		memcpy(&s0, p0+MD5_DIGEST_LENGTH, sizeof(size_t));
-		memcpy(&s1, p1+MD5_DIGEST_LENGTH, sizeof(size_t));
-
-		for(int i=0;i<MD5_DIGEST_LENGTH;i++) {
-			fprintf(stderr, "%02x", p0[i]);
-		}
-		fprintf(stderr, ":%li  ", s0);
-		for(int i=0;i<MD5_DIGEST_LENGTH;i++) {
-			fprintf(stderr, "%02x", p1[i]);
-		}
-		fprintf(stderr, ":%li", s1);
-
-	if(nl)
-		fprintf(stderr, "\n");
-}*/
-
-
 int mosaik2_duplicates(mosaik2_arguments *args) {
 
 	char *mosaik2_db_name_1 = args->mosaik2db;
@@ -101,7 +82,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	size_t size_read_h0, size_read_h1;
 	uint8_t duplicates_data0=0,duplicates_data1=0;
 	uint32_t i0=0, j0=0;
-	uint8_t compare_same_file=strncmp(md0.filehashes_filename, md1.filehashes_filename, strlen(md0.filehashes_filename)) == 0;
+	int compare_same_file=is_same_file(md0.filehashes_filename, md1.filehashes_filename);
 
 	/* idea:
 	 * filehashes.idx are openend from two mosaik2 databases (m0 and m1), also their duplicates.bin files.
@@ -121,6 +102,8 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	// loop through every element. 
 	// it the next element in the filehashes.idx file (sorted) the same hash like the current one?
 	// mark the next one as duplicate.
+
+	uint32_t duplicates_count=0;
 			
 	for(i0=0,j0=0;(( size_read_h0 = fread(f0, dataset_len, 1, filehashes_index_file0)) == 1);i0++){
 
@@ -140,7 +123,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 			
 			if(qsort < 0) {
 				m_fseeko(filehashes_index_file1,-dataset_len,SEEK_CUR);
-				m_fseeko(duplicates_file1,-1,SEEK_CUR);
+				m_fseeko(duplicates_file1,-1,SEEK_CUR);//TODO raises an error
 				break;
 			} else if( qsort > 0) {
 			
@@ -179,9 +162,16 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				char *filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
 				printf("%s\n", filename);
 				free(filename);
-
+				duplicates_count++;
 			} // else block ends
 		}
+	}
+
+	if(duplicates_count>0 && dry_run ==0) {
+		FILE *lastmodified_file = m_fopen(md0.lastmodified_filename, "w");
+		time_t now = time(NULL);
+		m_fwrite(&now, md0.lastmodified_sizeof, lastmodified_file);
+		m_fclose(lastmodified_file);
 	}
 
 	m_fflush(stdout);

@@ -12,7 +12,6 @@ void write_pid_file(mosaik2_database *md);
 void remove_pid_file(mosaik2_database *md);
 void process_input_data(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md);
 void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i,FILE *);
-//void signal_handler(int signal);
 void mosaik2_index_add_tiler_pid(mosaik2_context *, pid_t);
 void mosaik2_index_clean_tiler_pids(mosaik2_context *);
 void print_usage(char *);
@@ -20,56 +19,27 @@ void print_usage(char *);
 
 
 
-void /* Examine a wait() status using the W* macros */
-printWaitStatus(const char *msg, int status)
-{
-if (msg != NULL)
-printf("%s", msg);
-if (WIFEXITED(status)) {
-printf("child exited, status=%d\n", WEXITSTATUS(status));
-} else if (WIFSIGNALED(status)) {
-printf("child killed by signal %d (%s)",
-WTERMSIG(status), strsignal(WTERMSIG(status)));
-#ifdef WCOREDUMP /* Not in SUSv3, may be absent on some systems */
-if (WCOREDUMP(status))
-printf(" (core dumped)");
-#endif
-printf("\n");
-} else if (WIFSTOPPED(status)) {
-printf("child stopped by signal %d (%s)\n",
-WSTOPSIG(status), strsignal(WSTOPSIG(status)));
-#ifdef WIFCONTINUED /* SUSv3 has this, but older Linux versions and
-some other UNIX implementations don't */
-} else if (WIFCONTINUED(status)) {
-printf("child continued\n");
-#endif
-} else { /* Should never happen */
-printf("what happened to this child? (status=%x)\n",
-(unsigned int) status);
-}
-}
-
 int mosaik2_index(mosaik2_arguments *args) {
 
 	char *mosaik2_database_name = args->mosaik2db;
 	uint32_t max_tiler_processes = args->max_jobs;
 	uint32_t max_load_avg = args->max_load;
 
-	//signal(SIGINT, signal_handler);
-
 	mosaik2_context ctx;
 	init_mosaik2_context(&ctx);
 	ctx.max_tiler_processes = get_max_tiler_processes(max_tiler_processes);
 	ctx.max_load_avg = get_max_load_avg(max_load_avg);
-//	fprintf(stderr, "max_load_avg %f\n", ctx.max_load_avg, ctx.max_load_avg);
 
 	mosaik2_database md;
-	
+
 	init_mosaik2_database(&md, mosaik2_database_name);
 	check_thumbs_db(&md);
 	mosaik2_database_read_database_id(&md);
 	check_pid_file(&md);
 	write_pid_file(&md);
+
+	md.element_count = read_thumbs_db_count(&md);
+	md.database_image_resolution = read_database_image_resolution(&md);
 
 	process_input_data(args, &ctx, &md);
 
@@ -137,10 +107,7 @@ void remove_pid_file(mosaik2_database *md) {
 
 
 void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md) {
-	
-	//mosaik2_indextask task_list[ctx->max_tiler_processes];
-	
-	md->tilecount = read_thumbs_conf_tilecount(md);
+	md->database_image_resolution = read_database_image_resolution(md);
 	uint32_t i=read_thumbs_db_count(md);
 	uint32_t maxmemb=UINT32_MAX;
 	size_t len = 0;
@@ -163,7 +130,7 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	if(i>=maxmemb) {
 		fprintf(stderr, "exiting after maximum lines (%i) saved per mosaik2 database, append outstanding images to a new mosaik2 database\n", maxmemb);
 	}
-		
+
 	int wstatus=0;
 	wait(&wstatus); //TODO doesnt work always
 }
@@ -174,8 +141,8 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 		fprintf(stdout, "input data is not resumed, EXITing because of SIGTERM.");
 
 	mosaik2_indextask task;
-//	memset(&task, 0, sizeof(task));
-	
+	memset(&task, 0, sizeof(task));
+
 	char *token0 = strtok(line, "\t");
 	char *token1 = strtok(NULL, "\t");
 	char *token2 = strtok(NULL, "\n");
@@ -188,10 +155,11 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 	}
 
 	strncpy(task.filename, token0, strlen(token0)+1);
-	
+
 
 	task.filesize = atol(token1);
-	task.lastmodified = atoll(token2);
+	task.lastmodified = atoll(token2);//original lastmodified from the image
+	task.lastindexed = time(NULL);
 	//here to fork
 
 	//fprintf(stdout,"%i cp: %i mp: %i\n", getpid(), ctx->current_tiler_processes, ctx->max_tiler_processes);
@@ -206,7 +174,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 	}
 
 	pid_t pid = fork(); // 0.2 ms
-	
+
 	// forked child
 	if(pid==0) {
 		// closing the input file now, because there where reproduceable invalid data in the main process. Don't know why.
@@ -221,7 +189,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 		}
 		exit(0);
 	} else {
-		//parent process 
+		//parent process
 		mosaik2_index_add_tiler_pid(ctx, pid);
 		if(signal(SIGINT, sigHandler) == SIG_ERR)
 			fprintf(stderr, "sigint in user func\n");
@@ -258,22 +226,20 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	FILE *tiledims_file = m_fopen( md->tiledims_filename, "a");
 	FILE *invalid_file = m_fopen( md->invalid_filename, "a");
 	FILE *duplicates_file = m_fopen( md->duplicates_filename, "a");
-	FILE *lastmodified_file = m_fopen( md->lastmodified_filename, "w");
+	FILE *lastindexed_file = m_fopen( md->lastindexed_filename, "w");
 	FILE *tileoffsets_file = m_fopen( md->tileoffsets_filename, "a");
 
 
-	char null_value='\0';
-	char ff_value=0xFF;
-	char new_line='\n';
+	uint8_t null_value='\0';
+	uint8_t new_line='\n';
 
 	//TODO check if everything is written to disk
 	off_t image_offset = ftello(imagecolors_file);
 	m_fwrite(&image_offset, sizeof(off_t), image_index_file);
 	m_fwrite(task->colors, RGB*task->total_tile_count, imagecolors_file);
-	m_fwrite(task->colors_stddev, RGB*task->total_tile_count, imagestddev_file);
+	m_fwrite(task->stddev, RGB*task->total_tile_count, imagestddev_file);
 
-	m_fwrite(&task->width, sizeof(int), imagedims_file);
-	m_fwrite(&task->height, sizeof(int), imagedims_file);
+	m_fwrite(&task->imagedims, md->imagedims_sizeof, imagedims_file);
 
 	off_t filenames_offset = ftello(filenames_file);
 	m_fwrite(&filenames_offset, sizeof(off_t), filenames_index_file);
@@ -282,22 +248,20 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 
 	m_fwrite(task->hash, MD5_DIGEST_LENGTH, filehashes_file);
 
-	m_fwrite(&task->lastmodified, sizeof(time_t), timestamps_file);
+	m_fwrite(&task->lastindexed, md->lastindexed_sizeof, timestamps_file);
 
-	m_fwrite(&task->filesize, sizeof(size_t), filesizes_file);
+	m_fwrite(&task->filesize, md->filesizes_sizeof, filesizes_file);
 
-	m_fwrite(&task->tile_x_count, sizeof(char), tiledims_file);
-	m_fwrite(&task->tile_y_count, sizeof(char), tiledims_file);
-	
-	m_fwrite(&null_value, 1, invalid_file);
+	m_fwrite(&task->tiledims, md->tiledims_sizeof, tiledims_file);
 
-	m_fwrite(&null_value, 1, duplicates_file);
+	m_fwrite(&null_value, md->invalid_sizeof, invalid_file);
+	m_fwrite(&null_value, md->duplicates_sizeof, duplicates_file);
 
 	// the content is just written for updating ".lastmodified"s modified timestamp
-	m_fwrite(&task->lastmodified, sizeof(time_t),  lastmodified_file);
+	m_fwrite(&task->lastindexed, md->lastindexed_sizeof,  lastindexed_file);
 
-	m_fwrite(&ff_value, sizeof(ff_value), tileoffsets_file);
-	m_fwrite(&ff_value, sizeof(ff_value), tileoffsets_file);
+	uint8_t ff_value[2] = {0xFF, 0xFF};
+	m_fwrite(&ff_value, md->tileoffsets_sizeof, tileoffsets_file);
 
 
 	m_fclose( imagecolors_file );
@@ -312,9 +276,8 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	m_fclose( tiledims_file );
 	m_fclose( invalid_file );
 	m_fclose( duplicates_file );
-	m_fclose( lastmodified_file );
+	m_fclose( lastindexed_file );
 	m_fclose( tileoffsets_file );
-
 
 	//print_usage("unflock");
 	if (flock(lockfile_fd, LOCK_UN) == -1) {
@@ -346,29 +309,17 @@ void mosaik2_index_add_tiler_pid(mosaik2_context *ctx, pid_t pid) {
 }
 
 void mosaik2_index_clean_tiler_pids(mosaik2_context *ctx) {
-	//print_usage("clean0");
 		usleep(10000);
-	//print_usage("clean1");
-	
 	for(int i=0;i<10; i++) {
 		if(ctx->pids[i]>0) {
 			int status;
-			//fprintf(stdout, "%i check pid %i\n", getpid(),ctx->pids[i]);
-			//pid_t child_pid = waitpid(-1, &status, WUNTRACED | WCONTINUED);
-			
 			pid_t child_pid = waitpid(ctx->pids[i], &status, WNOHANG);
-			//fprintf(stdout, "%i check pid %i return_pid:%i\n", getpid(),ctx->pids[i], child_pid);
 
 			if(child_pid == 0)
 				continue; //still running
 			if(child_pid == ctx->pids[i]) {
-
-			//if(WIFEXITED(status)) printf("%i exited:%d\n", getpid(), child_pid);
-			//if(WIFSIGNALED(status)) printf("%i wifsignaled %d\n", getpid(), child_pid);
-				
 				ctx->pids[i]=0;
 				ctx->current_tiler_processes--;
-				
 			} else if(child_pid == -1) {
 				fprintf(stdout, "%i check pid %i\n", getpid(),ctx->pids[i]);
 				ctx->pids[i]=0;
@@ -379,49 +330,10 @@ void mosaik2_index_clean_tiler_pids(mosaik2_context *ctx) {
 			}
 		}
 	}
-	//print_usage("clean2");
-			/*if(child_pid==-1)perror("child_pid");
-			fprintf(stdout, "%i waitpid return value:%i,child_pid:%i\n", getpid(), ctx->pids[i], child_pid);
-			continue;
-			if(child_pid == ctx->pids[i]) {
-				fprintf(stdout, "%i child state has changed ctx->pids[%i]:%i child_pid:%i\n", getpid(), i, ctx->pids[i], child_pid);
-			} else if(child_pid==0) {
-				fprintf(stdout, "%i child state has not changed\n", getpid());
-			}
-			//fprintf(stdout, "%i check pid2 %i %i\n", getpid(),ctx->pids[i]);
-			if(child_pid == -1) {
-				fprintf(stdout,"%i waitpid=-1\n", getpid());
-				ctx->pids[i]=0;
-				ctx->current_tiler_processes--;
-				continue;
-				//exit(EXIT_FAILURE);
-			}
-			//printf("%i waitpid() returned: PID=%ld; status=0x%04x (%d,%d)\n",
-			//	getpid(),(long) child_pid,
-			//	(unsigned int) status, status >> 8, status & 0xff);	
-			if(WIFEXITED(status)) {
-				ctx->pids[i]=0;
-				ctx->current_tiler_processes--;
-				//printf("%i exited:%d\n", getpid(), child_pid);
-			}
-			if(WIFSIGNALED(status))
-				printf("%i wifsignaled %d\n", getpid(), child_pid);
-		}*/
 }
 
-/*void signal_handler(int signal) {
-	if(signal == SIGINT) {
-		printf("SIGINT catched, do not exit\n");
-	}
-	if(signal==SIGUSR1) {
-		fprintf(stdout, "parent SIGUSR1 received\n");
+static void sigHandler(int sig) {
+	if(sig==SIGINT) {
+		exiting = 1;
 	}
 }
-*/
-
-	static void sigHandler(int sig) {
-	//	printf("%i %i sigHandler sig:%i\n", getppid(), getpid(), sig);
-		if(sig==SIGINT) {
-			exiting = 1;
-		}
-	}
