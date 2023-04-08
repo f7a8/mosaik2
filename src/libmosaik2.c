@@ -33,8 +33,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( (*md).tiledims_filename,0,256);
 	memset( (*md).invalid_filename,0,256);
 	memset( (*md).duplicates_filename,0,256);
-	memset( (*md).tilecount_filename,0,256);
-	memset( md->tilecount_filename, 0, 256);
+	memset( (*md).database_image_resolution_filename,0,256);
+	memset( md->database_image_resolution_filename, 0, 256);
 	memset( md->id_filename, 0, 256);
 	memset( md->id,0, 14);
 	memset( md->version_filename, 0, 256);
@@ -89,8 +89,8 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( (*md).duplicates_filename,thumbs_db_name,l);
 	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
-	strncpy( (*md).tilecount_filename,thumbs_db_name,l);
-	strncat( (*md).tilecount_filename,"/tilecount.txt",14);
+	strncpy( (*md).database_image_resolution_filename,thumbs_db_name,l);
+	strncat( (*md).database_image_resolution_filename,"/tilecount.txt",14);
 
 	strncpy( (*md).id_filename,thumbs_db_name,l);
 	strncat( (*md).id_filename,"/id.txt",7);
@@ -384,11 +384,11 @@ uint32_t read_thumbs_db_count(mosaik2_database *md) {
 }
 
 uint8_t read_thumbs_conf_tilecount(mosaik2_database *md) {
-	FILE *thumbs_conf_tilecount_file = m_fopen(md->tilecount_filename, "rb");
+	FILE *thumbs_conf_tilecount_file = m_fopen(md->database_image_resolution_filename, "rb");
     	char buf[4];
 	char *rbuf = fgets( buf, 4, thumbs_conf_tilecount_file );
 	if(rbuf==NULL) {
-		fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->tilecount_filename);
+		fprintf(stderr, "thumbs db file (%s) could not be read correctly\n", md->database_image_resolution_filename);
 		m_fclose( thumbs_conf_tilecount_file );
 		exit(EXIT_FAILURE);
 	}
@@ -611,7 +611,7 @@ size_t read_thumbs_db_size(mosaik2_database *md) {
 		+ get_file_size( md->tiledims_filename)
 		+ get_file_size( md->invalid_filename)
 		+ get_file_size( md->duplicates_filename)
-		+ get_file_size( md->tilecount_filename)
+		+ get_file_size( md->database_image_resolution_filename)
 		+ get_file_size( md->id_filename)
 		+ get_file_size( md->version_filename)
 		+ get_file_size( md->readme_filename)
@@ -678,7 +678,7 @@ void check_thumbs_db(mosaik2_database *md) {
 	m_access( md->tiledims_filename, F_OK );
 	m_access( md->invalid_filename, F_OK );
 	m_access( md->duplicates_filename, F_OK );
-	m_access( md->tilecount_filename, F_OK );
+	m_access( md->database_image_resolution_filename, F_OK );
 	m_access( md->lock_filename, F_OK);
 	m_access( md->lastmodified_filename, F_OK) ;
 	m_access( md->tileoffsets_filename, F_OK);

@@ -104,14 +104,14 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.image_index_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.invalid_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.duplicates_filename, 1, args->verbose);
-	create_mosaik2_database_file(md.tilecount_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.database_image_resolution_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lock_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastmodified_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tileoffsets_filename, 1, args->verbose);
 
 	create_mosaik2_database_file_id(md.id_filename, args->verbose);
 	create_mosaik2_database_file_int(md.version_filename, MOSAIK2_DATABASE_FORMAT_VERSION, args->verbose);
-	create_mosaik2_database_file_int(md.tilecount_filename, tilecount, args->verbose);
+	create_mosaik2_database_file_int(md.database_image_resolution_filename, tilecount, args->verbose);
 	create_mosaik2_database_file_readme(md.readme_filename, args->verbose);
 
 	return 0;

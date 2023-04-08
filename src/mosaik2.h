@@ -140,7 +140,7 @@ struct mosaik2_database_struct {
 	char tiledims_filename[256];
 	char invalid_filename[256];
 	char duplicates_filename[256];
-	char tilecount_filename[256];
+	char database_image_resolution_filename[256];
 	char id_filename[256];
 	char id[14];
 	size_t id_len;
