@@ -6,7 +6,7 @@ You may want to have a look at the [README](https://github.com/f7a8/mosaik2/blob
 
 ### Examples
 
-160k unique Waifu images assambled to a big image. Deep zoom [version](https://f7a8.github.io/mosaik2_web/).
+160k unique Waifu images compiled to a ~2 gigapixel mosaic. Deep zoom [version](https://f7a8.github.io/mosaik2_web/).
 ![waifu_533x300_cropped.jpeg](https://f7a8.github.io/mosaik2_web/assets/waifu_533x300_cropped_small.jpeg)
 Waifu mosaics are from [thiswaifudoesnotexist.com](https://www.thiswaifudoesnotexist.net/) under CC-0 license. 
 
