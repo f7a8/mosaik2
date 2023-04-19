@@ -17,9 +17,8 @@
 #define MODE_DUPLICATES 4
 #define MODE_INVALID 5
 #define MODE_INFO 6
-#define MODE_XINFO 7
-#define MODE_CROP 8
-#define MODE_COUNT 9
+#define MODE_CROP 7
+#define MODE_COUNT 8
 
 void print_usage();
 void print_help();
@@ -193,7 +192,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
 	|| (mode == MODE_INVALID    && marg != 2)
 	|| (mode == MODE_INFO       && (marg < 2 || marg > 3))
-	|| (mode == MODE_XINFO       && (marg < 2 || marg > 3))
 	|| (mode == MODE_CROP        && marg != 2);
 
 	if(invalid) {
@@ -245,19 +243,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 				args->src_image = argv[optind+1];
-				args->mosaik2db = argv[optind+2];
-			} else {
-				args->mosaik2db = argv[optind+1];
-			}
-			break;
-		case MODE_XINFO:
-
-			if(marg==3) {
-				if( args->has_element_number) {
-					print_usage();
-					exit(EXIT_FAILURE);
-				}
-				args->dest_image = argv[optind+1];
 				args->mosaik2db = argv[optind+2];
 			} else {
 				args->mosaik2db = argv[optind+1];
