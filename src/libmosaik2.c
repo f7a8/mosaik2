@@ -50,78 +50,75 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
 
 	strncpy( (*md).imagecolors_filename,thumbs_db_name,l);
-	strncat( (*md).imagecolors_filename, "/imagecolors.bin",16);
+	strcat( (*md).imagecolors_filename, "/imagecolors.bin");
 
 	strncpy( (*md).imagestddev_filename,thumbs_db_name,l);
-	strncat( (*md).imagestddev_filename,"/imagestddev.bin",16);
+	strcat( (*md).imagestddev_filename,"/imagestddev.bin");
 
 	strncpy( (*md).imagedims_filename,thumbs_db_name,l);
-	strncat( (*md).imagedims_filename,"/imagedims.bin",14);
+	strcat( (*md).imagedims_filename,"/imagedims.bin");
 
 	strncpy( (*md).image_index_filename,thumbs_db_name,l);
-	strncat( (*md).image_index_filename,"/image.idx",10);
+	strcat( (*md).image_index_filename,"/image.idx");
 
 	strncpy( (*md).filenames_filename,thumbs_db_name,l);
-	strncat( (*md).filenames_filename,"/filenames.txt",14);
+	strcat( (*md).filenames_filename,"/filenames.txt");
 
 	strncpy( (*md).filenames_index_filename,thumbs_db_name,l);
-	strncat( (*md).filenames_index_filename,"/filenames.idx",14);
+	strcat( (*md).filenames_index_filename,"/filenames.idx");
 
 	strncpy( (*md).filehashes_filename,thumbs_db_name,l);
-	strncat( (*md).filehashes_filename,"/filehashes.bin",15);
+	strcat( (*md).filehashes_filename,"/filehashes.bin");
 
 	strncpy( (*md).filehashes_index_filename,thumbs_db_name,l);
-	strncat( (*md).filehashes_index_filename,"/filehashes.idx",15);
+	strcat( (*md).filehashes_index_filename,"/filehashes.idx");
 
 	strncpy( (*md).timestamps_filename,thumbs_db_name,l);
-	strncat( (*md).timestamps_filename,"/timestamps.bin",15);
+	strcat( (*md).timestamps_filename,"/timestamps.bin");
 
 	strncpy( (*md).filesizes_filename,thumbs_db_name,l);
-	strncat( (*md).filesizes_filename,"/",1);
-	strncat( (*md).filesizes_filename,"filesizes.bin",13);
+	strcat( (*md).filesizes_filename,"/filesizes.bin");
 
 	strncpy( (*md).tiledims_filename,thumbs_db_name,l);
-	strncat( (*md).tiledims_filename,"/",1);
-	strncat( (*md).tiledims_filename,"tiledims.bin",12);
+	strcat( (*md).tiledims_filename,"/tiledims.bin");
 
 	strncpy( (*md).invalid_filename,thumbs_db_name,l);
-	strncat( (*md).invalid_filename,"/",1);
-	strncat( (*md).invalid_filename,"invalid.bin",11);
-	
+	strcat( (*md).invalid_filename,"/invalid.bin");
+
 	strncpy( (*md).duplicates_filename,thumbs_db_name,l);
-	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
+	strcat( (*md).duplicates_filename,"/duplicates.bin");
 
 	strncpy( (*md).database_image_resolution_filename,thumbs_db_name,l);
-	strncat( (*md).database_image_resolution_filename,"/database_image_resolution.bin",30);
+	strcat( (*md).database_image_resolution_filename,"/database_image_resolution.bin");
 
 	strncpy( (*md).id_filename,thumbs_db_name,l);
-	strncat( (*md).id_filename,"/id.txt",7);
+	strcat( (*md).id_filename,"/id.txt");
 
 	(*md).id_len = 14;
 
 	strncpy( md->version_filename,thumbs_db_name,l);
-	strncat( md->version_filename,"/dbversion.txt",14);
+	strcat( md->version_filename,"/dbversion.txt");
 
 	strncpy( md->readme_filename,thumbs_db_name,l);
-	strncat( md->readme_filename,"/README.txt",11);
+	strcat( md->readme_filename,"/README.txt");
 
 	strncpy( md->pid_filename,thumbs_db_name,l);
-	strncat( md->pid_filename,"/mosaik2.pid",12);
+	strcat( md->pid_filename,"/mosaik2.pid");
 
 	strncpy( md->lock_filename, thumbs_db_name, l);
-	strncat( md->lock_filename, "/.lock", 6);
+	strcat( md->lock_filename, "/.lock");
 
 	strncpy( md->lastmodified_filename, thumbs_db_name, l);
-	strncat( md->lastmodified_filename, "/.lastmodified", 14); 
+	strcat( md->lastmodified_filename, "/.lastmodified");
 
 	strncpy( md->tileoffsets_filename, thumbs_db_name, l);
-	strncat( md->tileoffsets_filename, "/tileoffsets.bin", 16);
-	
+	strcat( md->tileoffsets_filename, "/tileoffsets.bin");
+
 	strncpy( md->lastindexed_filename, thumbs_db_name, l);
-	strncat( md->lastindexed_filename, "/.lastindexed", 13);
+	strcat( md->lastindexed_filename, "/.lastindexed");
 
 	strncpy( md->createdat_filename, thumbs_db_name, l);
-	strncat( md->createdat_filename, "/.createdat", 11);
+	strcat( md->createdat_filename, "/.createdat");
 
 	md->imagestddev_sizeof = 3;
 	md->imagecolors_sizeof = 3;
@@ -147,35 +144,35 @@ void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *
 
 
 	strncpy(mp->dest_filename, dest_filename, dest_filename_len);
-	
+
 	char *thumbs_db_ending=".mtileres";
 	size_t thumbs_db_ending_len = strlen(thumbs_db_ending);
 
 	memset(mp->dest_primarytiledims_filename, 0, 256);
 	strncpy(mp->dest_primarytiledims_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_primarytiledims_filename, ".", 1);
+	strcat(mp->dest_primarytiledims_filename, ".");
 	strncat(mp->dest_primarytiledims_filename, mosaik2_database_id, mosaik2_database_id_len);
 	strncat(mp->dest_primarytiledims_filename, thumbs_db_ending, thumbs_db_ending_len);
 
 	memset(mp->dest_imagedims_filename, 0, 256);
 	strncpy(mp->dest_imagedims_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_imagedims_filename, ".imagedims.txt", 14);
- 
+	strcat(mp->dest_imagedims_filename, ".imagedims.txt");
+
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
 	thumbs_db_ending_len = strlen(thumbs_db_ending);
 	strncpy(mp->dest_result_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_result_filename, ".", 1);
+	strcat(mp->dest_result_filename, ".");
 	strncat(mp->dest_result_filename, mosaik2_database_id, mosaik2_database_id_len);
 	strncat(mp->dest_result_filename, thumbs_db_ending, thumbs_db_ending_len);
 
 	memset(mp->dest_html_filename, 0, 256);
 	strncpy(mp->dest_html_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_html_filename, ".html", 5);
-	
+	strcat(mp->dest_html_filename, ".html");
+
 	memset(mp->dest_src_filename, 0, 256);
 	strncpy(mp->dest_src_filename, mp->dest_filename, dest_filename_len);
-	strncat(mp->dest_src_filename, ".src", 4);
+	strcat(mp->dest_src_filename, ".src");
 }
 
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height) {
@@ -386,12 +383,12 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 	memset(dest, '\0', dest_len);
 					fprintf(stderr, "6\n");
 	//strncpy(dest, commons_prefix, commons_prefix_len);
-	strncpy(dest,"[[File:", 7);
+	strcpy(dest,"[[File:");
 					fprintf(stderr, "7\n");
 					fprintf(stderr, "dest %s common_prefix_len %i filename %s filename_len %lu dest_len %i \n", dest, commons_prefix_len, filename, filename_len, dest_len);
 //	sprintf(dest + commons_prefix_len, filename, filename_len); 
 	strncpy(dest + 7, filename, filename_len);
-	strncpy(dest + 7 + filename_len, "|50px]]", 7);
+	strcpy(dest + 7 + filename_len, "|50px]]");
 					fprintf(stderr, "8\n");
 }
 
