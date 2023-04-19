@@ -383,12 +383,12 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 	memset(dest, '\0', dest_len);
 					fprintf(stderr, "6\n");
 	//strncpy(dest, commons_prefix, commons_prefix_len);
-	strncpy(dest,"[[File:", 7);
+	strcpy(dest,"[[File:");
 					fprintf(stderr, "7\n");
 					fprintf(stderr, "dest %s common_prefix_len %i filename %s filename_len %lu dest_len %i \n", dest, commons_prefix_len, filename, filename_len, dest_len);
 //	sprintf(dest + commons_prefix_len, filename, filename_len); 
 	strncpy(dest + 7, filename, filename_len);
-	strncpy(dest + 7 + filename_len, "|50px]]", 7);
+	strcpy(dest + 7 + filename_len, "|50px]]");
 					fprintf(stderr, "8\n");
 }
 
