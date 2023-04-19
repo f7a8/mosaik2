@@ -92,7 +92,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncat( (*md).duplicates_filename,"/duplicates.bin",15);
 
 	strncpy( (*md).database_image_resolution_filename,thumbs_db_name,l);
-	strncat( (*md).database_image_resolution_filename,"/database_image_resolution.txt",30);
+	strncat( (*md).database_image_resolution_filename,"/database_image_resolution.bin",30);
 
 	strncpy( (*md).id_filename,thumbs_db_name,l);
 	strncat( (*md).id_filename,"/id.txt",7);
@@ -1389,6 +1389,9 @@ void m_fread(void *buf, size_t nmemb, FILE *stream) {
 	size_t bytes_read = fread(buf, 1, nmemb, stream);
 	if(nmemb != bytes_read) {
 		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data\n", bytes_read, nmemb);
+		char* filename = get_file_name(stream);
+		fprintf(stderr, "filename: %s\n", filename);
+		free(filename);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -1639,3 +1642,21 @@ int min_heap_peek(Heap *h, mosaik2_database_candidate *d) {
 	return 1;
 }
 /* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
+
+char* get_file_name(FILE *file) {
+	int fno = fileno(file);
+	char* filename =  m_malloc(0xFFF);
+	int MAXSIZE = 0xFFF;
+	ssize_t r;
+	char proclnk[0xFFF];
+	sprintf(proclnk, "/proc/self/fd/%d", fno);
+
+	r = readlink(proclnk, filename, MAXSIZE);
+	if (r < 0) {
+		perror("failed to readlink");
+
+		exit(EXIT_FAILURE);
+	}
+	filename[r] = '\0';
+	return filename;
+}

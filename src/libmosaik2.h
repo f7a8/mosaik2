@@ -165,4 +165,4 @@ int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
 int min_heap_pop(Heap* h, mosaik2_database_candidate *k);
 int min_heap_peek(Heap *h, mosaik2_database_candidate *k);
 /* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
-
+char* get_file_name(FILE *file);
