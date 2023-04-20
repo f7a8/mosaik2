@@ -202,7 +202,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					//NEW TIMESTAMP, SAME SIZE? LET'S COMAPARE THE HASH FOR BEING SURE
 					if(debug) printf("no changed filesize\n");
 					
-					//MAKE A HASH COMPARE
+					//MAKE A MD5 HASH COMPARE
 						
 					uint8_t old_hash[MD5_DIGEST_LENGTH];
 					m_fseeko(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET);
@@ -213,19 +213,24 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					size_t bytes;
 					unsigned char new_hash[MD5_DIGEST_LENGTH];
 					
-					MD5_CTX md5_ctx;
-					if( MD5_Init(&md5_ctx) != 1) {
-						fprintf(stderr, "could not init md5 context\n");
+					EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+					if(mdctx==NULL) {
+						fprintf(stderr, "could not create digest context\n");
+						exit(EXIT_FAILURE);
+					}
+					if(!EVP_DigestInit_ex(mdctx, EVP_md5(), NULL)) {
+						fprintf(stderr, "could not create digest context\n");
 						exit(EXIT_FAILURE);
 					}
 					while ((bytes = fread(image_data, 1, BUFSIZ, image_file)) != 0) {
-						if( MD5_Update (&md5_ctx, image_data, bytes)  == 0 ) {
-							fprintf(stderr, "error md5_update for element %li\n", j);
+						if(!EVP_DigestUpdate(mdctx, image_data, bytes)) {
+							fprintf(stderr, "error update digest for element %li\n", j);
 							exit(EXIT_FAILURE);
 						}
 					}
-					if( MD5_Final(new_hash, &md5_ctx) == 0 ) {
-						fprintf(stderr, "error md5_final for element %li\n", j);
+					unsigned int md5_digest_length = MD5_DIGEST_LENGTH;
+					if(!EVP_DigestFinal_ex(mdctx, new_hash, &md5_digest_length)) {
+						fprintf(stderr, "error digestfinal for element %li\n", j);
 						exit(EXIT_FAILURE);
 					}
 					m_fclose(image_file);

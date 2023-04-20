@@ -11,7 +11,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <math.h>
-#include <openssl/md5.h>
+#include <openssl/evp.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,7 +26,7 @@
 #include <time.h>
 #include <unistd.h>
 
-
+#define MD5_DIGEST_LENGTH 16
 
 #include <gd.h>
 #include <libexif/exif-data.h>

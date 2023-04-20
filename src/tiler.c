@@ -47,10 +47,24 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	task->tiledims[1]= ti.tile_y_count;
 	task->total_tile_count = ti.total_tile_count;
 
-	MD5_CTX md5;
-	MD5_Init (&md5);
-	MD5_Update (&md5, buffer, file_size);
-	MD5_Final ( task->hash, &md5);
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+	if( mdctx==NULL ) {
+		fprintf(stderr, "could not create digest context\n");
+		exit(EXIT_FAILURE);
+	}
+	if(!EVP_DigestInit_ex(mdctx, EVP_md5(), NULL)) {
+		fprintf(stderr, "could not iit digest content\n");
+		exit(EXIT_FAILURE);
+	}
+	if(!EVP_DigestUpdate(mdctx, buffer, file_size)) {
+		fprintf(stderr, "could not update digest\n");
+		exit(EXIT_FAILURE);
+	}
+	unsigned int md5_digest_length = MD5_DIGEST_LENGTH;
+	if(!EVP_DigestFinal_ex(mdctx, task->hash, &md5_digest_length)) {
+		fprintf(stderr, "could finish digest\n");
+		exit(EXIT_FAILURE);
+	}
 
 	//check if already indexed TODO
 
