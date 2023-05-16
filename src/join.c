@@ -208,7 +208,8 @@ if(debug) fprintf(stderr, "init\n");
 
 	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
 	char mkdir_buf[sz+1];
-	snprintf(mkdir_buf, 0, "%s/.mosaik2/mosaik2.hash",home);
+	memset(mkdir_buf,0,sz+1);
+	snprintf(mkdir_buf, sz+1, "%s/.mosaik2/mosaik2.hash",home);
 	char *mkdir_path = dirname(mkdir_buf);
 	if(access(mkdir_path, W_OK)!=0) {
 		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
