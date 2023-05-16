@@ -213,7 +213,11 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					size_t bytes;
 					unsigned char new_hash[MD5_DIGEST_LENGTH];
 					
+					#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 					EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+					#else
+					EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
+					#endif
 					if(mdctx==NULL) {
 						fprintf(stderr, "could not create digest context\n");
 						exit(EXIT_FAILURE);
@@ -233,6 +237,11 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 						fprintf(stderr, "error digestfinal for element %li\n", j);
 						exit(EXIT_FAILURE);
 					}
+					#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+					EVP_MD_CTX_free(mdctx);
+					#else
+					EVP_MD_CTX_destroy(mdctx);
+					#endif
 					m_fclose(image_file);
 
 					if( memcmp(new_hash, old_hash, MD5_DIGEST_LENGTH) == 0 ) {

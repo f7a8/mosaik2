@@ -47,7 +47,12 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	task->tiledims[1]= ti.tile_y_count;
 	task->total_tile_count = ti.total_tile_count;
 
+
+	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+	#else
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
+	#endif
 	if( mdctx==NULL ) {
 		fprintf(stderr, "could not create digest context\n");
 		exit(EXIT_FAILURE);
@@ -65,6 +70,11 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 		fprintf(stderr, "could finish digest\n");
 		exit(EXIT_FAILURE);
 	}
+	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	EVP_MD_CTX_free(mdctx);
+	#else
+	EVP_MD_CTX_destroy(mdctx);
+	#endif
 
 	//check if already indexed TODO
 
