@@ -36,7 +36,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( (*md).database_image_resolution_filename,0,256);
 	memset( md->database_image_resolution_filename, 0, 256);
 	memset( md->id_filename, 0, 256);
-	memset( md->id,0, 14);
+	memset( md->id, 0, 17);
 	memset( md->version_filename, 0, 256);
 	memset( md->readme_filename, 0, 256);
 	memset( md->pid_filename, 0, 256);
@@ -94,7 +94,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( (*md).id_filename,thumbs_db_name,l);
 	strcat( (*md).id_filename,"/id.txt");
 
-	(*md).id_len = 14;
+	(*md).id_len = 16;
 
 	strncpy( md->version_filename,thumbs_db_name,l);
 	strcat( md->version_filename,"/dbversion.txt");
