@@ -1,6 +1,6 @@
 
 COMPILER=gcc
-CFLAGS=-g  -Wall -march=native -mtune=native
+CFLAGS=-O3 -Wall -march=native -mtune=native
 MOSAIK2LIBS=src/libmosaik2.c src/libmosaik2.h src/mosaik2.h
 
 all: bin/ bin/mosaik2

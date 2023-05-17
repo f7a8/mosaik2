@@ -22,6 +22,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	char *dest_filename = args->dest_image;
 	int ratio = args->color_stddev_ratio;
 	int unique = args->unique;
+	int fast_unique = args->fast_unique;
 	char *mosaik2_db_name = args->mosaik2db;
 	uint8_t debug = 0;
 	uint8_t debug1 = 0;
@@ -60,7 +61,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	uint32_t candidates_insert=0;
 	uint32_t candidates_pop=0;
 	uint32_t candidates_toobad=0;
-	float diff_best=FLT_MAX, diff_worst=0;
+	float diff_best=FLT_MAX,diff_improv=FLT_MIN,diff_worst=0;
 
 	FILE *mosaik2_result;
 	float candidate_best_costs = FLT_MAX, candidate_worst_costs=0;
@@ -96,7 +97,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	image_ratio = ratio / 100;
 	stddev_ratio = 1.0 - image_ratio;
 
-	mosaik2_project mp = {.ratio = ratio, .unique = unique, .primary_tile_count = primary_tile_count};
+	mosaik2_project mp = {.ratio = ratio, .unique = unique, .fast_unique = fast_unique, .primary_tile_count = primary_tile_count};
 
 	init_mosaik2_project(&mp, md.id, dest_filename);
 
@@ -127,7 +128,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", ti.image_width, ti.image_height, ti.primary_tile_x_count, ti.primary_tile_y_count, ti.total_primary_tile_count, ti.tile_x_count, ti.tile_y_count, ti.lx, ti.ly, ti.offset_x, ti.offset_y, ti.pixel_per_primary_tile, ti.pixel_per_tile);
 
 	valid_md_element_count = read_thumbs_db_valid_count(&md);
-	needed_md_element_count = unique ? ti.total_primary_tile_count : 1;
+	needed_md_element_count = unique || fast_unique? ti.total_primary_tile_count : 1;
 	if( valid_md_element_count < needed_md_element_count ) {
 		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_md_element_count, unique ? "for unique ":"", needed_md_element_count);
 		exit(EXIT_FAILURE);
@@ -146,7 +147,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	total_candidates_count = ti.total_primary_tile_count * max_candidates_len;
 
 	if (debug)
-		fprintf(stdout, "max_candidates_len:%li, total_candidates_count:%li\n", max_candidates_len, total_candidates_count);
+		fprintf(stderr, "max_candidates_len:%li, total_candidates_count:%li\n", max_candidates_len, total_candidates_count);
 
 	Heap heap[SIZE_PRIMARY];
 	memset(&heap, 0, sizeof(heap));
@@ -336,7 +337,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	memset(& candidates_pop_uniqueness,0, sizeof(candidates_pop_uniqueness));
 	memset(&candidates_elect,0,sizeof(candidates_elect));
 
-	int32_t percent = -1;
+	int32_t old_percent = -1;
+	time_t old_time = 0;
+
 	while (1) {
 		size_t len = fread(invalid_buf, 1, BUFSIZ / 2, thumbs_db_invalid_file);
 		if (len == 0) {
@@ -363,8 +366,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 			uint8_t thumbs_db_tile_x_count = tile_dims_buf[i];
 			uint8_t thumbs_db_tile_y_count = tile_dims_buf[i + 1];
-			unsigned char thumbs_db_tileoffset_x = tileoffsets_buf[i];
-			unsigned char thumbs_db_tileoffset_y = tileoffsets_buf[i + 1];
+			uint8_t thumbs_db_tileoffset_x = tileoffsets_buf[i];
+			uint8_t thumbs_db_tileoffset_y = tileoffsets_buf[i + 1];
 			int thumbs_db_tileoffsets_unset = thumbs_db_tileoffset_x == 0xFF && thumbs_db_tileoffset_y == 0xFF;
 
 			uint32_t thumbs_db_total_tile_count = thumbs_db_tile_x_count * thumbs_db_tile_y_count;
@@ -373,12 +376,12 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 				float new_percent_f = idx / (thumbs_count * 1.0);
 				uint8_t new_percent = round(new_percent_f * 100);
+				time_t new_time = time(NULL);
 
-				if (new_percent != percent) {
-					time_t now;
-					time(&now);
-					percent = new_percent;
-					printf("%3i%%, %u/%u %s", percent, idx, thumbs_count, ctime(&now));
+				if (new_percent != old_percent && new_time != old_time) {
+					old_percent = new_percent;
+					old_time = new_time;
+					printf("%3i%%, %u/%u %s", old_percent, idx, thumbs_count, ctime(&new_time));
 				}
 			}
 
@@ -423,18 +426,24 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			}
 
 
-			mosaik2_database_candidate mdc0, mdc_best, mdc_worst;
+			mosaik2_database_candidate mdc0, mdc_best_shift, mdc_improv, mdc_worst;
+			memset(&mdc_best_shift, 0, sizeof(mdc_best_shift));
+			memset(&mdc_improv, 0, sizeof(mdc_improv));
+			memset(&mdc_worst, 0, sizeof(mdc_worst));
+
+			mdc_best_shift.costs = FLT_MAX;
+			mdc_worst.costs = 0;
+			diff_improv = FLT_MIN;
+
 
 			for (uint32_t primary_y = 0; primary_y < ti.primary_tile_y_count; primary_y++) {
 				for (uint32_t primary_x = 0; primary_x < ti.primary_tile_x_count; primary_x++) {
 
 					uint32_t primary_tile_idx = ti.primary_tile_x_count * primary_y + primary_x;
 
-
-					memset(&mdc_best, 0, sizeof(mdc_best));
+					memset(&mdc_best_shift, 0, sizeof(mdc_best_shift));
 					memset(&mdc_worst, 0, sizeof(mdc_worst));
-
-					mdc_best.costs = FLT_MAX;
+					mdc_best_shift.costs = FLT_MAX;
 					mdc_worst.costs = 0;
 
 					for (uint8_t shift_y = shift_y_0; shift_y <= shift_y_len; shift_y++) {
@@ -535,8 +544,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 							// only the best shift will be saved for this candidate in this primary tile
 							// unique or none unique
-							if( mdc0.costs < mdc_best.costs) {
-								memcpy(&mdc_best, &mdc0, sizeof(mdc_best));
+							if( mdc0.costs < mdc_best_shift.costs) {
+								memcpy(&mdc_best_shift, &mdc0, sizeof(mdc_best_shift));
 							}
 							if( mdc0.costs > mdc_worst.costs ) {
 								memcpy(&mdc_worst, &mdc0, sizeof(mdc_worst));
@@ -544,36 +553,85 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 						}     // for shift_x
 					}       // for shift_y
 
-					if( mdc_worst.costs - mdc_best.costs > diff_worst )
-						diff_worst = mdc_worst.costs - mdc_best.costs;
-					if( mdc_worst.costs - mdc_best.costs < diff_best  &&( shift_x_0 < shift_x_len-1 || shift_y_0 < shift_y_len-1 )) // only if theres more than one shift..
-						diff_best = mdc_worst.costs - mdc_best.costs;
 
-					// THIS is the point where the calculated color difference
-					// is compared to the already stored ones.
-					// If its lower, it is more equal and it should be the new candidate
-					// if(diff_color0 < candidates_costs[primary_tile_idx] ) 
-					// worst costs is saved in the last position, and this position
-					// will expand from 0 to ti.total_primary_tile_count
-					mosaik2_database_candidate max_heap;
-					int empty = max_heap_peek( &heap[primary_tile_idx], &max_heap );
+					if( mdc_worst.costs - mdc_best_shift.costs > diff_worst ) {
+						diff_worst = mdc_worst.costs - mdc_best_shift.costs;
 
-					if(heap[primary_tile_idx].last < max_candidates_len || max_heap.costs > mdc_best.costs || empty == 1) {
-						if( heap[primary_tile_idx].count >= max_candidates_len ) {
-							mosaik2_database_candidate c;
-							max_heap_pop( &heap[primary_tile_idx], &c);
-							candidates_pop++;
+					}
+					if( mdc_worst.costs - mdc_best_shift.costs < diff_best  &&( shift_x_0 < shift_x_len-1 || shift_y_0 < shift_y_len-1 )) { // only if theres more than one shift.. .
+						diff_best = mdc_worst.costs - mdc_best_shift.costs;
+					}
+
+
+					if(fast_unique) {
+						mosaik2_database_candidate mdc_old_heap;
+						//memset(&mdc_old_heap,0,sizeof(mdc_old_heap));
+						int empty = max_heap_peek( &heap[primary_tile_idx], &mdc_old_heap );
+						if(empty)
+							mdc_old_heap.costs = FLT_MAX;
+						if(mdc_old_heap.costs - mdc_best_shift.costs >  diff_improv) {
+							//fprintf(stderr, "better found %i:%i => %f - %f > %f\n", mdc_old_heap.primary_tile_idx, mdc_best_shift.primary_tile_idx, mdc_old_heap.costs, mdc_best_shift.costs,  diff_improv);
+							diff_improv = mdc_old_heap.costs - mdc_best_shift.costs ;
+							memcpy(&mdc_improv, &mdc_best_shift, sizeof(mdc_improv));
 						}
-						candidates_insert++;
-						max_heap_insert(&heap[primary_tile_idx], &mdc_best);
+						/*fprintf(stderr,"idx:%4i ptidx:%4i  best_shift ptidx:%4i costs:%7.2f  maxheap ptidx:%4i costs:%7.2f  improv ptidx:%4i costs:%7.2f  diff_improv:%7.2f  %7.2f\n",
+								idx,
+								primary_tile_idx,
+								mdc_best_shift.primary_tile_idx,
+								mdc_best_shift.costs,
+								mdc_old_heap.primary_tile_idx,
+								mdc_old_heap.costs,
+								mdc_improv.primary_tile_idx,
+								mdc_improv.costs,
+								mdc_old_heap.costs - mdc_best_shift.costs,
+								diff_improv);*/
+
+					} else /* !fast_unique*/ {
+						// THIS is the point where the calculated color difference
+						// is compared to the already stored ones.
+						// If its lower, it is more equal and it should be the new candidate
+						// if(diff_color0 < candidates_costs[primary_tile_idx] )
+						// worst costs is saved in the last position, and this position
+						// will expand from 0 to ti.total_primary_tile_count
+						mosaik2_database_candidate max_heap;
+
+						int empty = max_heap_peek( &heap[primary_tile_idx], &max_heap );
+
+						if(heap[primary_tile_idx].last < max_candidates_len || max_heap.costs > mdc_best_shift.costs || empty == 1) {
+							if( heap[primary_tile_idx].count >= max_candidates_len ) {
+								mosaik2_database_candidate c;
+								max_heap_pop( &heap[primary_tile_idx], &c);
+								candidates_pop++;
+							}
+							candidates_insert++;
+							max_heap_insert(&heap[primary_tile_idx], &mdc_best_shift);
+						}
+						else {
+							candidates_toobad++;
+						}
 					}
-					else {
-						candidates_toobad++;
+				}// for primary_x
+			}// for primary_y
+
+			if(fast_unique) {
+				mosaik2_database_candidate max_heap;
+				int empty = max_heap_peek( &heap[mdc_improv.primary_tile_idx], &max_heap );
+				if( !empty ) {
+					if(max_heap.costs > mdc_improv.costs) {
+						if(debug)fprintf(stderr,"insert OK- idx:%i pti:%i costs:%f\n",idx, mdc_improv.primary_tile_idx, mdc_improv.costs);
+						//remove old candidate
+						max_heap_pop(  &heap[ mdc_improv.primary_tile_idx ], NULL );
+						max_heap_insert( &heap[ mdc_improv.primary_tile_idx ], &mdc_improv );
+					} else {
+						if(debug)fprintf(stderr,"insert NO  idx:%i pti:%i costs:%f\n",idx, mdc_improv.primary_tile_idx, mdc_improv.costs);
 					}
-					// better candidate found
-				}         // for primary_x
-			}           // for primary_y
-		}             // for idx
+				} else {
+					if(debug)fprintf(stderr,"insert OK+ idx:%i pti:%i costs:%f\n",idx, mdc_improv.primary_tile_idx, mdc_improv.costs);
+					max_heap_insert( &heap[ mdc_improv.primary_tile_idx ], &mdc_improv );
+				}
+			}
+
+		}// for idx
 
 		if (len < BUFSIZ) {
 			break;

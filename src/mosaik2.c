@@ -17,9 +17,8 @@
 #define MODE_DUPLICATES 4
 #define MODE_INVALID 5
 #define MODE_INFO 6
-#define MODE_XINFO 7
-#define MODE_CROP 8
-#define MODE_COUNT 9
+#define MODE_CROP 7
+#define MODE_COUNT 8
 
 void print_usage();
 void print_help();
@@ -68,7 +67,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	
 	int modes_used[] = {0,0,0,0,0,0,0,0,0};
 
-	char *all_options = "dD:he:ij:l:nqp:r:R:st:uvVy?";
+	char *all_options = "dD:he:ij:l:nqp:r:R:st:uUvVy?";
 
 	int opt;
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
@@ -124,6 +123,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 				args->has_num_tiles = 1;
 								break;
 			case 'u': args->unique = 1;
+								modes_used[MODE_GATHERING]++;
+								break;
+			case 'U': args->fast_unique = 1;
 								modes_used[MODE_GATHERING]++;
 								break;
 			case 'v': print_version(); exit(EXIT_SUCCESS); 
@@ -190,7 +192,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
 	|| (mode == MODE_INVALID    && marg != 2)
 	|| (mode == MODE_INFO       && (marg < 2 || marg > 3))
-	|| (mode == MODE_XINFO       && (marg < 2 || marg > 3))
 	|| (mode == MODE_CROP        && marg != 2);
 
 	if(invalid) {
@@ -209,10 +210,14 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		case MODE_GATHERING: 
 			args->dest_image = argv[optind+1];
 			args->mosaik2db = argv[optind+2];
+			if(args->unique>0 && args->fast_unique>0) {
+				print_usage();
+				exit(EXIT_FAILURE);
+			}
 			break;
 		case MODE_JOIN:
 			args->dest_image = argv[optind+1];
-      args->mosaik2dbs= &argv[optind+2];
+			args->mosaik2dbs= &argv[optind+2];
 			args->mosaik2dbs_count = marg-2;
 			break;
 		case MODE_DUPLICATES:
@@ -243,19 +248,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 				args->mosaik2db = argv[optind+1];
 			}
 			break;
-		case MODE_XINFO:
-
-			if(marg==3) {
-				if( args->has_element_number) {
-					print_usage();
-					exit(EXIT_FAILURE);
-				}
-				args->dest_image = argv[optind+1];
-				args->mosaik2db = argv[optind+2];
-			} else {
-				args->mosaik2db = argv[optind+1];
-			}
-			break;
 		case MODE_CROP:
 			args->mosaik2db = argv[optind+1];
 			break;
@@ -268,7 +260,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n,num_tiles = %i\n",
+		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n,num_tiles = %i\n",
               args->verbose ? "yes" : "no",
               args->quiet ? "yes" : "no",
 
@@ -277,15 +269,16 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->max_load,
               args->max_jobs,
               args->unique ? "yes" : "no",
+              args->fast_unique ? "yes" : "no",
               args->color_stddev_ratio,
               args->pixel_per_tile,
               args->duplicate_reduction ? "yes" : "no",
               args->symlink_cache ? "yes" : "no",
               args->ignore_old_invalids ? "yes" : "no",
               args->no_hash_cmp ? "yes" : "no",
-		args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
-			args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
-		args->num_tiles);
+              args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
+            		  args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
+              args->num_tiles);
 		if(args->has_element_number) {
 			fprintf(stderr, "element_number = %i\n", args->element_number);
 		} else {
@@ -303,7 +296,7 @@ void print_usage() {
 	fprintf(stdout, 
 "Usage: mosaik2 init       [-V|-q] [-r <PIXEL>] MOSAIK2DB\n"
 "  or:  mosaik2 index      [-V|-q] [-j <COUNT>] [-l <LOAD>] MOSAIK2DB < file-list\n"
-"  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image\n"
+"  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 join       [-V|-q] [-p <PIXEL>] [-s] [-d] dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
 "  or:  mosaik2 duplicates [-V|-q] [-i] [-y] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
 "  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <NUM>] MOSAIK2DB\n"
@@ -337,6 +330,7 @@ void print_help() {
 "  -s          Symlinks instead of file copies\n"
 "  -t NUM      Use NUM image tiles (default 20)\n"
 "  -u          Allow images only once (unique)\n"
+"  -U          Allow images only once (fast-unique)\n"
 "  -y          Dry run: does not change the database\n"
 "\n"
 "Website: https://f7a8.github.io/mosaik2/\n"

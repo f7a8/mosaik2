@@ -1,12 +1,12 @@
 //TODO check is db older than the result file?
-//TODO unique_tiles 
+//TODO unique_tiles
 
 /*
-      _
-     (_)      _       
-     | | ___ (_) _ _  
-	  _/ |/ _ \| || ' \
-	 |__/ \___/|_||_||_|
+    _
+   (_)      _
+   | | ___ (_) _ _
+  _/ |/ _ \| || ' \
+ |__/ \___/|_||_||_|
 */
 
 #include "libmosaik2.h"
@@ -208,7 +208,8 @@ if(debug) fprintf(stderr, "init\n");
 
 	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
 	char mkdir_buf[sz+1];
-	snprintf(mkdir_buf, 0, "%s/.mosaik2/mosaik2.hash",home);
+	memset(mkdir_buf,0,sz+1);
+	snprintf(mkdir_buf, sz+1, "%s/.mosaik2/mosaik2.hash",home);
 	char *mkdir_path = dirname(mkdir_buf);
 	if(access(mkdir_path, W_OK)!=0) {
 		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
@@ -324,7 +325,7 @@ if(debug) fprintf(stderr, "init\n");
 				char target[target_len];
 				memset(target, 0, target_len);
 				strncat(target, pwd, strlen(pwd));
-				strncat(target, "/", 1);
+				strcat(target, "/");
 				strncat(target, candidates[i].thumbs_db_filenames, strlen(candidates[i].thumbs_db_filenames));
 
 				int simlink = symlink(target, candidates[i].temp_filename);
@@ -341,7 +342,7 @@ if(debug) fprintf(stderr, "init\n");
 			CURL *curl_handle;
 			FILE *pagefile;
 			curl_global_init(CURL_GLOBAL_ALL);
- 
+
 			curl_handle = curl_easy_init();
 			//printf("[%s]\n", candidates[i].thumbs_db_filenames);
 			curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "mosaik2");
