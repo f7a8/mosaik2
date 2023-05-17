@@ -321,12 +321,19 @@ if(debug) fprintf(stderr, "init\n");
 			        candidates[i].md->thumbs_db_name, candidates[i].index,
 			        candidates[i].thumbs_db_filenames );
 			}
-				int target_len = strlen(pwd) + 1 + strlen(candidates[i].thumbs_db_filenames) + 1;
-				char target[target_len];
-				memset(target, 0, target_len);
-				strncat(target, pwd, strlen(pwd));
-				strcat(target, "/");
-				strncat(target, candidates[i].thumbs_db_filenames, strlen(candidates[i].thumbs_db_filenames));
+			
+			int absolute = candidates[i].thumbs_db_filenames[0] == '/' ;
+
+				int target_len = absolute ? strlen(candidates[i].thumbs_db_filenames) :  strlen(pwd) + 1 + strlen(candidates[i].thumbs_db_filenames);
+				char target[target_len+1];
+				memset(target, 0, target_len+1);
+				if(absolute)
+					strncat(target, candidates[i].thumbs_db_filenames, target_len);
+				else {
+					strncat(target, pwd, strlen(pwd));
+					strcat(target, "/");
+					strncat(target, candidates[i].thumbs_db_filenames, strlen(candidates[i].thumbs_db_filenames));
+				}
 
 				int simlink = symlink(target, candidates[i].temp_filename);
 				if(simlink != 0) {
