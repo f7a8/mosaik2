@@ -10,7 +10,7 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR index      [-V|-q] [-j <COUNT>] [-l <LOAD>] \fImosaik2db\fR < \fIfile-list\fR
 .PP
-\fBmosaik2\fR gathering  [-V|-q] [-t <NUM>] [-u] [-R <PERCENT>] [-D <DIST>] src-image \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
+\fBmosaik2\fR gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D <DIST>] src-image \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
 .br
 \fBmosaik2\fR join       [-V|-q] [-p <PIXEL>] [-s] [-d] \fIdest-image\fR \fImosaik2db\fR-0 [\fImosaik2db\fR-N ...]
 .PP
@@ -32,7 +32,7 @@ mosaik2 is a Command Line Interface program for Linux, especially designed for l
 .PP
 \fBinit\fR mode creates a new mosaik2 database directory with all necessary (mostly empty) files. It may be useful to create several database directories to reduce the amount of data per database using a suitable sorting criteria. Suitable can be for example the year, or a directory path of your source images. This allows you to run multiple indexing and gathering processes in simultaneously. Here the resolution of the images is set in the database and cannot be changed later.
 .PP
-The \fBindex\fR mode processes all input images from the file-list and saves the results to the mosaik2 database. The processing 
+The \fBindex\fR mode processes all input images from the file-list and saves the results to the mosaik2 database.
 .PP
 If your indexing gets stuck due to any imponderables, you can safely cancel the process by pressing Ctrl+C. The program will terminate only after all started tiler processes are finished. The error message or the number of lines in the mosaik2db/filenames.txt betrays the line offset, which can be selected at a indexing restart. The offset of the file list can be easily achieved with the process substitution, instead of "< file_list" type "< <(tail -n +K \fIfile_list\fR)" where K is the line offset.
 .br
@@ -140,6 +140,28 @@ Controls the caching strategy. If omitted files are copied to the cache director
 \fBcrop\fR mode: sets a specific offset to a database entry. 255 will unset the offset.
 .br
 Example: Common image formats are reduced to 22x16 if the \fIdatabase-image-resolution\fR was set to 16. Then only a 16x16 image section will used to find the best candidate, which will later be placed at this position. Here you can define which of the 6 possible 16x16 image sections to take. In this case valid values are from 0 to 5.
+.RE
+.PP
+\fB-u\fR
+.RS 4
+Unique: Ensures that candidates appear only once in the dest-image.
+.br
+This option can use a lot amount of memory, and may take more time to compute. On the other hand, this should bring the best mosaic compositions.
+.br
+This method works like this: Every candidates score is calculated and saved for every tile. Not only the best candidate per tile is stored, but per tile as many best candidates are stored as there are tiles. This inflated number of best candidates is necessary because eliminating duplicate candidates in the worst case completely wears them out.
+.br
+For example an mosaic with the src-image-resolution of 30 with an aspect ratio of 4:3 will have 40x30 tiles. N would be 1200 in this case. To memory requirements for -u would be 1200*1200*16B which would be 21MB. A src-image-resolution of 300 will need 214GB just for uniqueness.
+.br
+If an candidate has been indexed twice, e.g. because there was an old backup somewhere, it can also appear also up to two times in the dest-image. You can prevent duplicates with the \fBduplicates\fR mode.
+.RE
+.PP
+\fB-U\fR
+.RS 4
+Fast-Unique: Like the -u option, but uses much less memory and is almost as fast as without -u.
+.br
+The more the number of candidates exceeds the number of tiles in the mosaic, the better the result will be. If both are about the same size, the mosaic can become disappointing.
+.br
+This method works like this: First the images of the database are placed in the empty tiles where they fit best, then the images are placed only in the places where they bring the biggest improvements.
 .RE
 .PP
 \fB-y\fR
