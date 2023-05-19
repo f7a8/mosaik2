@@ -141,7 +141,7 @@ struct mosaik2_database_struct {
 	char duplicates_filename[256];
 	char database_image_resolution_filename[256];
 	char id_filename[256];
-	char id[14];
+	char id[17];
 	size_t id_len;
 	char version_filename[256];
 	char readme_filename[256];
