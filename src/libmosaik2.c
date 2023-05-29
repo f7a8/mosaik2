@@ -269,6 +269,9 @@ void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolut
 
 	ti->lx = ti->offset_x + ti->pixel_per_tile * ti->tile_x_count;
 	ti->ly = ti->offset_y + ti->pixel_per_tile * ti->tile_y_count;
+
+	ti->total_pixel_count = ti->pixel_per_tile * ti->tile_x_count * ti->pixel_per_tile * ti->tile_y_count;
+	ti->ignored_pixel_count = (image_width * image_height) - ti->total_pixel_count;
 }
 
 
