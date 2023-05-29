@@ -42,7 +42,8 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	memset(&ti, 0, sizeof(ti));
 	mosaik2_tiler_infos_init(&ti, md->database_image_resolution, gdImageSX(im), gdImageSY(im));
 
-
+	task->imagedims[0] = ti.image_width;
+	task->imagedims[1] = ti.image_height;
 	task->tiledims[0]= ti.tile_x_count;
 	task->tiledims[1]= ti.tile_y_count;
 	task->total_tile_count = ti.total_tile_count;
