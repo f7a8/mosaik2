@@ -2,6 +2,7 @@
 #ifndef _LIBMOSAIK2_H_
 #define _LIBMOSAIK2_H_
 
+#define _GNU_SOURCE // for activating memmem in string.h
 #include <assert.h>
 #include <curl/curl.h>
 #include <errno.h>
@@ -18,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/file.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysinfo.h> // for meminfo external sort in duplicates
@@ -35,6 +37,9 @@
 
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
+
+#define ELEMENT_NUMBER 1
+#define ELEMENT_FILENAME 2
 
 #define R 0
 #define G 1
@@ -57,6 +62,7 @@ void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resoluti
 void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int image_width, int image_height);
 void mosaik2_database_read_database_id(mosaik2_database *md);
 void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number);
+int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, uint32_t *found_element_number);
 char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, FILE *filenames_index_file);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
@@ -129,13 +135,22 @@ void write_entry(char *filename, void *val, size_t len, off_t offset); //read si
 
 FILE *m_fopen(char *filename, char *mode); // wrapper fpr fopen
 void m_fclose(FILE *file); //wrapper for flose
+
+int m_open(const char *pathname, int flags, mode_t mode);
+void m_close(int fd);
+
 void m_fread(void *ptr, size_t nmemb, FILE *stream);
 void m_fwrite(const void *ptr, size_t nmemb, FILE *stream);
 void *m_malloc(size_t size);
 void *m_calloc(size_t nmemb, size_t size);
 int m_fseeko(FILE *stream, off_t offset, int whence);
 int m_fflush(FILE *stream);
-int m_stat(const char *pathname, struct stat *statbuf);
+void m_stat(const char *pathname, struct stat *statbuf);
+void m_fstat(int fd, struct stat *statbuf);
+void *m_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+void m_munmap(void *addr, size_t length);
+
+
 int m_sysinfo(struct sysinfo *info);
 void m_access(const char *pathname, int mode);
 
@@ -165,4 +180,5 @@ int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
 int min_heap_pop(Heap* h, mosaik2_database_candidate *k);
 int min_heap_peek(Heap *h, mosaik2_database_candidate *k);
 /* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
-char* get_file_name(FILE *file);
+char *get_file_name(FILE *file);
+char *get_fd_name(int fd);

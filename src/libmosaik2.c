@@ -1,5 +1,6 @@
 #include "libmosaik2.h"
 
+
 const int FT_JPEG = 0;
 const int FT_PNG = 1;
 const int FT_ERR = -1;
@@ -602,6 +603,63 @@ void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_elemen
 	}
 }
 
+static int cmp_off_t(const void *p1, const void *p2) {
+	off_t *v1 = (off_t *)p1;
+	off_t *v2 = (off_t *)p2;
+
+	if(*v1<*v2)
+		return -1;
+	if(*v1>*v2)
+		return 1;
+	return 0;
+}
+
+/** returns 0 on success, -1 when no filename was found and -2 if the found string position is a substring ,
+ *
+ * searches with memmem in a memory mapped file for the filenames, rechecks the found offset with saved offsets in filenames_index 
+ * if theres a match a filename was found from its beginning.
+ * the recheck search in the filenames_index file uses also a memory mapped file and bsearch, because the offsets in filenames_index due to its nature are saved in order. 
+ */
+int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, uint32_t *found_element_number) {
+
+	int fd = m_open(md->filenames_filename, O_RDONLY, 0);
+	struct stat st;
+	m_fstat(fd, &st);
+	void *ptr = m_mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+
+	const void *haystack = (const void*) ptr;
+	size_t haystacklen = (size_t) st.st_size;
+	const void *needle = (const void *)filename;
+	size_t needlelen = strlen(filename);
+
+	void *found = memmem(haystack, haystacklen, needle, needlelen);
+
+	m_munmap(ptr, (size_t)st.st_size );
+	m_close(fd);
+
+	if(found==NULL)
+		return -1;
+
+	size_t found_character_position = (void *)found- (void *)ptr;
+
+	fd = m_open(md->filenames_index_filename, O_RDONLY, 0);
+	m_stat(md->filenames_index_filename, &st);
+
+	ptr = m_mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	size_t nmemb = st.st_size / md->filenames_index_sizeof;
+
+	found = bsearch( &found_character_position, ptr, nmemb, md->filenames_index_sizeof, cmp_off_t);
+	if(found == NULL) {
+		return -2;
+	}
+	uint32_t element_number = (found - ptr)/md->filenames_index_sizeof;
+	m_munmap(ptr, (size_t)st.st_size);
+	m_close(fd);
+
+	*found_element_number = element_number;
+	return 0;
+}
+
 /**
  * reads the filename at element_number from the mosaik2_database.
  * if FILE* is null its opend and closed
@@ -614,7 +672,7 @@ char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_n
 	if(fileobject_was_null)
 		filenames_index_file = m_fopen(md->filenames_index_filename, "r");
 
-	m_fseeko(filenames_index_file, element_number*sizeof(off_t), SEEK_SET);	
+	m_fseeko(filenames_index_file, element_number*sizeof(off_t), SEEK_SET);
 	size_t read = fread(offsets, sizeof(off_t), 2, filenames_index_file);
 	if(read == 0) {
 		fprintf(stderr, "could not read filenames offset from filenames index file\n");
@@ -1377,6 +1435,26 @@ FILE *m_fopen(char *filename, char *mode) {
 	}
 	return file;
 }
+
+int m_open(const char *pathname, int flags, mode_t mode) {
+	int fd = open(pathname, flags, mode);
+	if(fd == -1) {
+		fprintf(stderr, "file (%s) could not be opened\n", pathname);
+		perror("error:");
+		exit(EXIT_FAILURE);
+	}
+	return fd;
+}
+
+
+void m_close(int fd) {
+	int cal = close(fd);
+	if(cal == -1 )  {
+		fprintf(stderr, "file could not be closed\n");
+		perror("error:");
+	}
+}
+
 void m_fclose(FILE *file) {
 	int val = fclose(file);
 	if(val != 0) {
@@ -1442,15 +1520,42 @@ int m_fflush(FILE *stream) {
 	return val;
 }
 
-int m_stat(const char *pathname, struct stat *statbuf) {
+void m_stat(const char *pathname, struct stat *statbuf) {
 	int val = stat(pathname, statbuf);
 	if(val != 0) {
 		fprintf(stderr, "m_stat: could not stat file (%s)\n", pathname);
 		perror("error");
 		exit(EXIT_FAILURE);
 	}
-	return val;
 }
+void m_fstat(int fd, struct stat *statbuf) {
+	int val = fstat(fd, statbuf);
+	if(val != 0) {
+		fprintf(stderr, "m_fstat: could not stat fd");
+		fprintf(stderr, " (%s)\n", get_fd_name(fd));
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void *m_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+	void *ptr = mmap(addr, length, prot, flags, fd, offset);
+	if(ptr == MAP_FAILED ) {
+		fprintf(stderr, "memory mapped file (%s) failed\n", get_fd_name(fd));
+		perror("error");
+		exit(EXIT_FAILURE);
+	}
+	return ptr;
+}
+
+void m_munmap(void *addr, size_t length) {
+	int val = munmap(addr, length);
+	if(val==-1) {
+		perror("unmap memory mapped file failed");
+		exit(EXIT_FAILURE);
+	}
+}
+
 
 int m_sysinfo(struct sysinfo *info) {
 	int val = sysinfo(info);
@@ -1645,11 +1750,19 @@ int min_heap_peek(Heap *h, mosaik2_database_candidate *d) {
 
 char* get_file_name(FILE *file) {
 	int fno = fileno(file);
+	if(fno == -1) {
+		fprintf(stderr, "could not retrieve fd from FILE*\n");
+		exit(EXIT_FAILURE);
+	}
+	return get_fd_name( fileno(file));
+}
+
+char * get_fd_name(int fd) {
 	char* filename =  m_malloc(0xFFF);
 	int MAXSIZE = 0xFFF;
 	ssize_t r;
 	char proclnk[0xFFF];
-	sprintf(proclnk, "/proc/self/fd/%d", fno);
+	sprintf(proclnk, "/proc/self/fd/%d", fd);
 
 	r = readlink(proclnk, filename, MAXSIZE);
 	if (r < 0) {
@@ -1660,3 +1773,4 @@ char* get_file_name(FILE *file) {
 	filename[r] = '\0';
 	return filename;
 }
+
