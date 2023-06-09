@@ -1,15 +1,15 @@
 #include "libmosaik2.h"
 
 void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md);
-void print_element (mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint64_t element_number);
+void print_element (mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint32_t element_number);
 void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_database *md);
 
 int mosaik2_info(mosaik2_arguments *args) {
 
 	char *mosaik2_db_name = args->mosaik2db;
-	uint64_t element_number = args->element_number;
+	uint32_t element_number = args->element_number;
 
-	if(args->has_element_number && element_number < 1  ) {
+	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");
 		exit(EXIT_FAILURE);
 	}
@@ -19,8 +19,18 @@ int mosaik2_info(mosaik2_arguments *args) {
 	check_thumbs_db(&md);
 	md.database_image_resolution = read_database_image_resolution(&md);
 
-	if( args->has_element_number==1) {
+	if( args->has_element_identifier == ELEMENT_NUMBER ) {
 		print_element(args, mosaik2_db_name, &md, element_number-1);
+	} else if (args->has_element_identifier == ELEMENT_FILENAME ) {
+		uint32_t element_number;
+		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
+		if(val==0)
+			print_element(args, mosaik2_db_name, &md, element_number);
+		else {
+			fprintf(stderr, "no filename found, must be equal with the original path and filename\n");
+			exit(EXIT_FAILURE);
+		}
+
 	} else if( args->src_image != NULL ) {
 		mosaik2_database_read_database_id(&md);
 		print_src_image(args, mosaik2_db_name, &md);
@@ -59,9 +69,9 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 			md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
 }
 
-void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint64_t element_number) {
-	uint64_t element_count = read_thumbs_db_count(md);
-	if( element_number < 0 || element_number >= element_count ) {
+void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint32_t element_number) {
+	uint32_t element_count = read_thumbs_db_count(md);
+	if( args->has_element_identifier == ELEMENT_NUMBER && (element_number < 0 || element_number >= element_count )) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
 	}
@@ -69,12 +79,26 @@ void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_datab
 	memset(&mde, 0, sizeof(mde));
 	mosaik2_database_read_element(md, &mde, element_number);
 
-	printf("db-name=%s\n", md->thumbs_db_name);
-	printf("element-number=%li\n", element_number+1);
+	uint8_t database_image_resolution = read_database_image_resolution(md);
+	//int src_image_resolution = database_image_resolution;
+	mosaik2_tile_infos ti;
+	memset(&ti, 0, sizeof(ti));
+	mosaik2_tiler_infos_init(&ti, database_image_resolution, mde.imagedims[0], mde.imagedims[1]);
+
+	printf("mosaik2db=%s\n", md->thumbs_db_name);
+	printf("database-image-resolution=%i\n", database_image_resolution);
+	printf("element-number=%i\n", element_number+1);
 	printf("md5-hash="); for(int i=0;i<MD5_DIGEST_LENGTH;i++) { printf("%02x", mde.hash[i]); }
 	printf("\nfilename=%s\n", mde.filename);
-	printf("image-dim=%ix%i\n", mde.imagedims[0], mde.imagedims[1]);
-	printf("tile-dim=%ix%i\n", mde.tiledims[0], mde.tiledims[1]);
+
+	printf("image-dims=%ix%i\n", mde.imagedims[0], mde.imagedims[1]);
+	printf("used-image-dims=%ix%i\n", ti.pixel_per_tile * ti.tile_x_count, ti.pixel_per_tile*ti.tile_y_count);
+	printf("image-offset=%ix%i\n", ti.offset_x, ti.offset_y);
+	printf("used-image-pixels=%i\n", ti.total_pixel_count);
+	printf("ignored-image-pixels=%i\n", ti.ignored_pixel_count);
+
+	printf("tile-dims=%ix%i\n", mde.tiledims[0], mde.tiledims[1]);
+	printf("pixel-per-tile=%i^2\n",ti.pixel_per_tile);
 	printf("timestamp=%s", ctime(&mde.timestamp));
 	printf("invalid=%i\n", mde.invalid);
 
@@ -97,8 +121,8 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 
 	gdImagePtr im = read_image_from_file(args->src_image); // inefficient but solid, TODO from exif
 
-	uint32_t image_width = gdImageSX(im);
-	uint32_t image_height = gdImageSY(im);
+	int image_width = gdImageSX(im);
+	int image_height = gdImageSY(im);
 	uint8_t database_image_resolution = read_database_image_resolution(md);
 	int src_image_resolution = args->num_tiles;
 
@@ -116,10 +140,10 @@ void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_dat
 	printf("ignored-image-pixels=%i\n", ti.ignored_pixel_count);
 	printf("primary-tiles=%ix%i\n", ti.primary_tile_x_count, ti.primary_tile_y_count);
 	printf("total-primary-tiles=%i\n", ti.primary_tile_x_count * ti.primary_tile_y_count);
-	printf("tile-dim=%ix%i\n", ti.tile_x_count, ti.tile_y_count);
+	printf("tile-dims=%ix%i\n", ti.tile_x_count, ti.tile_y_count);
 	printf("pixel-per-primary-tile=%i\n", ti.pixel_per_primary_tile);
 
-	printf("pixel-per-tile=%i\n",ti.pixel_per_tile);
+	printf("pixel-per-tile=%i^2\n",ti.pixel_per_tile);
 
 	double total_pixel_count_f = (double) ti.total_pixel_count;
 	double histogram_color[RGB];

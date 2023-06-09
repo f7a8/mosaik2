@@ -262,9 +262,10 @@ struct arguments_struct {
 	int no_hash_cmp;
 	int color_distance;
 	uint32_t element_number;
-	int has_element_number;
+	int has_element_identifier;
 	char *src_image;
 	int quiet;
+	char *element_filename;
 };
 typedef struct arguments_struct mosaik2_arguments;
 

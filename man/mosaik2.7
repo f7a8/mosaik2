@@ -16,11 +16,11 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .PP
 \fBmosaik2\fR duplicates [-V|-q] [-i] [-y] \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
 .br
-\fBmosaik2\fR invalid    [-V|-q] [[-i] [-y] [-n] | -e <NUM>] \fImosaik2db\fR
+\fBmosaik2\fR invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] \fImosaik2db\fR
 .br
-\fBmosaik2\fR info       [-V|-q] (-e <NUM> | \fIsrc-image\fR -t <NUM>) \fImosaik2db\fR
+\fBmosaik2\fR info       [-V|-q] (-e <SEARCH> | \fIsrc-image\fR -t <NUM>) \fImosaik2db\fR
 .br
-\fBmosaik2\fR crop       [-V|-q] -e <NUM> -t <NUM> \fImosaik2db\fR
+\fBmosaik2\fR crop       [-V|-q] -e <SEARCH> -t <NUM> \fImosaik2db\fR
 .br
 \fBmosaik2\fR (-h|-v)
 .SH "VERSION"
@@ -89,9 +89,10 @@ Specifies the method of determining similar colors. Possible values are \fBmanha
 .br
 The \fBchebyshev\fR distance is the fastest but most inaccurate method, where the distance between two vectors is the greatest of their differences along any coordinate dimension. Same example results to 2 because 159-161 has the absolute value of 2. 71-70 which would be 1 is dropped because it is lower than 2.
 .RE
-\fB-e\fR number
+.PP
+\fB-e\fR search
 .RS 4
-Execute the MODE only on the database entry with the nth number (starting at 1), instead on the entire database.
+Execute the MODE only for a specific database candidate and not for the entire database. Searching can be done with the element number (first one starts with 1) or the file name as it was indexed. File names are found by matching from the beginning, the end can be omitted. For example: Entry 1: "../pic2.jpg", Entry 2: "../pic1.jpg". Search for "pic" finds no file, because no matching beginning. Search for "../pic" finds "../pic2.jpg", because first hit. Search for "../pic1.jpg" finds "../pic1.jpg" as expected.
 .RE
 .PP
 \fB-i\fR

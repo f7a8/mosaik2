@@ -24,10 +24,12 @@ void print_usage();
 void print_help();
 void print_version();
 void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv);
+int is_number(char *string);
+void cleanup(mosaik2_arguments *args);
 
 int main(int argc, char **argv) {
 
-  mosaik2_arguments args;
+	mosaik2_arguments args;
 	get_mosaik2_arguments(&args, argc, argv);
 
 	if(strncmp( args.mode, "init", strlen("init")) == 0) {
@@ -48,6 +50,8 @@ int main(int argc, char **argv) {
 		return mosaik2_crop(&args);
 	}
 
+	cleanup(&args);
+
 	return 0;
 }
 
@@ -61,7 +65,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_DEFAULT;
 	args->has_num_tiles = 0;
 	args->element_number = 1;
-	args->has_element_number = 0;
+	args->has_element_identifier = 0;
+	args->element_filename = NULL;
+	args->element_number = 0;
 
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","crop"};
 	
@@ -89,9 +95,15 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 								break;
 			/* -h should be the only parameter, but this code will print help
 			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
-			case 'e': args->element_number = atoll(optarg);
-				  args->has_element_number = 1;
-				  break; //no modes_used because it appears in several modes
+			case 'e':
+				if(is_number(optarg)) {
+					args->element_number = atoll(optarg);
+					args->has_element_identifier = 1; // ELEMENT_NUMBER
+				} else {
+					args->element_filename = argv[optind-1];
+					args->has_element_identifier = 2; //ELEMENT_FILENAME;
+				}
+				break; //no modes_used because it appears in several modes
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
 			case 'i': args->ignore_old_invalids = 1; 
 								modes_used[MODE_DUPLICATES]++;
@@ -231,7 +243,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		case MODE_INVALID:
 			args->mosaik2db = argv[optind+1];
 			//either or
-			if(args->has_element_number==1 && ( args->ignore_old_invalids == 1 || args->dry_run == 1 || args->no_hash_cmp == 1)) {
+			if(args->has_element_identifier == 1 && ( args->ignore_old_invalids == 1 || args->dry_run == 1 || args->no_hash_cmp == 1)) {
 				print_usage();
 				exit(EXIT_FAILURE);
 			}
@@ -279,10 +291,15 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
             		  args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
               args->num_tiles);
-		if(args->has_element_number) {
+		if(args->has_element_identifier == 1 ) {
 			fprintf(stderr, "element_number = %i\n", args->element_number);
 		} else {
 			fprintf(stderr, "element_number = none\n");
+		}
+		if(args->has_element_identifier == 2 ) {
+			fprintf(stderr, "element_filename = %s", args->element_filename);
+		} else {
+			fprintf(stderr, "element_filename = none\n");
 		}
 		fprintf(stderr, "\n");
 	}
@@ -293,20 +310,20 @@ void print_version() {
 }
 
 void print_usage() {
-	fprintf(stdout, 
+	fprintf(stdout,
 "Usage: mosaik2 init       [-V|-q] [-r <PIXEL>] MOSAIK2DB\n"
 "  or:  mosaik2 index      [-V|-q] [-j <COUNT>] [-l <LOAD>] MOSAIK2DB < file-list\n"
 "  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 join       [-V|-q] [-p <PIXEL>] [-s] [-d] dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
 "  or:  mosaik2 duplicates [-V|-q] [-i] [-y] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
-"  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <NUM>] MOSAIK2DB\n"
-"  or:  mosaik2 info       [-V|-q] [-e <NUM>] | src-image -t <NUM>] MOSAIK2DB\n"
-"  or:  mosaik2 crop       [-V|-q] -e <NUM> -t <NUM> MOSAIK2DB\n"
+"  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] MOSAIK2DB\n"
+"  or:  mosaik2 info       [-V|-q] [-e <SEARCH>] | src-image -t <NUM>] MOSAIK2DB\n"
+"  or:  mosaik2 crop       [-V|-q] -e <SEARCH> -t <NUM> MOSAIK2DB\n"
 "  or:  mosaik2 (-h|-v)\n" );
 }
 
 void print_help() {
-	fprintf(stdout, 
+	fprintf(stdout,
 "\nmosaik2 -- creates real photo mosaics. ready for large data sets.\n"
 "\n"
 " OPTIONS\n"
@@ -316,7 +333,7 @@ void print_help() {
 "  -v          Print program version and exit\n"
 "  -d          Fast but not complete reduction of duplicates processor count\n"
 "  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
-"  -e NUM      operate only on the NUMth database element\n"
+"  -e SEARCH   operate only on the SEARCHs database element\n"
 "  -i          Ignore old invalid images\n"
 "  -j COUNT    Limit concurrent worker jobs to COUNT (default\n"
 "  -l LOAD     Soft limit the system load to LOAD (default 0, means off)\n"
@@ -338,4 +355,30 @@ void print_help() {
 "Report bugs to https://github.com/f7a8/mosaik2/issues.\n");
 }
 
+int is_number(char *string) {
 
+	int is_digit = 1;
+	int j=0;
+	size_t len = strlen(string);
+	while(j<len && is_digit == 1){
+		//fprintf(stderr, "j:%i c:%c:%i (%i %i) => ", j , string[j], string[j], '0', '9');
+	 	if(string[j] <=57 && string[j] >=48) {
+			//fprintf(stderr, "is digit\n");
+			is_digit = 1;
+		} else {
+			return 0;
+			//fprintf(stderr, "no digit\n");
+	    		is_digit = 0;
+		}
+	  	j++;
+	}
+	//fprintf(stderr, "RETURN VALUE is_digit:%i\n", is_digit);
+	return is_digit;
+}
+
+
+void cleanup(mosaik2_arguments *args) {
+	if( args->has_element_identifier == 2) {
+		free( args->element_filename );
+	}
+}

@@ -3,18 +3,27 @@
 int mosaik2_crop(mosaik2_arguments *args) {
 
 	char *mosaik2_db_name = args->mosaik2db;
-	int element_number = args->element_number;
+	uint32_t element_number = args->element_number;
 
-	if(args->has_element_number && element_number < 1  ) {
+	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");
 		exit(EXIT_FAILURE);
 	}
-	element_number--;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
 	check_thumbs_db(&md);
 	int database_image_resolution = read_database_image_resolution(&md); // standard value should be 16
+
+	if (args->has_element_identifier == ELEMENT_FILENAME ) {
+		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
+		if(val != 0) {
+			fprintf(stderr, "element not found\n");
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		element_number--;
+	}
 
 	uint32_t element_count = read_thumbs_db_count(&md);
 	if( element_number >= element_count ) {

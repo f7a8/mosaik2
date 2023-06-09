@@ -52,8 +52,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	FILE *thumbs_db_duplicates_file;
 	uint8_t tile_dims_buf[BUFSIZ];
 	unsigned char tileoffsets_buf[BUFSIZ];
-	unsigned char colors_buf[BUFSIZ];
-	unsigned char stddev_buf[BUFSIZ];
+	unsigned char colors_buf[256*256*RGB]; //maximal possible data amout per database candidate
+	unsigned char stddev_buf[256*256*RGB];
 	unsigned char invalid_buf[BUFSIZ];
 	unsigned char duplicates_buf[BUFSIZ];
 	FILE *primarytiledims_file;

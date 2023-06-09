@@ -46,8 +46,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	int dry_run = args->dry_run;
 	int no_hash_cmp = args->no_hash_cmp;
 	int debug = args->verbose;
-	int has_element_number = args->has_element_number;
-	uint32_t element_number = args->element_number - 1;
+	uint32_t element_number = 0;
 	uint32_t invalid_count = 0;
 
 	mosaik2_database md;
@@ -67,22 +66,33 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	if(no_hash_cmp < 0 || no_hash_cmp > 1 ) {
 		fprintf(stderr, "no_hash_cmp must be 0 or 1\n");
 	}
-		
-	if(has_element_number == 1 &&  element_number < 1 ) {
+
+	if(args->has_element_identifier == ELEMENT_NUMBER && args->element_number < 1 ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");
 		exit(EXIT_FAILURE);
 	}
+	element_number = args->element_number - 1;
+
+	if (args->has_element_identifier == ELEMENT_FILENAME ) {
+		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
+		if(val != 0) {
+			fprintf(stderr, "element not found\n");
+			exit(EXIT_FAILURE);
+		}
+	}
 
 
-	uint64_t mosaik2_database_elems = read_thumbs_db_count(&md);
-	if( has_element_number && element_number > mosaik2_database_elems ) {
+
+	uint32_t mosaik2_database_elems = read_thumbs_db_count(&md);
+	if( args->has_element_identifier == ELEMENT_NUMBER && element_number > mosaik2_database_elems ) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
 	}
 
+
 	FILE *invalid_file = m_fopen(md.invalid_filename, "r+");
-	
-	if(has_element_number == 1) {
+
+	if(args->has_element_identifier != 0) {
 
 		m_fseeko(invalid_file, element_number, SEEK_SET);
 		int old_value=0;
