@@ -248,7 +248,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 
 	m_fwrite(task->hash, MD5_DIGEST_LENGTH, filehashes_file);
 
-	m_fwrite(&task->lastindexed, md->lastindexed_sizeof, timestamps_file);
+	m_fwrite(&task->lastmodified, md->timestamps_sizeof, timestamps_file);
 
 	m_fwrite(&task->filesize, md->filesizes_sizeof, filesizes_file);
 
