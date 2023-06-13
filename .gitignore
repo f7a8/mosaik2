@@ -4,3 +4,4 @@ bin/*
 *.jpeg.src
 *.jpeg.*.primarytiledims
 *.jpeg.*.result
+test/*
