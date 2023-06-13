@@ -688,10 +688,11 @@ char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_n
 	offsets[1]--;
 	off_t filename_len = offsets[1]-offsets[0];
 
-	char * filename = m_calloc(1,filename_len);
+	char *filename = m_calloc(1,filename_len+1);
 	read_entry(md->filenames_filename, filename, filename_len, offsets[0]);
 	return filename;
 }
+
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp) {
 	char *filename = mp->dest_primarytiledims_filename;
 
