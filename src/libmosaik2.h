@@ -66,6 +66,7 @@ int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, u
 char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, FILE *filenames_index_file);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
+float mosaik2_database_costs(mosaik2_database *md, mosaik2_database_element *mde);
 
 int mosaik2_indextask_read_image(mosaik2_indextask *);
 void mosaik2_tile_image( mosaik2_tile_infos *ti, gdImagePtr *im, double *colors, double *stddev);
@@ -132,6 +133,8 @@ gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 void read_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
 void write_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
+void read_file_entry(FILE *file, void *val, size_t len, off_t offset); 
+void write_file_entry(FILE *file, void *val, size_t len, off_t offset);
 
 FILE *m_fopen(char *filename, char *mode); // wrapper fpr fopen
 void m_fclose(FILE *file); //wrapper for flose
@@ -149,6 +152,7 @@ void m_stat(const char *pathname, struct stat *statbuf);
 void m_fstat(int fd, struct stat *statbuf);
 void *m_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 void m_munmap(void *addr, size_t length);
+FILE *m_tmpfile(void);
 
 
 int m_sysinfo(struct sysinfo *info);

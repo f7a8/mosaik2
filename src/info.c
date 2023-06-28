@@ -90,6 +90,7 @@ void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_datab
 	printf("element-number=%i\n", element_number+1);
 	printf("md5-hash="); for(int i=0;i<MD5_DIGEST_LENGTH;i++) { printf("%02x", mde.hash[i]); }
 	printf("\nfilename=%s\n", mde.filename);
+	printf("filesize=%li\n", mde.filesize);
 
 	printf("image-dims=%ix%i\n", mde.imagedims[0], mde.imagedims[1]);
 	printf("used-image-dims=%ix%i\n", ti.pixel_per_tile * ti.tile_x_count, ti.pixel_per_tile*ti.tile_y_count);
@@ -100,7 +101,30 @@ void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_datab
 	printf("tile-dims=%ix%i\n", mde.tiledims[0], mde.tiledims[1]);
 	printf("pixel-per-tile=%i^2\n",ti.pixel_per_tile);
 	printf("timestamp=%s", ctime(&mde.timestamp));
-	printf("invalid=%i\n", mde.invalid);
+	printf("invalid=");
+	switch(mde.invalid) {
+		case 0:
+			printf("none\n");
+			break;
+		case 1:
+			printf("got_invalid\n");
+			break;
+		case 2:
+			printf("invalidated_manually\n");
+			break;
+	}
+
+	printf("duplicate=");
+	switch(mde.duplicate) {
+		case 0: 
+			printf("none\n");
+			break;
+		case 1: 
+			printf("md5_hash\n");
+			break;
+		case 2:
+			printf("perceptual_hash\n");
+	}
 
 	if(mde.tileoffsets[0] == 0xFF && mde.tileoffsets[1] == 0xFF) {
 		printf("tileoffsets=unset\n");

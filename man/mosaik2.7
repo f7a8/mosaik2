@@ -14,7 +14,7 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR join       [-V|-q] [-p <PIXEL>] [-s] [-d] \fIdest-image\fR \fImosaik2db\fR-0 [\fImosaik2db\fR-N ...]
 .PP
-\fBmosaik2\fR duplicates [-V|-q] [-i] [-y] \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
+\fBmosaik2\fR duplicates [-V|-q] [-i] [-y] [-P <DIST>] \fImosaik2db\fR-src [\fImosaik2db\fR-dest]
 .br
 \fBmosaik2\fR invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] \fImosaik2db\fR
 .br
@@ -42,7 +42,7 @@ After your mosaik2 database(s) have been created, you can start to work on your 
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases with the same resolution will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
 
-The \fBduplicates\fR mode indentifies images, that appear multiple times in your image collection, and mark all but the first occurance as invalid. This mode prints the invlidated files to stdout. Option dry-run makes no modification to the mosaik2 database. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination or omit mosaik2db-dest.
+The \fBduplicates\fR mode indentifies candidate images, that appear multiple times in your mosaik2 database, and mark all but the first occurance as invalid. This mode prints the invalidated candidates to stdout. Option dry-run makes no modification to the mosaik2 database. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination or omit mosaik2db-dest. You may also want to have a look on the perceptual hash argument -P, which can also find similar duplicates.
 .PP
 Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
 .br
@@ -118,6 +118,13 @@ No-hash-cmp: while checking all images in the mosaik2db, omit the file content c
 \fB-p\fR pixel-per-tile
 .RS 4
 Each original image is reduced to squared \fIpixel-per-tile\fR pixels. The default value is 200 px. This value controls the resulting total image size. Multiply pixel-per-tile with num-tile results to the pixel size at the smaller dimension.
+.RE
+.PP
+\fB-P\fR perceptual-hash-similarity-distance
+.RS 4
+Each candidate is not only compared for exact equalness like same timestamp, filesizes and file hash, with this option image content are compared to similar image contents. This phash DCT algorithm (phash.org/) can detect sligthy changed images, like a resaved jpegs, tiny cropped images or changed color settings. The underlying library, which accepts distance values from 1 to 32. Try low values first, and check, if they fit to your needs (you may want to use the -y option to test serveral phash-distance values, before saving it permanenty and -V will print both candidates, make it possible to comapare them manually).
+.br
+To preserve color diversity, those candidates are marked as duplicates which colors are closer to the mean color of the mosaik2 database.
 .RE
 .PP
 \fB-r\fR database-image-resolution

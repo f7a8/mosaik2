@@ -68,12 +68,14 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->has_element_identifier = 0;
 	args->element_filename = NULL;
 	args->element_number = 0;
+	args->has_phash_distance = 0;
+	args->phash_distance = 0;
 
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","crop"};
 	
 	int modes_used[] = {0,0,0,0,0,0,0,0,0};
 
-	char *all_options = "dD:he:ij:l:nqp:r:R:st:uUvVy?";
+	char *all_options = "dD:he:ij:l:nqp:P:r:R:st:uUvVy?";
 
 	int opt;
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
@@ -120,6 +122,10 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			case 'p': args->pixel_per_tile = atoi(optarg);
 								modes_used[MODE_JOIN]++;
 								break;
+			case 'P': args->phash_distance = atoi(optarg);
+				  args->has_phash_distance = 1;
+				  modes_used[MODE_DUPLICATES]++;
+				  break;
 			case 'q': args->quiet = 1;
 				  break; // no modes_used because it appears int several modes
 			case 'r': args->database_image_resolution = atoi(optarg);
@@ -272,7 +278,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\n,num_tiles = %i\n",
+		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
               args->verbose ? "yes" : "no",
               args->quiet ? "yes" : "no",
 
@@ -315,7 +321,7 @@ void print_usage() {
 "  or:  mosaik2 index      [-V|-q] [-j <COUNT>] [-l <LOAD>] MOSAIK2DB < file-list\n"
 "  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image\n"
 "  or:  mosaik2 join       [-V|-q] [-p <PIXEL>] [-s] [-d] dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
-"  or:  mosaik2 duplicates [-V|-q] [-i] [-y] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
+"  or:  mosaik2 duplicates [-V|-q] [-i] [-y] [-P <DIST>] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
 "  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] MOSAIK2DB\n"
 "  or:  mosaik2 info       [-V|-q] [-e <SEARCH>] | src-image -t <NUM>] MOSAIK2DB\n"
 "  or:  mosaik2 crop       [-V|-q] -e <SEARCH> -t <NUM> MOSAIK2DB\n"
@@ -340,6 +346,7 @@ void print_help() {
 "  -n          No hash comparison\n"
 "  -p PIXEL    Image resolution in PIXEL of one image tile in\n"
 "              the dest-image (default 200)\n"
+"  -P DIST     Phash-Similarity-Distance: values between 1 and 32\n"
 "  -r PIXEL    Database-image-resolution in PIXEL (default 16)\n"
 "  -R PERCENT  Ratio between color matching and color\n"
 "              standard devation (default 100 means only color\n"

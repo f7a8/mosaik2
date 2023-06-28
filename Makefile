@@ -9,7 +9,7 @@ bin/:
 	mkdir -p bin/
 
 bin/mosaik2: src/mosaik2.h src/mosaik2.c bin/libmosaik2.o bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/crop.o
-	${COMPILER} ${CFLAGS} src/mosaik2.c bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/crop.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl
+	${COMPILER} ${CFLAGS} src/mosaik2.c bin/init.o bin/index.o bin/tiler.o bin/gathering.o bin/join.o bin/duplicates.o bin/invalid.o bin/info.o bin/crop.o bin/libmosaik2.o -o bin/mosaik2 -lm -lgd -lcrypto -lexif -lcurl -lpHash
 
 bin/libmosaik2.o: src/libmosaik2.c src/libmosaik2.h
 	${COMPILER} ${CFLAGS} -c src/libmosaik2.c -o bin/libmosaik2.o -lexif -lgd
@@ -55,8 +55,8 @@ test: all
 	bin/mosaik2 init -r 16 test/flower/flowerphotos16
 	bin/mosaik2 index -q test/flower/flowerphotos8 < test/flower/flower_photos.file_list
 	bin/mosaik2 index -q test/flower/flowerphotos16 < test/flower/flower_photos.file_list
-	bin/mosaik2 duplicates test/flower/flowerphotos8
-	bin/mosaik2 duplicates test/flower/flowerphotos16
+	bin/mosaik2 duplicates -P 10 test/flower/flowerphotos8
+	bin/mosaik2 duplicates -P 10 test/flower/flowerphotos16
 	bin/mosaik2 gathering -q -u -t 16 test/flower/Wiesen-Schaumkraut8.jpeg test/flower/flowerphotos8 < /tmp/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
 	bin/mosaik2 gathering -q -u -t 16 test/flower/Wiesen-Schaumkraut16.jpeg test/flower/flowerphotos16 < /tmp/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg
 	bin/mosaik2 join -q -p 100 test/flower/Wiesen-Schaumkraut8.jpeg test/flower/flowerphotos8

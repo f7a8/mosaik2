@@ -46,6 +46,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	memset( md->tileoffsets_filename, 0, 256);
 	memset( md->lastindexed_filename, 0, 256);
 	memset( md->createdat_filename, 0,256);
+	memset( md->phash_filename, 0,256);
 
 	size_t l = strlen(thumbs_db_name);
 	strncpy( (*md).thumbs_db_name,thumbs_db_name,l);
@@ -121,6 +122,9 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strncpy( md->createdat_filename, thumbs_db_name, l);
 	strcat( md->createdat_filename, "/.createdat");
 
+	strncpy( md->phash_filename, thumbs_db_name, l);
+	strcat( md->phash_filename, "/pash.bin");
+
 	md->imagestddev_sizeof = 3;
 	md->imagecolors_sizeof = 3;
 	md->imagedims_sizeof = 2*sizeof(int);
@@ -137,6 +141,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	md->lastmodified_sizeof = sizeof(time_t);
 	md->lastindexed_sizeof = sizeof(time_t);
 	md->createdat_sizeof = sizeof(time_t);
+	md->phash_sizeof = sizeof(unsigned long long) + sizeof(int);
 }
 
 void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
@@ -602,6 +607,22 @@ void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_elemen
 		}
 	}
 }
+float mosaik2_database_costs(mosaik2_database *md, mosaik2_database_element *mde) {
+	double diff_c = sqrt(
+			  pow(md->histogram_color[R] - mde->histogram_color[R], 2)
+			+ pow(md->histogram_color[G] - mde->histogram_color[G], 2)
+			+ pow(md->histogram_color[B] - mde->histogram_color[B], 2)
+			);
+	double diff_s = sqrt(
+			  pow(md->histogram_stddev[R] - mde->histogram_stddev[R], 2)
+			+ pow(md->histogram_stddev[G] - mde->histogram_stddev[G], 2)
+			+ pow(md->histogram_stddev[B] - mde->histogram_stddev[B], 2)
+			);
+	float image_ratio = 1.0;
+	float stddev_ratio = 0.0;
+
+	return image_ratio * diff_c + stddev_ratio * diff_s;
+}
 
 static int cmp_off_t(const void *p1, const void *p2) {
 	off_t *v1 = (off_t *)p1;
@@ -823,6 +844,7 @@ void check_thumbs_db(mosaik2_database *md) {
 
 	// TODO make more plause checks
 	uint32_t element_count = read_thumbs_db_count(md);
+	md->element_count = element_count;
 	uint8_t database_image_resolution = read_database_image_resolution(md);
 
 	assert(get_file_size(md->imagecolors_filename)     >= element_count * md->imagecolors_sizeof*database_image_resolution*database_image_resolution);
@@ -1420,11 +1442,23 @@ void read_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
 	m_fclose(f);
 }
 
+// assumes, that file is opened in the right mode
+void read_file_entry(FILE *file, void *val, size_t val_len, off_t file_offset) {
+	m_fseeko(file, file_offset, SEEK_SET);
+	m_fread(val, val_len, file);	
+}
+
 void write_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
 	FILE *f = m_fopen(filename, "r+");
 	m_fseeko(f, file_offset, SEEK_SET);
 	m_fwrite(val, val_len, f);
 	m_fclose(f);
+}
+
+// assumes that file is open in the right mode
+void write_file_entry(FILE *file, void *val, size_t val_len, off_t file_offset) {
+	m_fseeko(file, file_offset, SEEK_SET);
+	m_fwrite(val, val_len, file);
 }
 
 FILE *m_fopen(char *filename, char *mode) {
@@ -1467,7 +1501,7 @@ void m_fclose(FILE *file) {
 void m_fread(void *buf, size_t nmemb, FILE *stream) {
 	size_t bytes_read = fread(buf, 1, nmemb, stream);
 	if(nmemb != bytes_read) {
-		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data\n", bytes_read, nmemb);
+		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data at position %i \n", bytes_read, nmemb, ftello(stream));
 		char* filename = get_file_name(stream);
 		fprintf(stderr, "filename: %s\n", filename);
 		free(filename);
@@ -1478,7 +1512,7 @@ void m_fread(void *buf, size_t nmemb, FILE *stream) {
 void m_fwrite(const void *ptr, size_t nmemb, FILE *stream) {
 	size_t bytes_written = fwrite(ptr, 1, nmemb, stream);
 	if(nmemb != bytes_written) {
-		fprintf(stderr, "m_fwrite: could not (%li) write the expexted (%li) amount of data\n", bytes_written, nmemb);
+		fprintf(stderr, "m_fwrite: could not (%li) write the expected (%li) amount of data at position %i\n", bytes_written, nmemb, ftello(stream));
 		exit(EXIT_FAILURE);
 	}
 }
@@ -1555,6 +1589,24 @@ void m_munmap(void *addr, size_t length) {
 		perror("unmap memory mapped file failed");
 		exit(EXIT_FAILURE);
 	}
+}
+
+FILE *m_tmpfile(void) {
+	FILE *f = tmpfile();
+	if(f == NULL) {
+		perror("tmpfile() failed");
+		exit(EXIT_FAILURE);
+	}
+	return f;
+}
+
+FILE *m_fdopen(int fd, const char *mode) {
+	FILE *f = fdopen(fd, mode);
+	if( f == NULL) {
+		perror("fdopen failed\n");
+		exit(EXIT_FAILURE);
+	}
+	return f;
 }
 
 

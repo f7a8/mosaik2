@@ -77,6 +77,7 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.lastmodified_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tileoffsets_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastindexed_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.phash_filename, 1, args->verbose);
 
 	create_mosaik2_database_file_val(md.version_filename, &mdfv, sizeof(mdfv),  args->verbose);
 	create_mosaik2_database_file_val(md.database_image_resolution_filename, &database_image_resolution, sizeof(database_image_resolution), args->verbose);

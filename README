@@ -15,6 +15,7 @@ for building
 4. libssl             libssl-dev
 5. libgd              libgd-dev
 6. libexif            libexif-dev
+7. phash              - (www.phash.org v0.9.6)
 
 Build
 

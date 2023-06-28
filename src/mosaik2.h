@@ -151,6 +151,7 @@ struct mosaik2_database_struct {
 	char lastmodified_filename[256];
 	char lastindexed_filename[256];
 	char createdat_filename[256];
+	char phash_filename[256];
 
 	int imagestddev_sizeof;
 	int imagecolors_sizeof;
@@ -168,6 +169,7 @@ struct mosaik2_database_struct {
 	int lastmodified_sizeof;
 	int lastindexed_sizeof;
 	int createdat_sizeof;
+	int phash_sizeof;
 
 	uint8_t database_image_resolution;
 	float histogram_color[3]; // all valid entries
@@ -266,6 +268,8 @@ struct arguments_struct {
 	char *src_image;
 	int quiet;
 	char *element_filename;
+	int phash_distance;
+	int has_phash_distance;
 };
 typedef struct arguments_struct mosaik2_arguments;
 
