@@ -123,7 +123,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	strcat( md->createdat_filename, "/.createdat");
 
 	strncpy( md->phash_filename, thumbs_db_name, l);
-	strcat( md->phash_filename, "/pash.bin");
+	strcat( md->phash_filename, "/phash.bin");
 
 	md->imagestddev_sizeof = 3;
 	md->imagecolors_sizeof = 3;
