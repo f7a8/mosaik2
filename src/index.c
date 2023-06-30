@@ -143,11 +143,9 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 	mosaik2_indextask task;
 	memset(&task, 0, sizeof(task));
 
-	char *token0 = strtok(line, "\t");
-	char *token1 = strtok(NULL, "\t");
-	char *token2 = strtok(NULL, "\n");
-	if(token0 == NULL || token1 == NULL || token2 == NULL ) {
-		errx(EINVAL, "could not split line by tabstop into three token (%s,%s,%s) filename is empty. (linenumber:%i, line:[%s])\n",token0,token1,token2,i, line);
+	char *token0 = strtok(line, "\n");
+	if(token0 == NULL  ) {
+		errx(EINVAL, "could not split line to newline (%s) filename is empty. (linenumber:%i, line:[%s])\n",token0,i, line);
 	}
 
 	if(strlen(token0)>=sizeof(task.filename)) {
@@ -156,9 +154,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 
 	strncpy(task.filename, token0, strlen(token0)+1);
 
-
-	task.filesize = atol(token1);
-	task.lastmodified = atoll(token2);//original lastmodified from the image
+	task.lastmodified = time(NULL);//may be overwritten with acutal modified timestamp
 	task.lastindexed = time(NULL);
 	//here to fork
 

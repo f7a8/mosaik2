@@ -179,18 +179,15 @@ Dry-run: outputs invalids or duplicates as desired, but won't save it to the mos
 .PP
 .SH "FILE LIST"
 If you want to index a bunch of images its is needed to create an input stream 
-to mosaik2 in the text format
+to mosaik2 in the simple text format
 
-file_link{TABULATOR}file_size{TABULATOR}timestamp{LINEBREAK}
+file_link{LINEBREAK}
+[...]
 .br
 \.\.\.
 .PP
 .RS 4
 * file_link means an absolute or relative filepath on your local machine or an url.
-.br
-* file_size means the file size in bytes.
-.br
-* timestamp is a unix timestamp (integer format, floating points will be floored), which is used to check via invalid program if a file has changed.
 .RE
 .PP
 You can either write your own program to create that list on the fly and pipe 
@@ -198,7 +195,7 @@ it to the index process or you can use the find program to create a static file
 on disk, which you take as stdin to the index process. The file list can be 
 created like this:
 .PP
-find /root_dir -type f -iregex ".*\e.jpe?g$" -size +10000c -size -100000000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
+find /root_dir -type f -iregex ".*\e.jpe?g$" -size +10000c -size -100000000c >  first_mosaik2.file_list
 .PP
 
 .SH "EXIT STATUS"

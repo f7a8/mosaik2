@@ -50,7 +50,7 @@ test: all
 	wget -N "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz" --directory-prefix=/tmp
 	wget -N "https://upload.wikimedia.org/wikipedia/commons/5/52/2014.03.29.-08-Mannheim_Neckarau_Waldpark-Wiesen-Schaumkraut.jpg" --directory-prefix=/tmp
 	tar xfz /tmp/flower_photos.tgz -C test/flower
-	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +10000c -size -100000000c -fprintf test/flower/flower_photos.file_list "%p\t%s\t%T@\n" 
+	find test/flower/flower_photos -type f -iregex '.*\.jpe?g$$' -size +10000c -size -100000000c > test/flower/flower_photos.file_list
 	bin/mosaik2 init -r 8 test/flower/flowerphotos8
 	bin/mosaik2 init -r 16 test/flower/flowerphotos16
 	bin/mosaik2 index -q test/flower/flowerphotos8 < test/flower/flower_photos.file_list

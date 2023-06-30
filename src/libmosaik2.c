@@ -1187,8 +1187,19 @@ void check_resolution(uint32_t resolution) {
 	}
 }
 
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+	fprintf(stderr, "write_data\n");
+    size_t written;
+    written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
 int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 	if(is_file_local( task->filename )) {
+		struct stat st;
+		m_stat(task->filename, &st);
+		task->filesize = st.st_size;
+		task->lastmodified = st.st_mtim.tv_sec;
 		FILE *file = m_fopen( task->filename, "rb");
 		unsigned char *buf = m_malloc(task->filesize);
 		m_fread(buf,task->filesize,file);
@@ -1198,6 +1209,27 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 	} else {
 		fprintf(stderr, "only reading of local files is currently implemented\n");
 		exit(1);
+		/*CURL *curl;
+		CURLcode res;
+		char filename[100];
+		snprintf(filename,100,"download_temp_file_%i",task->idx); 
+		FILE *tmpfile =m_fopen(filename, "w+");
+		curl = curl_easy_init();
+		if(curl) {
+			curl_easy_setopt(curl, CURLOPT_URL, task->filename);
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, tmpfile);
+			res = curl_easy_perform(curl);
+			struct stat st;
+			m_stat(get_file_name(tmpfile), &st);
+			task->filesize = st.st_size;
+			task->lastmodified = st.st_mtim.tv_sec;
+			m_fseeko(tmpfile, 0, SEEK_SET);
+			task->image_data = m_malloc(task->filesize);
+			m_fread(task->image_data, task->filesize, tmpfile);
+			m_fclose(tmpfile);
+			curl_easy_cleanup(curl);
+		}*/
 	}
 	return 0;
 }
@@ -1501,7 +1533,7 @@ void m_fclose(FILE *file) {
 void m_fread(void *buf, size_t nmemb, FILE *stream) {
 	size_t bytes_read = fread(buf, 1, nmemb, stream);
 	if(nmemb != bytes_read) {
-		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data at position %i \n", bytes_read, nmemb, ftello(stream));
+		fprintf(stderr, "m_fread: could not (%li) read the expected (%li) amount of data at position %li \n", bytes_read, nmemb, ftello(stream));
 		char* filename = get_file_name(stream);
 		fprintf(stderr, "filename: %s\n", filename);
 		free(filename);
@@ -1512,7 +1544,7 @@ void m_fread(void *buf, size_t nmemb, FILE *stream) {
 void m_fwrite(const void *ptr, size_t nmemb, FILE *stream) {
 	size_t bytes_written = fwrite(ptr, 1, nmemb, stream);
 	if(nmemb != bytes_written) {
-		fprintf(stderr, "m_fwrite: could not (%li) write the expected (%li) amount of data at position %i\n", bytes_written, nmemb, ftello(stream));
+		fprintf(stderr, "m_fwrite: could not (%li) write the expected (%li) amount of data at position %li\n", bytes_written, nmemb, ftello(stream));
 		exit(EXIT_FAILURE);
 	}
 }

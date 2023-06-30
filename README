@@ -25,7 +25,7 @@ Build
 
 USAGE
 
-I.   find ~/Pictures -type f -iregex ".*\.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\t%s\t%T@\n"
+I.   find ~/Pictures -type f -iregex '.*\.jpe?g$' -size +10000c -size -100000000c > first_mosaik2.file_list
 II.  mosaik2 init first_mosaik2_db
 III. mosaik2 index first_mosaik2_db < first_mosaik2.file_list
 IV.  mosaik2 gathering my_first_mosaik2.jpeg first_mosaik2_db < source_image.jpeg
@@ -34,7 +34,7 @@ V.   mosaik2 join my_first_mosaik2.jpeg first_mosaik2_db
 
 
 Usage Description
-I.   See README.file_list
+I.   create a text file with filenames
 II.  initialize a mosaik2 database named first_mosaik2. You can create multiple
      mosaik2 databases to handle a large volume of images by processing them in
      parallel.
