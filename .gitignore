@@ -1,7 +1,12 @@
-bin/*
+src/*.o
 *.jpeg
 *.jpeg.html
 *.jpeg.src
 *.jpeg.*.primarytiledims
 *.jpeg.*.result
+*.jpg
+*.jpg.html
+*.jpg.src
+*.jpg.*.primarytiledims
+*.jpg.*.result
 test/*

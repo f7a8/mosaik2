@@ -13,21 +13,11 @@
 int check_filehashes_index(mosaik2_database *md);
 void build_filehashes_index(mosaik2_database *md);
 int qsort_(const void*, const void*);
-int check_phashes(mosaik2_database *md);
-void build_phashes(mosaik2_database *md);
-
-int ph_dct_imagehash(const char *file, unsigned long long *hash);
-int ph_hamming_distance(unsigned long long hasha, unsigned long long hashb);
 
 const int FILEHASHES_INDEX_VALID = 1;
 const int FILEHASHES_INDEX_INVALID = 0;
 
-const int PHASHES_VALID = 1;
-const int PHASHES_INVALID = 0;
 
-const int IS_PHASH_DUPLICATE = 2;
-const int IS_DUPLICATE = 1;
-const int IS_NO_DUPLICATE = 0;
 
 int mosaik2_duplicates(mosaik2_arguments *args) {
 
@@ -62,15 +52,16 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	if(check_filehashes_index(&md1) == FILEHASHES_INDEX_INVALID) {
 		build_filehashes_index(&md1);
 	}
+
+#ifdef HAVE_PHASH
 	if(args->has_phash_distance && check_phashes(&md0) == PHASHES_INVALID ) {
 		build_phashes(&md0);
 	}
 	if(args->has_phash_distance && check_phashes(&md1) == PHASHES_INVALID ) {
 		build_phashes(&md1);
 	}
-
+#endif
 	int debug=0;
-	
 
 	FILE *filehashes_file0       = m_fopen(md0.filehashes_filename, "rb");
 	FILE *filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
@@ -80,8 +71,10 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	FILE *duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
 	FILE *filenames_index_file   = m_fopen(md1.filenames_index_filename, "r");
 	FILE *filenames_file         = m_fopen(md1.filenames_filename, "r");
+#ifdef HAVE_PHASH
 	FILE *phash_file0            = m_fopen(md0.phash_filename, "r");
 	FILE *phash_file1            = m_fopen(md1.phash_filename, "r");
+#endif
 
 	int compare_same_file=is_same_file(md0.filehashes_filename, md1.filehashes_filename);
 	// DRY RUN operates the same way, data is written to a temporary copy of duplicates file from md1
@@ -207,7 +200,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		}
 	}
 
-
+#ifdef HAVE_PHASH
 	if(args->has_phash_distance) {
 
 	read_thumbs_db_histogram(&md0);
@@ -300,6 +293,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 			}
 		}
 	}
+#endif
 
 	if(duplicates_count>0 && dry_run ==0) {
 		FILE *lastmodified_file = m_fopen(md0.lastmodified_filename, "w");
@@ -309,7 +303,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	}
 
 	m_fflush(stdout);
-	
+
 	m_fflush(duplicates_file1);
 	if(debug)fprintf(stderr,"closing files\n");
 
@@ -321,55 +315,14 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	m_fclose(filehashes_index_file1);
 	m_fclose(filenames_file);
 	m_fclose(filenames_index_file);
+#ifdef HAVE_PHASH
 	m_fclose(phash_file0);
 	m_fclose(phash_file1);
-	
+#endif
+
 	return 0;
 }
 
-/*
- * compares the last modified timestamps of one mosaik2 database directory
- * if the file .lastmodifed has newer changes than the filehashes.idx FILEHASHES_INDEX_INVALID
- * is returnd, FILEHASHES_INDEX_VALID otherwise.
- */
-int check_filehashes_index(mosaik2_database *md) {
-	struct stat lastmodified_file, filehashes_index_file;
-
-	m_stat(md->lastmodified_filename, &lastmodified_file);
-	m_stat(md->filehashes_index_filename,&filehashes_index_file);
-
-	if( filehashes_index_file.st_ctim.tv_sec > lastmodified_file.st_ctim.tv_sec ||
-			( filehashes_index_file.st_ctim.tv_sec == lastmodified_file.st_ctim.tv_sec &&
-				filehashes_index_file.st_ctim.tv_nsec > lastmodified_file.st_ctim.tv_nsec )) {
-		//filehashes index was created after last modified timestamp of that mosaik2_database => still fine
-		return FILEHASHES_INDEX_VALID;
-
-	}
-	//if(debug) fprintf(stderr, "filehashes index outdated\n");
-	return FILEHASHES_INDEX_INVALID;
-}
-
-int check_phashes(mosaik2_database *md) {
-	struct stat lastmodified_file, phashes_file;
-
-	m_stat(md->lastmodified_filename, &lastmodified_file);
-	m_stat(md->phash_filename, &phashes_file);
-
-	if( phashes_file.st_ctim.tv_sec > lastmodified_file.st_ctim.tv_sec ||
-			( phashes_file.st_ctim.tv_sec == lastmodified_file.st_ctim.tv_sec &&
-				phashes_file.st_ctim.tv_nsec > lastmodified_file.st_ctim.tv_nsec )) {
-		//filehashes index was created after last modified timestamp of that mosaik2_database => still fine
-		fprintf(stderr, "phashes file was modified after last modified of the database, has to be rebuild\n");
-		return PHASHES_INVALID;
-	}
-
-	if(get_file_size(md->phash_filename) != md->element_count * md->phash_sizeof) {
-		fprintf(stderr, "phases file has not that much elements than it could be, has to be rebuild\n");
-		return PHASHES_INVALID;
-	}
-
-	return PHASHES_VALID;
-}
 
 /*
  * creates an external sort if free ram is lower than the filehashes.bin size.
@@ -530,37 +483,27 @@ void build_filehashes_index(mosaik2_database *md) {
 	m_fclose(filehashes_index_file);
 }
 
-void build_phashes(mosaik2_database *md) {
+/*
+ * compares the last modified timestamps of one mosaik2 database directory
+ * if the file .lastmodifed has newer changes than the filehashes.idx FILEHASHES_INDEX_INVALID
+ * is returnd, FILEHASHES_INDEX_VALID otherwise.
+ */
+int check_filehashes_index(mosaik2_database *md) {
+	struct stat lastmodified_file, filehashes_index_file;
 
-	int old_phash_element_count = get_file_size(md->phash_filename);
-	int element_count = md->element_count;
-	
-	FILE *filename_index_file = m_fopen(md->filenames_index_filename, "r");
-	FILE *phash_file = m_fopen(md->phash_filename, "a");
-	fprintf(stderr, "building phashes\n");
+	m_stat(md->lastmodified_filename, &lastmodified_file);
+	m_stat(md->filehashes_index_filename,&filehashes_index_file);
 
-	int next_phash_element = 0;
-	if(old_phash_element_count > 0)
-		next_phash_element=1;
-	for(uint32_t element = old_phash_element_count + next_phash_element; element<element_count; element++) {
+	if( filehashes_index_file.st_ctim.tv_sec > lastmodified_file.st_ctim.tv_sec ||
+			( filehashes_index_file.st_ctim.tv_sec == lastmodified_file.st_ctim.tv_sec &&
+				filehashes_index_file.st_ctim.tv_nsec > lastmodified_file.st_ctim.tv_nsec )) {
+		//filehashes index was created after last modified timestamp of that mosaik2_database => still fine
+		return FILEHASHES_INDEX_VALID;
 
-		char *filename = mosaik2_database_read_element_filename( md, element, filename_index_file);
-		unsigned long long hasha=0;
-	//	fprintf(stderr, "phashing file %s\n", filename);
-		int val = ph_dct_imagehash(filename, &hasha);
-		free(filename);
-		fwrite(&hasha,sizeof(unsigned long long), 1, phash_file);
-		fwrite(&val, sizeof(int), 1, phash_file);
 	}
-	fprintf(stderr, "building phashes done\n");
-	
-
-
-	m_fclose(filename_index_file);
-	m_fclose(phash_file);
-
+	//if(debug) fprintf(stderr, "filehashes index outdated\n");
+	return FILEHASHES_INDEX_INVALID;
 }
-
 
 int qsort_(const void *p0, const void *p1) {
 	unsigned char *d0 = (unsigned char*) p0;
@@ -575,3 +518,4 @@ int qsort_(const void *p0, const void *p1) {
 
 	return 0;
 }
+

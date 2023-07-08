@@ -11,11 +11,13 @@
 
 #include "libmosaik2.h"
 
+#ifdef HAVE_CURL
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
   return written;
 }
+#endif
 
 void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len);
 
@@ -344,6 +346,7 @@ if(debug) fprintf(stderr, "init\n");
 			}
 
 		} else {
+#ifdef HAVE_CURL
 			printf("%i/%i downloading %s:%i %s\n", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 
 			CURL *curl_handle;
@@ -365,6 +368,9 @@ if(debug) fprintf(stderr, "init\n");
 			}
 			curl_easy_cleanup(curl_handle);
 			curl_global_cleanup();
+#else
+			fprintf(stderr, "mosaik2 was compiled without curl support, no downloads are possible, only loading images from the local filesystem\n");
+#endif
 		}
 	}
 	if(args->verbose)printf("join mosaik2 for real\n");

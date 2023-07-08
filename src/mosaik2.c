@@ -312,54 +312,33 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 }
 
 void print_version() {
-	fprintf(stdout, "mosaik2 v%s\n", MOSAIK2_VERSION);
+        puts(PACKAGE " version " VERSION);
+        puts("Compile-time switches: "
+#ifdef DEBUG
+                "debug "
+#endif
+#ifdef HAVE_PHASH
+		"phash "
+#endif
+#ifdef HAVE_LIBCURL
+		"curl "
+#endif
+#ifdef HAVE_LIBEXIF
+		"exif "
+#endif
+	);
 }
 
 void print_usage() {
 	fprintf(stdout,
-"Usage: mosaik2 init       [-V|-q] [-r <PIXEL>] MOSAIK2DB\n"
-"  or:  mosaik2 index      [-V|-q] [-j <COUNT>] [-l <LOAD>] MOSAIK2DB < file-list\n"
-"  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image\n"
-"  or:  mosaik2 join       [-V|-q] [-p <PIXEL>] [-s] [-d] dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]\n"
-"  or:  mosaik2 duplicates [-V|-q] [-i] [-y] [-P <DIST>] MOSAIK2DB_0 [MOSAIK2DB_1]\n"
-"  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] MOSAIK2DB\n"
-"  or:  mosaik2 info       [-V|-q] [-e <SEARCH>] | src-image -t <NUM>] MOSAIK2DB\n"
-"  or:  mosaik2 crop       [-V|-q] -e <SEARCH> -t <NUM> MOSAIK2DB\n"
-"  or:  mosaik2 (-h|-v)\n" );
+#include "usage.inc"
+);
 }
 
 void print_help() {
 	fprintf(stdout,
-"\nmosaik2 -- creates real photo mosaics. ready for large data sets.\n"
-"\n"
-" OPTIONS\n"
-"  -V          Verbose output\n"
-"  -q          Quiet output\n"
-"  -h          Print this help and exit\n"
-"  -v          Print program version and exit\n"
-"  -d          Fast but not complete reduction of duplicates processor count\n"
-"  -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev\n"
-"  -e SEARCH   operate only on the SEARCHs database element\n"
-"  -i          Ignore old invalid images\n"
-"  -j COUNT    Limit concurrent worker jobs to COUNT (default\n"
-"  -l LOAD     Soft limit the system load to LOAD (default 0, means off)\n"
-"  -n          No hash comparison\n"
-"  -p PIXEL    Image resolution in PIXEL of one image tile in\n"
-"              the dest-image (default 200)\n"
-"  -P DIST     Phash-Similarity-Distance: values between 1 and 32\n"
-"  -r PIXEL    Database-image-resolution in PIXEL (default 16)\n"
-"  -R PERCENT  Ratio between color matching and color\n"
-"              standard devation (default 100 means only color\n"
-"              matching only, 0 uses only stddev informations)\n"
-"  -s          Symlinks instead of file copies\n"
-"  -t NUM      Use NUM image tiles (default 20)\n"
-"  -u          Allow images only once (unique)\n"
-"  -U          Allow images only once (fast-unique)\n"
-"  -y          Dry run: does not change the database\n"
-"\n"
-"Website: https://f7a8.github.io/mosaik2/\n"
-"\n"
-"Report bugs to https://github.com/f7a8/mosaik2/issues.\n");
+#include "help.inc"
+);
 }
 
 int is_number(char *string) {

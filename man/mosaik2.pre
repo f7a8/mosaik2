@@ -1,4 +1,4 @@
-.TH "mosaik2" "7" "2022" "mosaik2 0.3" "mosaik2 Documentation"
+.TH "mosaik2" "1" "$DATE$" "mosaik2 $VERSION$" "mosaik2 Documentation"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 
@@ -25,7 +25,16 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 \fBmosaik2\fR (-h|-v)
 .SH "VERSION"
 .PP
-This manual documents mosaik2 version 0.3
+This manual documents mosaik2 $VERSION$
+Compile-time switches in this build:
+.RS 4
+.br
+libcurl remote file support: $MAN_CURL$
+.br
+libexif handle rotated images support: $MAN_EXIF$
+.br
+libpHash handle similar images support: $MAN_PHASH$
+.RE
 .SH "DESCRIPTION"
 .PP
 mosaik2 is a Command Line Interface program for Linux, especially designed for large amounts of data.
@@ -42,7 +51,7 @@ After your mosaik2 database(s) have been created, you can start to work on your 
 .PP
 The \fBjoin\fR mode merges the gathered intermediate results from different mosaik2 databases with the same resolution will finally create the desired mosaic. After the candidates have been identified, they are saved into ~/.mosaik2. This brings you in a better position, if you create several mosaics with different properites, a lot of images will be reused, and a download for example can be avoided.
 
-The \fBduplicates\fR mode indentifies candidate images, that appear multiple times in your mosaik2 database, and mark all but the first occurance as invalid. This mode prints the invalidated candidates to stdout. Option dry-run makes no modification to the mosaik2 database. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination or omit mosaik2db-dest. You may also want to have a look on the perceptual hash argument -P, which can also find similar duplicates.
+The \fBduplicates\fR mode indentifies candidate images, that appear multiple times in your mosaik2 database, and mark all but the first occurance as invalid. This mode prints the invalidated candidates to stdout. Option dry-run makes no modification to the mosaik2 database. Duplicate images will only be saved in mosaik2db-dest. If you want to save them vice versa, you have to switch the order of mosaik2db arguments. If you want to eliminate just duplicates in one mosaik2db itself, then let mosaik2db-src and mosaik2db-dest point to the same destination or omit mosaik2db-dest. You may also want to have a look on the perceptual hash argument -P, which can also find similar duplicates (optional feature, $MAN_PHASH$ in this build).
 .PP
 Your image collection will be changed from time to time, which means some images were renamed, removed or their file content has changed. mosaik2 databases can run out of sync, which may lead to wrong or missing tiles. The \fBinvalidate\fR mode takes this into account due comparing all images candidates by accessiable, last modification timestamps, filesizes and file hashes. Your mosaik2 database will ignore those invalidated candidates in further \fBgathering\fR operations, which will lead to a lower effective candidates number. This mode prints the invalidated files to stdout.
 .br
@@ -95,6 +104,11 @@ The \fBchebyshev\fR distance is the fastest but most inaccurate method, where th
 Execute the MODE only for a specific database candidate and not for the entire database. Searching can be done with the element number (first one starts with 1) or the file name as it was indexed. File names are found by matching from the beginning, the end can be omitted. For example: Entry 1: "../pic2.jpg", Entry 2: "../pic1.jpg". Search for "pic" finds no file, because no matching beginning. Search for "../pic" finds "../pic2.jpg", because first hit. Search for "../pic1.jpg" finds "../pic1.jpg" as expected.
 .RE
 .PP
+\fB-h\fR
+.RS 4
+print short help and exit
+.RE
+.PP
 \fB-i\fR
 .RS 4
 Ignore-old-invalids: this compares all files again with their original source if set, otherwise only valid files are compared.
@@ -120,7 +134,7 @@ No-hash-cmp: while checking all images in the mosaik2db, omit the file content c
 Each original image is reduced to squared \fIpixel-per-tile\fR pixels. The default value is 200 px. This value controls the resulting total image size. Multiply pixel-per-tile with num-tile results to the pixel size at the smaller dimension.
 .RE
 .PP
-\fB-P\fR perceptual-hash-similarity-distance
+\fB-P\fR perceptual-hash-similarity-distance (optional feature, $MAN_PHASH$ in this build)
 .RS 4
 Each candidate is not only compared for exact equalness like same timestamp, filesizes and file hash, with this option image content are compared to similar image contents. This phash DCT algorithm (phash.org/) can detect sligthy changed images, like a resaved jpegs, tiny cropped images or changed color settings. The underlying library, which accepts distance values from 1 to 32. Try low values first, and check, if they fit to your needs (you may want to use the -y option to test serveral phash-distance values, before saving it permanenty and -V will print both candidates, make it possible to comapare them manually).
 .br
@@ -163,6 +177,11 @@ For example an mosaic with the src-image-resolution of 30 with an aspect ratio o
 If an candidate has been indexed twice, e.g. because there was an old backup somewhere, it can also appear also up to two times in the dest-image. You can prevent duplicates with the \fBduplicates\fR mode.
 .RE
 .PP
+\fB-v\fR
+.RS 4
+Print program version and exit
+.RE
+.PP
 \fB-U\fR
 .RS 4
 Fast-Unique: Like the -u option, but uses much less memory and is almost as fast as without -u.
@@ -187,7 +206,8 @@ file_link{LINEBREAK}
 \.\.\.
 .PP
 .RS 4
-* file_link means an absolute or relative filepath on your local machine or an url.
+* file_link means an absolute or relative filepath on your local machine or an url (remote files are are an optional feature, $MAN_CURL$ in this build).
+.
 .RE
 .PP
 You can either write your own program to create that list on the fly and pipe 
@@ -204,7 +224,7 @@ In case of an error the exit code is always 1, 0 otherwise. The program tries to
 
 .SH "EXAMPLE"
 .PP
-find ~/Pictures -type f -iregex ".*\e.jpe?g$" -size +10000c -fprintf  first_mosaik2.file_list "%p\et%s\et%T@\en" 
+find ~/Pictures -type f -iregex ".*\e.jpe?g$" -size +10000c -size -100000000c >  first_mosaik2.file_list
 .br
 mosaik2 init first_mosaik2_db
 .br
@@ -283,7 +303,7 @@ The desired photo mosaic result image.
 .br
 my_first_mosaik2.jpeg.src
 .RS 6
-A text file of all images used in the photo mosaic, sorted by index.
+A text file of all images used in the photo mosaic, sorted by position, starting top left. Every new image row leads to an empty line.
 .RE
 .br
 my_first_mosaik2.jpeg.html
@@ -293,7 +313,7 @@ The photo mosaic in table form with image displays.
 .br
 my_first_mosaik2.jpeg.result
 .RS 6
-Save the best candidates from the gathering mode. It is saved periodically and at the end.
+Save the best candidates from the gathering mode.
 .RE
 .br
 my_first_mosaik2.jpeg.mtileres

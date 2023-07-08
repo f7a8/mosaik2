@@ -9,7 +9,17 @@ uint8_t ORIENTATION_RIGHT_TOP=1;
 uint8_t ORIENTATION_BOTTOM_RIGHT=2;
 uint8_t ORIENTATION_LEFT_BOTTOM=3;
 
+#ifdef HAVE_PHASH
+const int PHASHES_VALID = 1;
+const int PHASHES_INVALID = 0;
+
+const int IS_PHASH_DUPLICATE = 2;
+#endif
+const int IS_DUPLICATE = 1;
+const int IS_NO_DUPLICATE = 0;
+
 void init_mosaik2_context(mosaik2_context *ctx) {
+
 	memset(ctx, 0, sizeof(mosaik2_context));
 	memset(ctx->pids, 0, 1024*sizeof(pid_t));
 	char *env_mosaik2_debug = getenv("MOSAIK2_DEBUG");
@@ -975,9 +985,9 @@ int File_Copy(char FileSource[], char FileDestination[])
 
 
 
-
+#ifdef HAVE_EXIF
 uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
-	
+
 	ExifData *ed;
 	ExifEntry *entry;
 
@@ -1014,6 +1024,11 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 	//exif_entry_free(entry);
 	return ORIENTATION_TOP_LEFT;
 }
+#else
+uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
+	return ORIENTATION_TOP_LEFT;
+}
+#endif
 
 
 gdImagePtr read_image_from_file(char *filename) {
@@ -1080,48 +1095,48 @@ void trim_spaces(char *buf) {
 
 
 /* Show the tag name and contents if the tag exists */
-void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
-{
-    /* See if this tag exists */
-    ExifEntry *entry = exif_content_get_entry(d->ifd[ifd],tag);
-    if (entry) {
-        char buf[1024];
-
-        /* Get the contents of the tag in human-readable form */
-        exif_entry_get_value(entry, buf, sizeof(buf));
-
-        /* Don't bother printing it if it's entirely blank */
-        trim_spaces(buf);
-        if (*buf) {
-            printf("%s\t%s\t%02X\n", exif_tag_get_name_in_ifd(tag,ifd), buf, entry->data[0]);
-        }
-    }
-}
+//void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag)
+//{
+//    /* See if this tag exists */
+//    ExifEntry *entry = exif_content_get_entry(d->ifd[ifd],tag);
+//    if (entry) {
+//        char buf[1024];
+//
+//        /* Get the contents of the tag in human-readable form */
+//        exif_entry_get_value(entry, buf, sizeof(buf));
+//
+//        /* Don't bother printing it if it's entirely blank */
+//        trim_spaces(buf);
+//        if (*buf) {
+//            printf("%s\t%s\t%02X\n", exif_tag_get_name_in_ifd(tag,ifd), buf, entry->data[0]);
+//        }
+//    }
+//}
 
 /* Show the given MakerNote tag if it exists */
-void show_mnote_tag(ExifData *d, unsigned tag)
-{
-    ExifMnoteData *mn = exif_data_get_mnote_data(d);
-    if (mn) {
-        int num = exif_mnote_data_count(mn);
-        int i;
-
-        /* Loop through all MakerNote tags, searching for the desired one */
-        for (i=0; i < num; ++i) {
-            char buf[1024];
-            if (exif_mnote_data_get_id(mn, i) == tag) {
-                if (exif_mnote_data_get_value(mn, i, buf, sizeof(buf))) {
-                    /* Don't bother printing it if it's entirely blank */
-                    trim_spaces(buf);
-                    if (*buf) {
-                        printf("%s: %s\n", exif_mnote_data_get_title(mn, i),
-                            buf);
-                    }
-                }
-            }
-        }
-    }
-}
+//void show_mnote_tag(ExifData *d, unsigned tag)
+//{
+//    ExifMnoteData *mn = exif_data_get_mnote_data(d);
+//    if (mn) {
+//        int num = exif_mnote_data_count(mn);
+//        int i;
+//
+//        /* Loop through all MakerNote tags, searching for the desired one */
+//        for (i=0; i < num; ++i) {
+//            char buf[1024];
+//            if (exif_mnote_data_get_id(mn, i) == tag) {
+//                if (exif_mnote_data_get_value(mn, i, buf, sizeof(buf))) {
+//                    /* Don't bother printing it if it's entirely blank */
+//                    trim_spaces(buf);
+//                    if (*buf) {
+//                        printf("%s: %s\n", exif_mnote_data_get_title(mn, i),
+//                            buf);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 /* Rotates an image by 90 degrees (counter clockwise) */
 gdImagePtr gdImageRotate90 (gdImagePtr src) {
@@ -1207,8 +1222,13 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 		m_fclose(file);
 		
 	} else {
+#ifdef HAVE_CURL
 		fprintf(stderr, "only reading of local files is currently implemented\n");
 		exit(1);
+#else
+		fprintf(stderr, "only reading of local files is currently implemented\n");
+		exit(1);
+#endif
 		/*CURL *curl;
 		CURLcode res;
 		char filename[100];

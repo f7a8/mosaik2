@@ -4,10 +4,10 @@
 
 #define _GNU_SOURCE // for activating memmem in string.h
 #include <assert.h>
-#include <curl/curl.h>
 #include <errno.h>
 #include <err.h>
 #include <float.h>
+#include <gd.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
@@ -30,8 +30,13 @@
 
 #define MD5_DIGEST_LENGTH 16
 
-#include <gd.h>
+#ifdef HAVE_CURL
+#include <curl/curl.h>
+#endif
+
+#ifdef HAVE_EXIF
 #include <libexif/exif-data.h>
+#endif
 
 #include "mosaik2.h"
 
@@ -54,6 +59,19 @@ extern uint8_t ORIENTATION_TOP_LEFT;
 extern uint8_t ORIENTATION_RIGHT_TOP;
 extern uint8_t ORIENTATION_BOTTOM_RIGHT;
 extern uint8_t ORIENTATION_LEFT_BOTTOM;
+
+#ifdef HAVE_PHASH
+extern const int PHASHES_VALID;
+extern const int PHASHES_INVALID;
+
+extern const int IS_PHASH_DUPLICATE;
+
+void build_phashes(mosaik2_database *md);
+int check_phashes(mosaik2_database *md);
+int ph_dct_imagehash(const char *file, unsigned long long *hash);
+#endif
+extern const int IS_DUPLICATE;
+extern const int IS_NO_DUPLICATE;
 
 void init_mosaik2_context(mosaik2_context *);
 void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name);
@@ -120,8 +138,8 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
 gdImagePtr read_image_from_file(char *filename);
 gdImagePtr read_image_from_buf(unsigned char *buf, size_t file_size);
 void trim_spaces(char *buf);
-void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
-void show_mnote_tag(ExifData *d, unsigned tag);
+//void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
+//void show_mnote_tag(ExifData *d, unsigned tag);
 
 gdImagePtr gdImageRotate90 (gdImagePtr src);
 gdImagePtr gdImageRotate180 (gdImagePtr src);
