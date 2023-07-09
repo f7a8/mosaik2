@@ -44,7 +44,7 @@ deps.mk: ${TARGETS} ${I_DSTS}
 	${CC} ${CFLAGS} -MM ${TARGETS} > $@
 
 clean:
-	rm -f mosaik2 *.o
+	rm -f mosaik2 *.o *.inc
 
 
 

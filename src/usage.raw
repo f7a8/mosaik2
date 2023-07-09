@@ -1,0 +1,11 @@
+" PACKAGE " version " VERSION "
+
+Usage: mosaik2 init       [-V|-q] [-r <PIXEL>] MOSAIK2DB
+  or:  mosaik2 index      [-V|-q] [-j <COUNT>] [-l <LOAD>] MOSAIK2DB < file-list
+  or:  mosaik2 gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D DIST] dest-image MOSAIK2DB < src-image
+  or:  mosaik2 join       [-V|-q] [-p <PIXEL>] [-s] [-d] dest-image MOSAIK2DB_0 [MOSAIK2DB_1, ...]
+  or:  mosaik2 duplicates [-V|-q] [-i] [-y] [-P <DIST>] MOSAIK2DB_0 [MOSAIK2DB_1]
+  or:  mosaik2 invalid    [-V|-q] [[-i] [-y] [-n] | -e <SEARCH>] MOSAIK2DB
+  or:  mosaik2 info       [-V|-q] [-e <SEARCH>] | src-image -t <NUM>] MOSAIK2DB
+  or:  mosaik2 crop       [-V|-q] -e <SEARCH> -t <NUM> MOSAIK2DB
+  or:  mosaik2 (-h|-v)
