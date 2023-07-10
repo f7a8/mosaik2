@@ -150,6 +150,11 @@ In an existing mosaik2 database the \fIdatabase-image-resolution\fR cannot be ch
 Example of an expected database size: from 2003 to 2019, there are about 53 million JPEG images in Wikimedia Commons, occupying a storage size of about 165 TB. At a image-resolution of 16, the resulting mosaik2 database size was 130 GB.
 .RE
 .PP
+\fB-R\fR color-stddev-ratio
+.RS 4
+Ratio between color matching and color standard devation. Only color matching is 100 (default), only stddev color matching is 0.
+.RE
+.PP
 \fB-s\fR
 .RS 4
 Controls the caching strategy. If omitted files are copied to the cache directory ~/.mosaik2/, which should be advantageous for downloaded data. But this option can create symlinks instead of copies, if files are local.
@@ -177,11 +182,6 @@ For example an mosaic with the src-image-resolution of 30 with an aspect ratio o
 If an candidate has been indexed twice, e.g. because there was an old backup somewhere, it can also appear also up to two times in the dest-image. You can prevent duplicates with the \fBduplicates\fR mode.
 .RE
 .PP
-\fB-v\fR
-.RS 4
-Print program version and exit
-.RE
-.PP
 \fB-U\fR
 .RS 4
 Fast-Unique: Like the -u option, but uses much less memory and is almost as fast as without -u.
@@ -189,6 +189,11 @@ Fast-Unique: Like the -u option, but uses much less memory and is almost as fast
 The more the number of candidates exceeds the number of tiles in the mosaic, the better the result will be. If both are about the same size, the mosaic can become disappointing.
 .br
 This method works like this: First the images of the database are placed in the empty tiles where they fit best, then the images are placed only in the places where they bring the biggest improvements.
+.RE
+.PP
+\fB-v\fR
+.RS 4
+Print program version and exit
 .RE
 .PP
 \fB-y\fR
