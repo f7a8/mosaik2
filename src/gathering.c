@@ -94,7 +94,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
-	image_ratio = ratio / 100;
+	image_ratio = ratio / 100.0;
 	stddev_ratio = 1.0 - image_ratio;
 
 	mosaik2_project mp = {.ratio = ratio, .unique = unique, .fast_unique = fast_unique, .primary_tile_count = primary_tile_count};
