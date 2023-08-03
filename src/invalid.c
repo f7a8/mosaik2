@@ -19,8 +19,8 @@ void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
 	m_fwrite(&new_value, 1, invalid_file);
 }
 
-void print_invalid(char *filename, size_t filesize, time_t last_modified ) {
-	fprintf(stdout, "%s\t%li\t%li\n", filename, filesize, last_modified);
+void print_invalid(char *filename) {
+	fprintf(stdout, "%s\n", filename);
 }
 
 void print_invalid_(char *filename,int access) {
@@ -28,15 +28,7 @@ void print_invalid_(char *filename,int access) {
 		fprintf(stderr, "file (%s) not accessible => invalid: %s\n", filename, strerror(errno));
 		return;
 	}
-	size_t filesize;
-	time_t last_modified;
-	 struct stat st;
-	//TODO take care about missing files
-	m_stat(filename, &st);
-	filesize = st.st_size;	
-	last_modified = st.st_mtim.tv_sec;
-
-	print_invalid(filename, filesize, last_modified);
+	print_invalid(filename);
 }
 
 int mosaik2_invalid(mosaik2_arguments *args) {
@@ -181,7 +173,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					//continue;
 				} else {
 					if(debug)fprintf(stdout, "file version with different timestamps for (%s) available, mark this file as invalid\n",buf);
-					print_invalid( buf, cur_filesize, cur_timestamp );	
+					print_invalid( buf);
 					if(!dry_run) {
 						mark_invalid(invalid_file, j,md.invalid_filename);
 						invalid_count++;
@@ -198,7 +190,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				if(cur_filesize != old_filesize) {
 					
 					fprintf(stderr, "file (%s) version with different filesize (old:%li cur:%li) available => invalid\n",buf, old_filesize, cur_filesize);
-					print_invalid(buf, cur_filesize, cur_timestamp );
+					print_invalid(buf);
 					if(!dry_run) {
 						mark_invalid(invalid_file,j,md.invalid_filename);
 						invalid_count++;
@@ -258,7 +250,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 						if(debug) fprintf(stdout, "filehashes are EQUAL\n");
 					} else {
 						fprintf(stderr, "file hashes mismatch, mark file (%s) as invalid\n", buf);
-						print_invalid( buf, cur_filesize, cur_timestamp );
+						print_invalid(buf);
 						if(!dry_run) {
 							mark_invalid(invalid_file,j,md.invalid_filename);
 							invalid_count++;
