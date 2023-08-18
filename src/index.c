@@ -29,6 +29,7 @@ int mosaik2_index(mosaik2_arguments *args) {
 	init_mosaik2_context(&ctx);
 	ctx.max_tiler_processes = get_max_tiler_processes(max_tiler_processes);
 	ctx.max_load_avg = get_max_load_avg(max_load_avg);
+	ctx.new_indexed_element = 0;
 
 	mosaik2_database md;
 
@@ -122,6 +123,7 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	ctx->start_t = time(NULL);
 	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0 && i < maxmemb) {
 		process_next_line(args, ctx, md, lineptr, i++,stdin0);
+		ctx->new_indexed_element++;
 	}
 	free(lineptr);
 	if(exiting == 1) {
@@ -177,10 +179,10 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 		m_fclose(file);
 		mosaik2_tiler(args, md, &task);
 
-		if(args->quiet == 0 || i == 0 || i % 1000 == 0) {
+		if(args->quiet == 0 || ctx->new_indexed_element == 0 || ctx->new_indexed_element % 1000 == 0) {
 			int jobs = ctx->current_tiler_processes + 1;
-			double img_per_min = 60.*i/(time(NULL)-ctx->start_t);
-			fprintf(stdout, "job #%i, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
+			double img_per_min = 60.*ctx->new_indexed_element/(time(NULL)-ctx->start_t);
+			fprintf(stdout, "#%i, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
 			exit(0);
 		}
 		exit(0);

@@ -38,6 +38,9 @@ struct mosaik2_context_struct {
 	pid_t pids[1024];
 
 	time_t start_t;
+
+	// starts every index process at 0, important for image per second info in index mode
+	uint32_t new_indexed_element;
 };
 
 typedef struct mosaik2_context_struct mosaik2_context;
