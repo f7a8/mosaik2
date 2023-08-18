@@ -1,4 +1,10 @@
 src/*.o
+man/mosaik2.1
+src/deps.mk
+src/help.inc
+src/mosaik2
+src/usage.inc
+src/version.inc
 *.jpeg
 *.jpeg.html
 *.jpeg.src
