@@ -7,7 +7,7 @@
 
 #include "libmosaik2.h"
 
-int check_phashes(mosaik2_database *md) {
+int mosaik2_database_phashes_check(mosaik2_database *md) {
 	struct stat lastmodified_file, phashes_file;
 
 	m_stat(md->lastmodified_filename, &lastmodified_file);
@@ -29,7 +29,7 @@ int check_phashes(mosaik2_database *md) {
 	return PHASHES_VALID;
 }
 
-void build_phashes(mosaik2_database *md) {
+void mosaik2_database_phashes_build(mosaik2_database *md) {
 
 	int old_phash_element_count = get_file_size(md->phash_filename);
 	int element_count = md->element_count;

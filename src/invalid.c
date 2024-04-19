@@ -43,7 +43,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
-	check_thumbs_db(&md);
+	mosaik2_database_check(&md);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
 		fprintf(stderr, "ingore_old_invalids must be 0 or 1\n");

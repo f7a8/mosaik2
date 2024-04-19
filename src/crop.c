@@ -12,7 +12,7 @@ int mosaik2_crop(mosaik2_arguments *args) {
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
-	check_thumbs_db(&md);
+	mosaik2_database_check(&md);
 	int database_image_resolution = read_database_image_resolution(&md); // standard value should be 16
 
 	if (args->has_element_identifier == ELEMENT_FILENAME ) {

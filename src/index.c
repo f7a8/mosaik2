@@ -34,7 +34,7 @@ int mosaik2_index(mosaik2_arguments *args) {
 	mosaik2_database md;
 
 	init_mosaik2_database(&md, mosaik2_database_name);
-	check_thumbs_db(&md);
+	mosaik2_database_check(&md);
 	mosaik2_database_read_database_id(&md);
 	check_pid_file(&md);
 	write_pid_file(&md);

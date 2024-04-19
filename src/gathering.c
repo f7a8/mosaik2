@@ -72,9 +72,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	init_mosaik2_database(&md, mosaik2_db_name);
 	mosaik2_database_read_database_id(&md);
 
-	check_thumbs_db(&md);
+	mosaik2_database_check(&md);
 
-	check_dest_filename(dest_filename);
+	 mosaik2_project_check_dest_filename(dest_filename);
 	database_image_resolution = read_database_image_resolution(&md);
 	thumbs_count = read_thumbs_db_count(&md);
 

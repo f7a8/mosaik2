@@ -32,7 +32,7 @@ int mosaik2_join(mosaik2_arguments *args) {
 	char * home = getenv("HOME");
 	char *pwd = getenv("PWD");
 
-	int ft = check_dest_filename( dest_filename );
+	int ft =  mosaik2_project_check_dest_filename( dest_filename );
 
 	if(dest_tile_width<1) {
 		fprintf(stderr, "dest_tile_width should be greater 1\n");
@@ -72,7 +72,7 @@ if(debug) fprintf(stderr, "init\n");
 		
 		init_mosaik2_database(&mds[i0], args->mosaik2dbs[i]);
 		mosaik2_database_read_database_id(&mds[i0]);
-		check_thumbs_db(&mds[i0]);
+		mosaik2_database_check(&mds[i0]);
 		candidates_count += read_thumbs_db_count(&mds[i0]);
 
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);

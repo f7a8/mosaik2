@@ -61,21 +61,23 @@ extern uint8_t ORIENTATION_BOTTOM_RIGHT;
 extern uint8_t ORIENTATION_LEFT_BOTTOM;
 
 #ifdef HAVE_PHASH
+
 extern const int PHASHES_VALID;
 extern const int PHASHES_INVALID;
-
 extern const int IS_PHASH_DUPLICATE;
 
-void build_phashes(mosaik2_database *md);
-int check_phashes(mosaik2_database *md);
-int ph_dct_imagehash(const char *file, unsigned long long *hash);
+void mosaik2_database_phashes_build(mosaik2_database *md);
+int  mosaik2_database_phashes_check(mosaik2_database *md);
+
+extern int ph_dct_imagehash(const char *file, unsigned long long *hash);
 #endif
+
 extern const int IS_DUPLICATE;
 extern const int IS_NO_DUPLICATE;
 
-void init_mosaik2_context(mosaik2_context *);
-void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name);
-void init_mosaik2_project(mosaik2_project *mp, char *thumbs_db_name, char *dest_filename);
+void init_mosaik2_context(mosaik2_context *ctx);
+void init_mosaik2_database(mosaik2_database *md, char *mosaik2_database_name);
+void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_name, char *dest_filename);
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height);
 void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int image_width, int image_height);
 void mosaik2_database_read_database_id(mosaik2_database *md);
@@ -118,11 +120,11 @@ time_t read_thumbs_db_lastmodified(mosaik2_database *md);
 size_t read_thumbs_db_size(mosaik2_database *md);
 void read_thumbs_db_histogram(mosaik2_database *md);
 
-void check_thumbs_db_name(char *thumbs_db_name);
-void check_thumbs_db(mosaik2_database *md);
+void mosaik2_database_check_name(char *mosaik2_database_name);
+void mosaik2_database_check(mosaik2_database *md);
 void mosaik2_project_check(mosaik2_project *mp);
-int check_dest_filename(char *dest_filename);
-void check_thumbs_tile_count(uint32_t thumbs_tile_count);
+int  mosaik2_project_check_dest_filename(char *dest_filename);
+//void check_thumbs_tile_count(uint32_t thumbs_tile_count);
 void check_resolution(uint32_t resolution);
 void remove_newline(char *str);
 

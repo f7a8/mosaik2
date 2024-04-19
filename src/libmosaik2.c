@@ -831,7 +831,7 @@ void mosaik2_project_check(mosaik2_project *mp) {
 	m_access( mp->dest_imagedims_filename, F_OK);
 }
 
-void check_thumbs_db(mosaik2_database *md) {
+void mosaik2_database_check(mosaik2_database *md) {
 
 	//check_thumbs_db_name( md->thumbs_db_name );
 	m_access( md->thumbs_db_name, F_OK );
@@ -878,7 +878,7 @@ void check_thumbs_db(mosaik2_database *md) {
 	assert(get_file_size(md->tileoffsets_filename)     == element_count * md->tileoffsets_sizeof);
 }
 
-int check_dest_filename(char *dest_filename) {
+int  mosaik2_project_check_dest_filename(char *dest_filename) {
 	
 	uint32_t dest_filename_len = strlen(dest_filename);
 	if( dest_filename_len > 100 || dest_filename_len < 1 ) {
@@ -918,13 +918,13 @@ int check_dest_filename(char *dest_filename) {
 	return ft;
 }
 
-void check_thumbs_tile_count(uint32_t thumbs_tile_count) {
+/*void check_thumbs_tile_count(uint32_t thumbs_tile_count) {
   if(thumbs_tile_count*thumbs_tile_count*(6*256)>UINT32_MAX) {
     //can candidates_costs contain the badest possible costs?
     fprintf(stderr, "thumb tile size too high for internal data structure\n");
     exit(EXIT_FAILURE);
   }
-}
+}*/
 
 void remove_newline(char *str) {
 	size_t l = strlen(str);

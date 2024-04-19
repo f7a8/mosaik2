@@ -30,11 +30,11 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 
 	mosaik2_database md0;
 	init_mosaik2_database(&md0, mosaik2_db_name_1);
-	check_thumbs_db(&md0);
+	mosaik2_database_check(&md0);
 
 	mosaik2_database md1;
 	init_mosaik2_database(&md1, mosaik2_db_name_2);
-	check_thumbs_db(&md1);
+	mosaik2_database_check(&md1);
 
 	if(dry_run < 0 || dry_run > 1) {
 		fprintf(stderr, "dry_run must be 0 or 1\n");
@@ -54,11 +54,11 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	}
 
 #ifdef HAVE_PHASH
-	if(args->has_phash_distance && check_phashes(&md0) == PHASHES_INVALID ) {
-		build_phashes(&md0);
+	if(args->has_phash_distance && mosaik2_database_phashes_check(&md0) == PHASHES_INVALID ) {
+		mosaik2_database_phashes_build(&md0);
 	}
-	if(args->has_phash_distance && check_phashes(&md1) == PHASHES_INVALID ) {
-		build_phashes(&md1);
+	if(args->has_phash_distance && mosaik2_database_phashes_check(&md1) == PHASHES_INVALID ) {
+		mosaik2_database_phashes_build(&md1);
 	}
 #endif
 	int debug=0;

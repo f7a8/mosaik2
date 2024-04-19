@@ -16,7 +16,7 @@ int mosaik2_info(mosaik2_arguments *args) {
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
-	check_thumbs_db(&md);
+	mosaik2_database_check(&md);
 	md.database_image_resolution = read_database_image_resolution(&md);
 
 	if( args->has_element_identifier == ELEMENT_NUMBER ) {
