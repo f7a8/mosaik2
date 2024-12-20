@@ -224,12 +224,21 @@ void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resoluti
   	ti->pixel_per_primary_tile = ti->pixel_per_tile * database_image_resolution; 
   	ti->total_pixel_per_primary_tile = ti->pixel_per_primary_tile * ti->pixel_per_primary_tile;
   
-	ti->primary_tile_x_count = image_width / ti->pixel_per_primary_tile;
-	ti->primary_tile_y_count = image_height / ti->pixel_per_primary_tile;
+  	if(ti->short_dim == ti->image_width) {
+  		//prevent primary_tile_x/y_count be greater than the src_image_resolution, (possible through floored pixel_per_tile)
+  		ti->primary_tile_x_count = ti->src_image_resolution;
+	} else {
+		ti->primary_tile_x_count = image_width / ti->pixel_per_primary_tile;
+	}
+	if(ti->short_dim == ti->image_height) {
+		ti->primary_tile_y_count = ti->src_image_resolution;
+	} else {
+		ti->primary_tile_y_count = image_height / ti->pixel_per_primary_tile;
+	}
 	ti->tile_x_count = ti->primary_tile_x_count * database_image_resolution;
 	ti->tile_y_count = ti->primary_tile_y_count * database_image_resolution;
-	ti->offset_x = (image_width %  ti->pixel_per_primary_tile) / 2;
-	ti->offset_y = (image_height % ti->pixel_per_primary_tile) / 2;
+	ti->offset_x = (image_width -  ti->primary_tile_x_count * ti->pixel_per_primary_tile) / 2;
+	ti->offset_y = (image_height - ti->primary_tile_y_count * ti->pixel_per_primary_tile) / 2;
 	
 	ti->total_tile_count = ti->tile_x_count * ti->tile_y_count;
 	ti->total_primary_tile_count = ( ti->tile_x_count / database_image_resolution ) * ( ti->tile_y_count / database_image_resolution );
