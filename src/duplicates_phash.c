@@ -22,7 +22,7 @@ int mosaik2_database_phashes_check(mosaik2_database *md) {
 	}
 
 	if(get_file_size(md->phash_filename) != md->element_count * md->phash_sizeof) {
-		fprintf(stderr, "phases file has not that much elements than it could be, has to be rebuild\n");
+		fprintf(stderr, "phashes file has not that much elements than it could be, has to be rebuild\n");
 		return PHASHES_INVALID;
 	}
 
