@@ -71,8 +71,8 @@ if(debug) fprintf(stderr, "init\n");
 		if(debug) fprintf( stderr, "check %i %s\n", i, args->mosaik2dbs[i]);
 		
 		init_mosaik2_database(&mds[i0], args->mosaik2dbs[i]);
-		mosaik2_database_read_database_id(&mds[i0]);
 		mosaik2_database_check(&mds[i0]);
+		mosaik2_database_read_database_id(&mds[i0]);
 		candidates_count += read_thumbs_db_count(&mds[i0]);
 
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
