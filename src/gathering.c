@@ -44,26 +44,26 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	int *stddev_int;
 
 
-	FILE *thumbs_db_tiledims_file;
-	FILE *thumbs_db_tileoffsets_file;
-	FILE *thumbs_db_imagecolors_file;
-	FILE *thumbs_db_imagestddev_file;
-	FILE *thumbs_db_invalid_file;
-	FILE *thumbs_db_duplicates_file;
+	m2file thumbs_db_tiledims_file;
+	m2file thumbs_db_tileoffsets_file;
+	m2file thumbs_db_imagecolors_file;
+	m2file thumbs_db_imagestddev_file;
+	m2file thumbs_db_invalid_file;
+	m2file thumbs_db_duplicates_file;
 	uint8_t tile_dims_buf[BUFSIZ];
 	unsigned char tileoffsets_buf[BUFSIZ];
 	unsigned char colors_buf[256*256*RGB]; //maximal possible data amout per database candidate
 	unsigned char stddev_buf[256*256*RGB];
 	unsigned char invalid_buf[BUFSIZ];
 	unsigned char duplicates_buf[BUFSIZ];
-	FILE *primarytiledims_file;
+	m2file primarytiledims_file;
 	uint32_t idx = 0;
 	uint32_t candidates_insert=0;
 	uint32_t candidates_pop=0;
 	uint32_t candidates_toobad=0;
 	float diff_best=FLT_MAX,diff_improv=FLT_MIN,diff_worst=0;
 
-	FILE *mosaik2_result;
+	m2file mosaik2_result;
 	float candidate_best_costs = FLT_MAX, candidate_worst_costs=0;
 
 

@@ -11,7 +11,7 @@ void check_pid_file(mosaik2_database *md);
 void write_pid_file(mosaik2_database *md);
 void remove_pid_file(mosaik2_database *md);
 void process_input_data(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md);
-void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i,FILE *);
+void process_next_line(mosaik2_arguments *, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i,m2file );
 void mosaik2_index_add_tiler_pid(mosaik2_context *, pid_t);
 void mosaik2_index_clean_tiler_pids(mosaik2_context *);
 void print_usage(char *);
@@ -67,7 +67,7 @@ double get_max_load_avg(uint32_t max_load_avg) {
 double read_system_load() {
 	char buf[BUFSIZ];
 	memset(buf,0,BUFSIZ);
-	FILE *loadfile = m_fopen("/proc/loadavg","r");
+	m2file loadfile = m_fopen("/proc/loadavg","r");
 
 	size_t read = fread(&buf,1,BUFSIZ,loadfile);
 	if(read<1) {
@@ -93,7 +93,7 @@ void check_pid_file(mosaik2_database *md) {
 }
 
 void write_pid_file(mosaik2_database *md) {
-	FILE *f = m_fopen(md->pid_filename,"w");
+	m2file f = m_fopen(md->pid_filename,"w");
 	fprintf(f, "%i", getpid());
 	m_fclose( f );
 }
@@ -115,7 +115,7 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	char *lineptr = NULL;
 
 	ssize_t readcount;
-	FILE *stdin0 = stdin;
+	m2file stdin0 = stdin;
 	if(stdin0==NULL) {
 		perror("failed open file");
 		exit(1);
@@ -137,7 +137,7 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	wait(&wstatus); //TODO doesnt work always
 }
 
-void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i, FILE *file) {
+void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md, char *line, uint32_t i, m2file file) {
 
   if(ctx->exiting)
 		fprintf(stdout, "input data is not resumed, EXITing because of SIGTERM.");
@@ -199,7 +199,7 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	// duration 0.2 ms
 	// lock the lockfile to make all other forked processes wait this process finishp
 
-	FILE *lockfile_file = m_fopen( md->lock_filename, "r");
+	m2file lockfile_file = m_fopen( md->lock_filename, "r");
 	int lockfile_fd = fileno(lockfile_file);
 	if(lockfile_fd == -1) {
 		fprintf(stderr, "could not open lock fd\n");
@@ -212,20 +212,20 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 		}
 	}
 
-	FILE *imagecolors_file = m_fopen( md->imagecolors_filename, "a");
-	FILE *imagestddev_file = m_fopen( md->imagestddev_filename, "a");
-	FILE *imagedims_file = m_fopen( md->imagedims_filename, "a");
-	FILE *image_index_file = m_fopen( md->image_index_filename, "a");
-	FILE *filenames_file = m_fopen( md->filenames_filename, "a");
-	FILE *filenames_index_file = m_fopen( md->filenames_index_filename, "a");
-	FILE *filehashes_file = m_fopen( md->filehashes_filename, "a");
-	FILE *timestamps_file = m_fopen( md->timestamps_filename, "a");
-	FILE *filesizes_file = m_fopen( md->filesizes_filename, "a");
-	FILE *tiledims_file = m_fopen( md->tiledims_filename, "a");
-	FILE *invalid_file = m_fopen( md->invalid_filename, "a");
-	FILE *duplicates_file = m_fopen( md->duplicates_filename, "a");
-	FILE *lastindexed_file = m_fopen( md->lastindexed_filename, "w");
-	FILE *tileoffsets_file = m_fopen( md->tileoffsets_filename, "a");
+	m2file imagecolors_file = m_fopen( md->imagecolors_filename, "a");
+	m2file imagestddev_file = m_fopen( md->imagestddev_filename, "a");
+	m2file imagedims_file = m_fopen( md->imagedims_filename, "a");
+	m2file image_index_file = m_fopen( md->image_index_filename, "a");
+	m2file filenames_file = m_fopen( md->filenames_filename, "a");
+	m2file filenames_index_file = m_fopen( md->filenames_index_filename, "a");
+	m2file filehashes_file = m_fopen( md->filehashes_filename, "a");
+	m2file timestamps_file = m_fopen( md->timestamps_filename, "a");
+	m2file filesizes_file = m_fopen( md->filesizes_filename, "a");
+	m2file tiledims_file = m_fopen( md->tiledims_filename, "a");
+	m2file invalid_file = m_fopen( md->invalid_filename, "a");
+	m2file duplicates_file = m_fopen( md->duplicates_filename, "a");
+	m2file lastindexed_file = m_fopen( md->lastindexed_filename, "w");
+	m2file tileoffsets_file = m_fopen( md->tileoffsets_filename, "a");
 
 
 	uint8_t null_value='\0';

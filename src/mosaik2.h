@@ -109,7 +109,7 @@ struct mosaik2_indextask_struct {
 	TASK_STATE state;
 	uint32_t idx;
 	char filename[1024]; // trade off, dont want to malloc that much. hoping it fits
-	FILE *file;
+	m2file file;
 	size_t filesize;
 	time_t lastmodified;
 	time_t lastindexed;

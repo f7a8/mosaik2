@@ -14,12 +14,12 @@
 #ifdef HAVE_CURL
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
-  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+  size_t written = fwrite(ptr, size, nmemb, (m2file )stream);
   return written;
 }
 #endif
 
-void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len);
+void inject_exif_comment(m2file out, off_t out_file_size, char *comment, size_t comment_len);
 
 int mosaik2_join(mosaik2_arguments *args) {
 
@@ -80,7 +80,7 @@ if(debug) fprintf(stderr, "init\n");
 		if(debug)
 			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,primarytiledis:%s\n", args->mosaik2dbs[i],dest_filename,mp.dest_primarytiledims_filename);
 
-		FILE *primarytiledims_file = m_fopen(mp.dest_primarytiledims_filename, "r");
+		m2file primarytiledims_file = m_fopen(mp.dest_primarytiledims_filename, "r");
 		if(debug) {
 			fprintf(stderr, "primarytiledims file loaded\n");
 		}
@@ -135,7 +135,7 @@ if(debug) fprintf(stderr, "init\n");
 
 		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
 
-		FILE *result_file = m_fopen(mp.dest_result_filename, "rb");
+		m2file result_file = m_fopen(mp.dest_result_filename, "rb");
 		if(args->verbose)fprintf(stderr,"load result file %s (%s)\n", args->mosaik2dbs[i], mp.dest_result_filename);
 		
 		off_t dest_result_filesize = get_file_size(mp.dest_result_filename);
@@ -201,8 +201,8 @@ if(debug) fprintf(stderr, "init\n");
   	}
 	
 	char *thumbs_db_name="";
-	FILE *thumbs_db_file = NULL;
-	FILE *thumbs_db_hash = NULL;
+	m2file thumbs_db_file = NULL;
+	m2file thumbs_db_hash = NULL;
 
 	uint64_t j=0;
 	float total_costs = 0;
@@ -350,7 +350,7 @@ if(debug) fprintf(stderr, "init\n");
 			printf("%i/%i downloading %s:%i %s\n", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 
 			CURL *curl_handle;
-			FILE *pagefile;
+			m2file pagefile;
 			curl_global_init(CURL_GLOBAL_ALL);
 
 			curl_handle = curl_easy_init();
@@ -381,9 +381,9 @@ if(debug) fprintf(stderr, "init\n");
 	}
 	gdImageSetInterpolationMethod(out_im, GD_GAUSSIAN );
 
-	FILE *out = m_fopen(dest_filename, "wb");
-	FILE *html_out = m_fopen(mp.dest_html_filename, "wb");
-	FILE *src_out = m_fopen(mp.dest_src_filename, "wb");
+	m2file out = m_fopen(dest_filename, "wb");
+	m2file html_out = m_fopen(mp.dest_html_filename, "wb");
+	m2file src_out = m_fopen(mp.dest_src_filename, "wb");
 
 	fprintf(html_out, "<html><body><table>");
 	gdImagePtr im;
@@ -556,7 +556,7 @@ if(debug) fprintf(stderr, "init\n");
 	return 0;
 }
 
-void inject_exif_comment(FILE *out, off_t out_file_size, char *comment, size_t comment_len) {
+void inject_exif_comment(m2file out, off_t out_file_size, char *comment, size_t comment_len) {
 		uint32_t buflen = out_file_size < BUFSIZ ? out_file_size : BUFSIZ;
 		unsigned char buf[buflen];
 

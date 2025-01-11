@@ -38,6 +38,7 @@
 #include <libexif/exif-data.h>
 #endif
 
+#include "data_types.h"
 #include "mosaik2.h"
 
 #define MAX_FILENAME_LEN 1024
@@ -83,7 +84,7 @@ void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolut
 void mosaik2_database_read_database_id(mosaik2_database *md);
 void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number);
 int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, uint32_t *found_element_number);
-char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, FILE *filenames_index_file);
+char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, m2file filenames_index_file);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
 float mosaik2_database_costs(mosaik2_database *md, mosaik2_database_element *mde);
@@ -153,26 +154,26 @@ gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 void read_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
 void write_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
-void read_file_entry(FILE *file, void *val, size_t len, off_t offset); 
-void write_file_entry(FILE *file, void *val, size_t len, off_t offset);
+void read_file_entry(m2file file, void *val, size_t len, off_t offset); 
+void write_file_entry(m2file file, void *val, size_t len, off_t offset);
 
-FILE *m_fopen(char *filename, char *mode); // wrapper fpr fopen
-void m_fclose(FILE *file); //wrapper for flose
+m2file m_fopen(char *filename, char *mode); // wrapper fpr fopen
+void m_fclose(m2file file); //wrapper for flose
 
 int m_open(const char *pathname, int flags, mode_t mode);
 void m_close(int fd);
 
-void m_fread(void *ptr, size_t nmemb, FILE *stream);
-void m_fwrite(const void *ptr, size_t nmemb, FILE *stream);
+void m_fread(void *ptr, size_t nmemb, m2file stream);
+void m_fwrite(const void *ptr, size_t nmemb, m2file stream);
 void *m_malloc(size_t size);
 void *m_calloc(size_t nmemb, size_t size);
-int m_fseeko(FILE *stream, off_t offset, int whence);
-int m_fflush(FILE *stream);
+int m_fseeko(m2file stream, off_t offset, int whence);
+int m_fflush(m2file stream);
 void m_stat(const char *pathname, struct stat *statbuf);
 void m_fstat(int fd, struct stat *statbuf);
 void *m_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 void m_munmap(void *addr, size_t length);
-FILE *m_tmpfile(void);
+m2file m_tmpfile(void);
 
 
 int m_sysinfo(struct sysinfo *info);
@@ -204,5 +205,5 @@ int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
 int min_heap_pop(Heap* h, mosaik2_database_candidate *k);
 int min_heap_peek(Heap *h, mosaik2_database_candidate *k);
 /* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
-char *get_file_name(FILE *file);
+char *get_file_name(m2file file);
 char *get_fd_name(int fd);

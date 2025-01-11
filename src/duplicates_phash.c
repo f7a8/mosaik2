@@ -33,9 +33,9 @@ void mosaik2_database_phashes_build(mosaik2_database *md) {
 
 	int old_phash_element_count = get_file_size(md->phash_filename);
 	int element_count = md->element_count;
-	FILE *filename_index_file = m_fopen(md->filenames_index_filename, "r");
+	m2file filename_index_file = m_fopen(md->filenames_index_filename, "r");
 
-	FILE *phash_file = m_fopen(md->phash_filename, "a");
+	m2file phash_file = m_fopen(md->phash_filename, "a");
 	fprintf(stderr, "building phashes\n");
 
 	int next_phash_element = 0;

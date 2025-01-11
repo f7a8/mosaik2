@@ -63,17 +63,17 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 #endif
 	int debug=0;
 
-	FILE *filehashes_file0       = m_fopen(md0.filehashes_filename, "rb");
-	FILE *filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
-	FILE *filehashes_index_file0 = m_fopen(md0.filehashes_index_filename, "rb");
-	FILE *filehashes_index_file1 = m_fopen(md1.filehashes_index_filename, "rb");
-	FILE *duplicates_file0       = m_fopen(md0.duplicates_filename, args->has_phash_distance ? "r+" : "r");
-	FILE *duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
-	FILE *filenames_index_file   = m_fopen(md1.filenames_index_filename, "r");
-	FILE *filenames_file         = m_fopen(md1.filenames_filename, "r");
+	m2file filehashes_file0       = m_fopen(md0.filehashes_filename, "rb");
+	m2file filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
+	m2file filehashes_index_file0 = m_fopen(md0.filehashes_index_filename, "rb");
+	m2file filehashes_index_file1 = m_fopen(md1.filehashes_index_filename, "rb");
+	m2file duplicates_file0       = m_fopen(md0.duplicates_filename, args->has_phash_distance ? "r+" : "r");
+	m2file duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
+	m2file filenames_index_file   = m_fopen(md1.filenames_index_filename, "r");
+	m2file filenames_file         = m_fopen(md1.filenames_filename, "r");
 #ifdef HAVE_PHASH
-	FILE *phash_file0            = m_fopen(md0.phash_filename, "r");
-	FILE *phash_file1            = m_fopen(md1.phash_filename, "r");
+	m2file phash_file0            = m_fopen(md0.phash_filename, "r");
+	m2file phash_file1            = m_fopen(md1.phash_filename, "r");
 #endif
 
 	int compare_same_file=is_same_file(md0.filehashes_filename, md1.filehashes_filename);
@@ -83,7 +83,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		uint8_t buf[BUFSIZ];
 
 		
-		FILE *tmp_file;
+		m2file tmp_file;
 	       
 		tmp_file = m_tmpfile();
 		while ((bytes = fread(&buf, 1, BUFSIZ, duplicates_file1)) != 0) {
@@ -296,7 +296,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 #endif
 
 	if(duplicates_count>0 && dry_run ==0) {
-		FILE *lastmodified_file = m_fopen(md0.lastmodified_filename, "w");
+		m2file lastmodified_file = m_fopen(md0.lastmodified_filename, "w");
 		time_t now = time(NULL);
 		m_fwrite(&now, md0.lastmodified_sizeof, lastmodified_file);
 		m_fclose(lastmodified_file);
@@ -335,7 +335,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 void build_filehashes_index(mosaik2_database *md) {
 	//if(debug)fprintf(stderr, "build filehashes index\n");
 
-	FILE *filehashes_index_file = m_fopen(md->filehashes_index_filename, "w");
+	m2file filehashes_index_file = m_fopen(md->filehashes_index_filename, "w");
 
 	struct sysinfo info;
 	m_sysinfo(&info);
@@ -359,7 +359,7 @@ void build_filehashes_index(mosaik2_database *md) {
 	
 	unsigned char *buf = m_malloc(chunk_nmemb[0] * (dataset_len));
 
-	FILE *tfiles[loop_size];
+	m2file tfiles[loop_size];
 	for(int i=0;i<loop_size;i++) {
 		tfiles[i] = tmpfile();
 		if(tfiles[i]==NULL) {
@@ -368,7 +368,7 @@ void build_filehashes_index(mosaik2_database *md) {
 		}
 	}
 
-	FILE *filehashes_file = m_fopen(md->filehashes_filename, "r");
+	m2file filehashes_file = m_fopen(md->filehashes_filename, "r");
 	for(size_t i=0;i<loop_size;i++) {
 		m_fread(buf, MD5_DIGEST_LENGTH*chunk_nmemb[i], filehashes_file);
 

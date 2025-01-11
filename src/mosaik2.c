@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <error.h>
 
+#include "data_types.h"
 #include "mosaik2.h"
 
 #define MODE_INIT 0

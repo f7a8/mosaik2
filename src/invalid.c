@@ -8,7 +8,7 @@
 #include "libmosaik2.h"
 
 /* automatically invalid detection is written to the first bit and preserves existing user defined invalid states in other bits */
-void mark_invalid(FILE *invalid_file, size_t nmemb, char *filename ) {
+void mark_invalid(m2file invalid_file, size_t nmemb, char *filename ) {
 
 	// need to be an opend file	
 	m_fseeko(invalid_file, nmemb, SEEK_SET);
@@ -82,7 +82,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	}
 
 
-	FILE *invalid_file = m_fopen(md.invalid_filename, "r+");
+	m2file invalid_file = m_fopen(md.invalid_filename, "r+");
 
 	if(args->has_element_identifier != 0) {
 
@@ -98,10 +98,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 		return 0;
 	}
 
-	FILE *filenames_file  = m_fopen(md.filenames_filename, "r");
-	FILE *timestamps_file = m_fopen(md.timestamps_filename, "rb");
-	FILE *filesizes_file  = m_fopen(md.filesizes_filename, "rb");
-	FILE *filehashes_file = m_fopen(md.filehashes_filename, "rb");
+	m2file filenames_file  = m_fopen(md.filenames_filename, "r");
+	m2file timestamps_file = m_fopen(md.timestamps_filename, "rb");
+	m2file filesizes_file  = m_fopen(md.filesizes_filename, "rb");
+	m2file filehashes_file = m_fopen(md.filehashes_filename, "rb");
 	
 	char buf[MAX_FILENAME_LEN];
 	uint8_t image_data[BUFSIZ];
@@ -210,7 +210,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					m_fseeko(filehashes_file, j*MD5_DIGEST_LENGTH, SEEK_SET);
 					m_fread(&old_hash, MD5_DIGEST_LENGTH, filehashes_file);
 
-					FILE *image_file = m_fopen(buf, "rb");
+					m2file image_file = m_fopen(buf, "rb");
 
 					size_t bytes;
 					unsigned char new_hash[MD5_DIGEST_LENGTH];
@@ -268,7 +268,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	m_fclose(filehashes_file);
 
 	if(invalid_count>0) {
-		FILE *lastmodified_file = m_fopen(md.lastmodified_filename, "w");
+		m2file lastmodified_file = m_fopen(md.lastmodified_filename, "w");
 		time_t now = time(NULL);
 		m_fwrite(&now, md.lastmodified_sizeof, lastmodified_file);
 		m_fclose(lastmodified_file);

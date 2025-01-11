@@ -5,8 +5,8 @@
 /**
 	* create as new empty mosaik2 database file. In case of an error it exits the program.
   */
-FILE* create_mosaik2_database_file(char *filename, uint8_t close, uint8_t print) {
-	FILE *f = m_fopen(filename,"w");
+m2file create_mosaik2_database_file(char *filename, uint8_t close, uint8_t print) {
+	m2file f = m_fopen(filename,"w");
 	if( close == 1 )
 		m_fclose( f );
 	if( print == 1 ) fprintf(stdout, "mosaik2 database file %s created\n", filename);
@@ -14,8 +14,8 @@ FILE* create_mosaik2_database_file(char *filename, uint8_t close, uint8_t print)
 }
 
 void create_mosaik2_database_file_id(mosaik2_database *md, int print) {
-	FILE *file = create_mosaik2_database_file(md->id_filename, 0, 0);
-	FILE *rand_file = m_fopen("/dev/random", "r");
+	m2file file = create_mosaik2_database_file(md->id_filename, 0, 0);
+	m2file rand_file = m_fopen("/dev/random", "r");
 
 	uint8_t buf[8];
 	m_fread(buf, 8, rand_file);
@@ -28,13 +28,13 @@ void create_mosaik2_database_file_id(mosaik2_database *md, int print) {
 }
 
 void create_mosaik2_database_file_readme(char *filename, int print) {
-	FILE *file = create_mosaik2_database_file(filename, 0, print);
+	m2file file = create_mosaik2_database_file(filename, 0, print);
 	fprintf(file, "This is a mosaik2 database directory.\n\nmosaik2 creates real photo mosaics especially like from large datasets.\nView the projects website at https://f7a8.github.io/mosaik2/\n");
 	m_fclose( file);
 }
 
 void create_mosaik2_database_file_val(char *filename, void *ptr, size_t len, int print) {
-	FILE *file = create_mosaik2_database_file(filename, 0, print);
+	m2file file = create_mosaik2_database_file(filename, 0, print);
 	m_fwrite(ptr, len, file);
 	m_fclose(file);
 }
