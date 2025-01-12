@@ -21,7 +21,7 @@ void print_usage(char *);
 
 int mosaik2_index(mosaik2_arguments *args) {
 
-	char *mosaik2_database_name = args->mosaik2db;
+	m2name mosaik2_database_name = args->mosaik2db;
 	uint32_t max_tiler_processes = args->max_jobs;
 	uint32_t max_load_avg = args->max_load;
 

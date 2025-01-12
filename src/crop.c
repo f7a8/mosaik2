@@ -3,7 +3,7 @@
 int mosaik2_crop(mosaik2_arguments *args) {
 
 	char *mosaik2_db_name = args->mosaik2db;
-	uint32_t element_number = args->element_number;
+	m2elem element_number = args->element_number;
 
 	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");

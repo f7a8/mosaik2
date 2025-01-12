@@ -1,13 +1,13 @@
 #include "libmosaik2.h"
 
-void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md);
-void print_element (mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint32_t element_number);
-void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_database *md);
+void print_database (mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md);
+void print_element  (mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md, m2elem element_number);
+void print_src_image(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md);
 
 int mosaik2_info(mosaik2_arguments *args) {
 
-	char *mosaik2_db_name = args->mosaik2db;
-	uint32_t element_number = args->element_number;
+	m2name mosaik2_db_name = args->mosaik2db;
+	m2elem element_number = args->element_number;
 
 	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");
@@ -22,7 +22,7 @@ int mosaik2_info(mosaik2_arguments *args) {
 	if( args->has_element_identifier == ELEMENT_NUMBER ) {
 		print_element(args, mosaik2_db_name, &md, element_number-1);
 	} else if (args->has_element_identifier == ELEMENT_FILENAME ) {
-		uint32_t element_number;
+		m2elem element_number;
 		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
 		if(val==0)
 			print_element(args, mosaik2_db_name, &md, element_number);
@@ -42,7 +42,7 @@ int mosaik2_info(mosaik2_arguments *args) {
 	return 0;
 }
 
-void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md) {
+void print_database(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md) {
 
 	printf("path=%s\n", mosaik2_db_name);
 	printf("id=%s\n", md->id);
@@ -69,8 +69,8 @@ void print_database(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_data
 			md->histogram_stddev[R], md->histogram_stddev[G], md->histogram_stddev[B]);
 }
 
-void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_database *md, uint32_t element_number) {
-	uint32_t element_count = read_thumbs_db_count(md);
+void print_element(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md, m2elem element_number) {
+	m2elem element_count = read_thumbs_db_count(md);
 	if( args->has_element_identifier == ELEMENT_NUMBER && (element_number < 0 || element_number >= element_count )) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
@@ -139,7 +139,7 @@ void print_element(mosaik2_arguments *args, char* mosaik2_db_name, mosaik2_datab
 	printf("histogram-stddev=%f %f %f\n", mde.histogram_stddev[R], mde.histogram_stddev[G], mde.histogram_stddev[B]);
 }
 
-void print_src_image(mosaik2_arguments *args, char *mosaik2_db_name, mosaik2_database *md) {
+void print_src_image(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md) {
 	printf("mosaik2db=%s\n", mosaik2_db_name);
 	printf("src-image=%s\n", args->src_image);
 

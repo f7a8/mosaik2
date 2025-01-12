@@ -8,7 +8,7 @@
 #include "libmosaik2.h"
 
 /* automatically invalid detection is written to the first bit and preserves existing user defined invalid states in other bits */
-void mark_invalid(m2file invalid_file, size_t nmemb, char *filename ) {
+void mark_invalid(m2file invalid_file, size_t nmemb, m2name filename ) {
 
 	// need to be an opend file	
 	m_fseeko(invalid_file, nmemb, SEEK_SET);
@@ -19,11 +19,11 @@ void mark_invalid(m2file invalid_file, size_t nmemb, char *filename ) {
 	m_fwrite(&new_value, 1, invalid_file);
 }
 
-void print_invalid(char *filename) {
+void print_invalid(m2name filename) {
 	fprintf(stdout, "%s\n", filename);
 }
 
-void print_invalid_(char *filename,int access) {
+void print_invalid_(m2name filename,int access) {
 	if(access != 0) {
 		fprintf(stderr, "file (%s) not accessible => invalid: %s\n", filename, strerror(errno));
 		return;
@@ -33,13 +33,13 @@ void print_invalid_(char *filename,int access) {
 
 int mosaik2_invalid(mosaik2_arguments *args) {
 
-	char *mosaik2_db_name = args->mosaik2db;
+	m2name mosaik2_db_name = args->mosaik2db;
 	int ignore_old_invalids = args->ignore_old_invalids;
 	int dry_run = args->dry_run;
 	int no_hash_cmp = args->no_hash_cmp;
 	int debug = args->verbose;
-	uint32_t element_number = 0;
-	uint32_t invalid_count = 0;
+	m2elem element_number = 0;
+	m2elem invalid_count = 0;
 
 	mosaik2_database md;
 	init_mosaik2_database(&md, mosaik2_db_name);
@@ -75,8 +75,8 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 
 
 
-	uint32_t mosaik2_database_elems = read_thumbs_db_count(&md);
-	if( args->has_element_identifier == ELEMENT_NUMBER && element_number > mosaik2_database_elems ) {
+	m2elem mosaik2_database_elements = read_thumbs_db_count(&md);
+	if( args->has_element_identifier == ELEMENT_NUMBER && element_number > mosaik2_database_elements ) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
 	}
@@ -106,14 +106,9 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	char buf[MAX_FILENAME_LEN];
 	uint8_t image_data[BUFSIZ];
 	//printf("%li database elems\n", mosaik2_database_elems);
-	for(uint64_t j=0;j<mosaik2_database_elems;j++) {
+	for(m2elem j=0;j<mosaik2_database_elements;j++) {
 		memset(buf,0,MAX_FILENAME_LEN);
-		char *freads_read = fgets(buf, MAX_FILENAME_LEN, filenames_file);
-		//printf("%li: %s\n",j,buf);
-		if(freads_read == NULL) {
-			fprintf(stderr, "read less data than it expected at element %li\n",j);
-			exit(EXIT_FAILURE);
-		}
+		m_fgets(buf, MAX_FILENAME_LEN, filenames_file);
 		size_t buflen = strlen( buf);
 		if(buflen>0 && buf[buflen-1]=='\n') {
 			buf[buflen-1]=0;
@@ -125,7 +120,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 
 		uint8_t invalid_data=0;
 		if(fread(&invalid_data,1,1,invalid_file) != 1 ) { // == 1, because of one element was hopefully written
-			fprintf(stderr, "error while reading image %li  invalids status\n", j);
+			fprintf(stderr, "error while reading image %i  invalids status\n", j);
 		} else if( ignore_old_invalids == 0 && invalid_data == 1) {
 			continue;
 		}
@@ -141,7 +136,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 
 
 				// NOT READABLE => INVALID
-				if(debug)fprintf(stderr, "%li. file (%s) cannot be accessed => %s\n", j, buf, strerror(errno));
+				if(debug)fprintf(stderr, "%i. file (%s) cannot be accessed => %s\n", j, buf, strerror(errno));
 				print_invalid_(buf,access_code);
 				if(!dry_run) {
 					mark_invalid(invalid_file,j,md.invalid_filename);
@@ -230,13 +225,13 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					}
 					while ((bytes = fread(image_data, 1, BUFSIZ, image_file)) != 0) {
 						if(!EVP_DigestUpdate(mdctx, image_data, bytes)) {
-							fprintf(stderr, "error update digest for element %li\n", j);
+							fprintf(stderr, "error update digest for element %i\n", j);
 							exit(EXIT_FAILURE);
 						}
 					}
 					unsigned int md5_digest_length = MD5_DIGEST_LENGTH;
 					if(!EVP_DigestFinal_ex(mdctx, new_hash, &md5_digest_length)) {
-						fprintf(stderr, "error digestfinal for element %li\n", j);
+						fprintf(stderr, "error digestfinal for element %i\n", j);
 						exit(EXIT_FAILURE);
 					}
 					#if OPENSSL_VERSION_NUMBER >= 0x10100000L

@@ -28,7 +28,7 @@ void init_mosaik2_context(mosaik2_context *ctx) {
 	}
 }
 
-void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
+void init_mosaik2_database(mosaik2_database *md, m2name thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);
 	memset( (*md).imagecolors_filename,0,256);
@@ -154,7 +154,7 @@ void init_mosaik2_database(mosaik2_database *md, char *thumbs_db_name) {
 	md->phash_sizeof = sizeof(unsigned long long) + sizeof(int);
 }
 
-void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_id, char *dest_filename) {
+void init_mosaik2_project(mosaik2_project *mp, m2ctext mosaik2_database_id, m2name dest_filename) {
 	size_t mosaik2_database_id_len = strlen(mosaik2_database_id);
 	size_t dest_filename_len = strlen(dest_filename);
 
@@ -317,7 +317,7 @@ int StartsWith(const char *pre, const char *str) {
 	return lenstr < lenpre ? 0 : memcmp(pre, str, lenpre) == 0;
 }
 
-int is_file_local( const char *filename ) {
+int is_file_local( const m2name filename ) {
 	if(!filename) {
 		fprintf(stderr, "no filename\n");
 		exit(EXIT_FAILURE);
@@ -327,7 +327,7 @@ int is_file_local( const char *filename ) {
 		return 0;
 	return 1;
 }
-int is_file_wikimedia_commons( const char *filename ) {
+int is_file_wikimedia_commons( const m2name filename ) {
 	if(!filename) {
 		fprintf(stderr, "no filename\n");
 		exit(EXIT_FAILURE);
@@ -347,7 +347,7 @@ void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int
 	
 
 	size_t url_len = strlen( url );
-	char *filename = strrchr(url, '/');
+	m2name filename = strrchr(url, '/');
 	size_t filename_len = strlen(filename);
 	if(filename_len < 2) {
 		fprintf(stderr,"nothing found behind SLASH in url/\n");
@@ -392,7 +392,7 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 
 					fprintf(stderr, "1\n");
 	//size_t url_len = strlen(url);
-	char *filename = strrchr(url, '/');
+	m2name filename = strrchr(url, '/');
 	size_t filename_len = strlen(filename);
 
 					fprintf(stderr, "2\n");
@@ -420,7 +420,7 @@ void get_wikimedia_file_url(const char *url, char *dest, int dest_len) {
 					fprintf(stderr, "8\n");
 }
 
-int is_same_file(const char *filename0, const char *filename1) {
+int is_same_file(const m2name filename0, const m2name filename1) {
 	assert(filename0!=NULL);
 	assert(filename1!=NULL);
 	struct stat st;
@@ -431,7 +431,7 @@ int is_same_file(const char *filename0, const char *filename1) {
 	return i0 == i1;
 }
 
-off_t get_file_size(const char *filename) {
+off_t get_file_size(const m2name filename) {
 	assert(filename != NULL );
 	assert(strlen(filename)>0);
 	struct stat st;
@@ -440,7 +440,7 @@ off_t get_file_size(const char *filename) {
 	return size;
 }
  
-int get_file_type(const char *dest_filename) {
+int get_file_type(const m2name dest_filename) {
 	if(EndsWith(dest_filename, "jpeg") || EndsWith(dest_filename, "jpg") )
 		return FT_JPEG;
 	if(EndsWith(dest_filename, "png"))
@@ -461,14 +461,14 @@ int get_file_type_from_buf(uint8_t *buf, size_t len) {
 	return FT_ERR;
 }
 
-uint32_t read_thumbs_db_count(mosaik2_database *md) {
+m2elem read_thumbs_db_count(mosaik2_database *md) {
 
 	off_t db_filesizes_size = get_file_size(md->filesizes_filename);
 	if(db_filesizes_size == 0)
 		return 0;
 	// the *.db.filesizes is a binary file that includes the original 
 	// filesizes of the indexed images and its saved as 4 byte integers
-	return (uint32_t)(db_filesizes_size / sizeof(size_t));
+	return (m2elem)(db_filesizes_size / sizeof(size_t));
 }
 
 uint8_t read_database_image_resolution(mosaik2_database *md) {
@@ -562,17 +562,13 @@ uint32_t read_thumbs_db_tileoffset_count(mosaik2_database *md) {
 void mosaik2_database_read_database_id(mosaik2_database *md) {
 
 	m2file file = m_fopen(md->id_filename,"r");
-	char *rbuf = fgets( md->id, md->id_len, file);
-	if(rbuf == NULL ) {
-		fprintf(stderr, "mosaik2 datbase file with id (%s) could not be read correctly\n", md->id_filename);
-		exit(EXIT_FAILURE);
-	}
+	m_fgets( md->id, md->id_len, file);
 	m_fclose( file );
 }
 
 //filename has to be freed in the end
 //md.database_image_resolution must be set before
-void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number) {
+void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, m2elem element_number) {
 	mde->md = md;
 	mde->element_number = element_number;
 	read_entry(md->filehashes_filename, mde->hash, MD5_DIGEST_LENGTH, element_number*MD5_DIGEST_LENGTH);
@@ -660,7 +656,7 @@ static int cmp_off_t(const void *p1, const void *p2) {
  * if theres a match a filename was found from its beginning.
  * the recheck search in the filenames_index file uses also a memory mapped file and bsearch, because the offsets in filenames_index due to its nature are saved in order. 
  */
-int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, uint32_t *found_element_number) {
+int mosaik2_database_find_element_number(mosaik2_database *md, m2name filename, m2elem *found_element_number) {
 
 	int fd = m_open(md->filenames_filename, O_RDONLY, 0);
 	struct stat st;
@@ -692,7 +688,7 @@ int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, u
 	if(found == NULL) {
 		return -2;
 	}
-	uint32_t element_number = (found - ptr)/md->filenames_index_sizeof;
+	m2elem element_number = (found - ptr)/md->filenames_index_sizeof;
 	m_munmap(ptr, (size_t)st.st_size);
 	m_close(fd);
 
@@ -728,13 +724,13 @@ char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_n
 	offsets[1]--;
 	off_t filename_len = offsets[1]-offsets[0];
 
-	char *filename = m_calloc(1,filename_len+1);
+	m2name filename = m_calloc(1,filename_len+1);
 	read_entry(md->filenames_filename, filename, filename_len, offsets[0]);
 	return filename;
 }
 
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp) {
-	char *filename = mp->dest_primarytiledims_filename;
+	m2name filename = mp->dest_primarytiledims_filename;
 
 	m2file file = m_fopen(filename, "r");
 	off_t filesize = get_file_size(filename);
@@ -887,7 +883,7 @@ void mosaik2_database_check(mosaik2_database *md) {
 	assert(get_file_size(md->tileoffsets_filename)     == element_count * md->tileoffsets_sizeof);
 }
 
-int  mosaik2_project_check_dest_filename(char *dest_filename) {
+int  mosaik2_project_check_dest_filename(m2name dest_filename) {
 	
 	uint32_t dest_filename_len = strlen(dest_filename);
 	if( dest_filename_len > 100 || dest_filename_len < 1 ) {
@@ -1040,7 +1036,7 @@ uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 #endif
 
 
-gdImagePtr read_image_from_file(char *filename) {
+gdImagePtr read_image_from_file(m2name filename) {
 	m2file in = m_fopen(filename, "rb");
 	size_t file_size = get_file_size(filename);
 	unsigned char *buf = m_calloc(1, file_size);
@@ -1496,7 +1492,7 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 }*/
 
 
-void read_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
+void read_entry(m2name filename, void *val, size_t val_len, off_t file_offset)  {
 	m2file f = m_fopen(filename, "r");
 	m_fseeko(f, file_offset, SEEK_SET);
 	m_fread(val, val_len, f);
@@ -1509,7 +1505,7 @@ void read_file_entry(m2file file, void *val, size_t val_len, off_t file_offset) 
 	m_fread(val, val_len, file);	
 }
 
-void write_entry(char *filename, void *val, size_t val_len, off_t file_offset)  {
+void write_entry(m2name filename, void *val, size_t val_len, off_t file_offset)  {
 	m2file f = m_fopen(filename, "r+");
 	m_fseeko(f, file_offset, SEEK_SET);
 	m_fwrite(val, val_len, f);
@@ -1522,7 +1518,7 @@ void write_file_entry(m2file file, void *val, size_t val_len, off_t file_offset)
 	m_fwrite(val, val_len, file);
 }
 
-m2file m_fopen(char *filename, char *mode) {
+m2file m_fopen(m2name filename, char *mode) {
 	m2file file = NULL;
 	file = fopen(filename, mode);
 	if( file == NULL) {
@@ -1681,13 +1677,22 @@ int m_sysinfo(struct sysinfo *info) {
 	return val;
 }
 
-void m_access(const char *pathname, int mode) {
+void m_access(m2ctext pathname, int mode) {
 	int val = access(pathname, mode);
 	if(val != 0) {
 		fprintf(stderr, "m_access: cannot access file (%s) with mode: %i\n", pathname, mode);
 		perror("error");
 		exit(EXIT_FAILURE);
 	}
+}
+
+m2rtext m_fgets(m2rtext s, int size, m2file stream) {
+	char* val = fgets(s, size, stream);
+	if(val == NULL) {
+		fprintf(stderr, "m_fgets: read less data from stream than expected (%i)", size);
+		exit(EXIT_FAILURE);
+	}
+	return s;
 }
 
 

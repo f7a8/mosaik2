@@ -6,7 +6,9 @@ typedef time_t        m2time;
 typedef uint8_t       m2tile;
 typedef uint8_t       m2rezo;
 
-typedef char*         m2name;
+typedef char*         m2name, m2text;
+typedef char* restrict m2rtext;
+typedef const char*   m2ctext;
 typedef FILE*         m2file;
 typedef uint8_t       m2data, *m2datap;
 typedef void*         m2addr;

@@ -19,11 +19,11 @@
 int mosaik2_gathering(mosaik2_arguments *args) {
 
 	int primary_tile_count = args->num_tiles;
-	char *dest_filename = args->dest_image;
+	m2name dest_filename = args->dest_image;
 	int ratio = args->color_stddev_ratio;
 	int unique = args->unique;
 	int fast_unique = args->fast_unique;
-	char *mosaik2_db_name = args->mosaik2db;
+	m2name mosaik2_db_name = args->mosaik2db;
 	uint8_t debug = 0;
 	uint8_t debug1 = 0;
 	const uint8_t html = 0;

@@ -177,15 +177,15 @@ struct mosaik2_database_struct {
 	uint8_t database_image_resolution;
 	float histogram_color[3]; // all valid entries
 	float histogram_stddev[3];
-	uint32_t element_count;
+	m2elem element_count;
 };
 typedef struct mosaik2_database_struct mosaik2_database;
 
 struct mosaik2_database_element_struct {
 	mosaik2_database *md;
-	uint32_t element_number;
+	m2elem element_number;
 	unsigned char hash[MD5_DIGEST_LENGTH];
-	char *filename;
+	m2name filename;
 	ssize_t filesize;
 	int imagedims[2];
 	unsigned char tiledims[2];
@@ -224,7 +224,7 @@ struct mosaik2_project_result_struct {
 	uint32_t sortorder;
 	mosaik2_database *md;
 	uint8_t hash[16];
-	uint32_t index; // index in thumbs_db
+	m2elem index; // index in thumbs_db
 	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
@@ -246,8 +246,8 @@ typedef struct mosaik2_database_candidate_struct {
 /* Used by main to communicate with parse_opt. */
 struct arguments_struct {
   char *mode;
-	char *mosaik2db;
-	char **mosaik2dbs;
+	m2name mosaik2db;
+	m2name *mosaik2dbs;
 	int mosaik2dbs_count;
 	char *dest_image;
   int verbose;
@@ -266,11 +266,11 @@ struct arguments_struct {
 	int ignore_old_invalids;
 	int no_hash_cmp;
 	int color_distance;
-	uint32_t element_number;
+	m2elem element_number;
 	int has_element_identifier;
 	char *src_image;
 	int quiet;
-	char *element_filename;
+	m2name element_filename;
 	int phash_distance;
 	int has_phash_distance;
 };

@@ -23,7 +23,7 @@ void inject_exif_comment(m2file out, off_t out_file_size, char *comment, size_t 
 
 int mosaik2_join(mosaik2_arguments *args) {
 
-	char *dest_filename = args->dest_image;
+	m2name dest_filename = args->dest_image;
 	int dest_tile_width = args->pixel_per_tile;
 	int unique_tile = args->duplicate_reduction;
 	int local_cache = args->symlink_cache;
@@ -200,7 +200,7 @@ if(debug) fprintf(stderr, "init\n");
 			candidates[i].md->thumbs_db_name);
   	}
 	
-	char *thumbs_db_name="";
+	m2name thumbs_db_name="";
 	m2file thumbs_db_file = NULL;
 	m2file thumbs_db_hash = NULL;
 
@@ -212,7 +212,7 @@ if(debug) fprintf(stderr, "init\n");
 	char mkdir_buf[sz+1];
 	memset(mkdir_buf,0,sz+1);
 	snprintf(mkdir_buf, sz+1, "%s/.mosaik2/mosaik2.hash",home);
-	char *mkdir_path = dirname(mkdir_buf);
+	m2ctext mkdir_path = dirname(mkdir_buf);
 	if(access(mkdir_path, W_OK)!=0) {
 		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
 		//not accessible or writeable, try to create dir
@@ -253,12 +253,8 @@ if(debug) fprintf(stderr, "init\n");
 		}
 
 
-		for(uint64_t len=candidates[i].index;j<=len;j++) {
-			char *freads_read = fgets(buffer, MAX_FILENAME_LEN, thumbs_db_file);
-			if(freads_read == NULL) {
-				fprintf(stderr, "read less data than it expected");
-				exit(EXIT_FAILURE);
-			}
+		for(m2elem len=candidates[i].index;j<=len;j++) {
+			m_fgets(buffer, MAX_FILENAME_LEN, thumbs_db_file);
 		}
 		strncpy(candidates[i].thumbs_db_filenames,buffer,strlen(buffer));
 		if(strlen(buffer)>0)	candidates[i].thumbs_db_filenames[strlen(buffer)-1]=0;

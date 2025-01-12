@@ -21,8 +21,8 @@ const int FILEHASHES_INDEX_INVALID = 0;
 
 int mosaik2_duplicates(mosaik2_arguments *args) {
 
-	char *mosaik2_db_name_1 = args->mosaik2db;
-	char *mosaik2_db_name_2 = mosaik2_db_name_1;
+	m2name mosaik2_db_name_1 = args->mosaik2db;
+	m2name mosaik2_db_name_2 = mosaik2_db_name_1;
 	if(args->mosaik2dbs_count > 0  ) {
 		mosaik2_db_name_2 = args->mosaik2dbs[0];
 	}
@@ -192,7 +192,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				duplicates_data1=IS_DUPLICATE;
 				m_fwrite(&duplicates_data1, 1, duplicates_file1);
 
-				char *filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
+				m2name filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
 				printf("%s\n", filename);
 				free(filename);
 				duplicates_count++;

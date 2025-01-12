@@ -5,7 +5,7 @@
 /**
 	* create as new empty mosaik2 database file. In case of an error it exits the program.
   */
-m2file create_mosaik2_database_file(char *filename, uint8_t close, uint8_t print) {
+m2file create_mosaik2_database_file(m2name filename, uint8_t close, uint8_t print) {
 	m2file f = m_fopen(filename,"w");
 	if( close == 1 )
 		m_fclose( f );
@@ -27,13 +27,13 @@ void create_mosaik2_database_file_id(mosaik2_database *md, int print) {
 	if(print) printf( "mosaik2 database file %s created\n", md->id_filename);
 }
 
-void create_mosaik2_database_file_readme(char *filename, int print) {
+void create_mosaik2_database_file_readme(m2name filename, int print) {
 	m2file file = create_mosaik2_database_file(filename, 0, print);
 	fprintf(file, "This is a mosaik2 database directory.\n\nmosaik2 creates real photo mosaics especially like from large datasets.\nView the projects website at https://f7a8.github.io/mosaik2/\n");
 	m_fclose( file);
 }
 
-void create_mosaik2_database_file_val(char *filename, void *ptr, size_t len, int print) {
+void create_mosaik2_database_file_val(m2name filename, void *ptr, size_t len, int print) {
 	m2file file = create_mosaik2_database_file(filename, 0, print);
 	m_fwrite(ptr, len, file);
 	m_fclose(file);
@@ -41,7 +41,7 @@ void create_mosaik2_database_file_val(char *filename, void *ptr, size_t len, int
 
 int mosaik2_init(mosaik2_arguments *args) {
 
-	char *mosaik2_database_name = args->mosaik2db;
+	m2name mosaik2_database_name = args->mosaik2db;
 	int database_image_resolution = args->database_image_resolution;
 	time_t n = time(NULL);
 	int mdfv = MOSAIK2_DATABASE_FORMAT_VERSION;

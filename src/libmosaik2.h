@@ -77,14 +77,14 @@ extern const int IS_DUPLICATE;
 extern const int IS_NO_DUPLICATE;
 
 void init_mosaik2_context(mosaik2_context *ctx);
-void init_mosaik2_database(mosaik2_database *md, char *mosaik2_database_name);
-void init_mosaik2_project(mosaik2_project *mp, char *mosaik2_database_name, char *dest_filename);
+void init_mosaik2_database(mosaik2_database *md, m2name mosaik2_database_name);
+void init_mosaik2_project(mosaik2_project *mp, m2ctext mosaik2_database_name, m2name dest_filename);
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height);
 void mosaik2_tiler_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int image_width, int image_height);
 void mosaik2_database_read_database_id(mosaik2_database *md);
-void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, uint32_t element_number);
-int mosaik2_database_find_element_number(mosaik2_database *md, char *filename, uint32_t *found_element_number);
-char *mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, m2file filenames_index_file);
+void mosaik2_database_read_element(mosaik2_database *md, mosaik2_database_element *mde, m2elem element_number);
+int mosaik2_database_find_element_number(mosaik2_database *md, m2name filename, m2elem *found_element_number);
+m2name mosaik2_database_read_element_filename(mosaik2_database *md, int element_number, m2file filenames_index_file);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
 float mosaik2_database_costs(mosaik2_database *md, mosaik2_database_element *mde);
@@ -96,17 +96,17 @@ void mosaik2_project_read_image_dims(mosaik2_project *mp);
 
 int EndsWith(const char *str, const char *suffix);
 int StartsWith(const char *pre, const char *str);
-int is_file_local( const char *filename );
-int is_file_wikimedia_commons( const char *filename );
+int is_file_local( const m2name filename );
+int is_file_wikimedia_commons( const m2name filename );
 void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int dest_len);
 void get_wikimedia_file_url(const char *url, char *dest, int dest_len);
 /**
  * check via inode equalness
  */
-int is_same_file(const char *filename0, const char *filename1);
-off_t get_file_size(const char *filename);
+int is_same_file(const m2name filename0, const m2name filename1);
+off_t get_file_size(const m2name filename);
 
-int get_file_type(const char *dest_filename);
+int get_file_type(const m2name dest_filename);
 int get_file_type_from_buf(uint8_t *buf, size_t len);
 uint32_t read_thumbs_db_count(mosaik2_database *md);
 uint8_t read_database_image_resolution(mosaik2_database *md);
@@ -124,7 +124,7 @@ void read_thumbs_db_histogram(mosaik2_database *md);
 void mosaik2_database_check_name(char *mosaik2_database_name);
 void mosaik2_database_check(mosaik2_database *md);
 void mosaik2_project_check(mosaik2_project *mp);
-int  mosaik2_project_check_dest_filename(char *dest_filename);
+int  mosaik2_project_check_dest_filename(m2name dest_filename);
 //void check_thumbs_tile_count(uint32_t thumbs_tile_count);
 void check_resolution(uint32_t resolution);
 void remove_newline(char *str);
@@ -138,7 +138,7 @@ int File_Copy(char FileSource[], char FileDestination[]);
 
 
 uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size);
-gdImagePtr read_image_from_file(char *filename);
+gdImagePtr read_image_from_file(m2name filename);
 gdImagePtr read_image_from_buf(unsigned char *buf, size_t file_size);
 void trim_spaces(char *buf);
 //void show_tag(ExifData *d, ExifIfd ifd, ExifTag tag);
@@ -152,17 +152,18 @@ gdImagePtr gdImageRotate270 (gdImagePtr src);
 
 //void print_usage(char *);
 
-void read_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
-void write_entry(char *filename, void *val, size_t len, off_t offset); //read single values from a single database file. 
+void read_entry(m2name filename, void *val, size_t len, off_t offset); //read single values from a single database file.
+void write_entry(m2name filename, void *val, size_t len, off_t offset); //read single values from a single database file.
 void read_file_entry(m2file file, void *val, size_t len, off_t offset); 
 void write_file_entry(m2file file, void *val, size_t len, off_t offset);
 
-m2file m_fopen(char *filename, char *mode); // wrapper fpr fopen
+m2file m_fopen(m2name filename, char *mode); // wrapper fpr fopen
 void m_fclose(m2file file); //wrapper for flose
 
 int m_open(const char *pathname, int flags, mode_t mode);
 void m_close(int fd);
 
+m2rtext m_fgets(m2rtext s, int size, m2file stream);
 void m_fread(void *ptr, size_t nmemb, m2file stream);
 void m_fwrite(const void *ptr, size_t nmemb, m2file stream);
 void *m_malloc(size_t size);
@@ -177,8 +178,7 @@ m2file m_tmpfile(void);
 
 
 int m_sysinfo(struct sysinfo *info);
-void m_access(const char *pathname, int mode);
-
+void m_access(m2ctext pathname, int mode);
 
 
 /* Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
