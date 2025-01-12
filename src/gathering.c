@@ -69,7 +69,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_db_name);
+	init_mosaik2_database(&md, mosaik2_database_name);
 	mosaik2_database_read_database_id(&md);
 
 	mosaik2_database_check(&md);
