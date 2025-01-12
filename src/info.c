@@ -6,7 +6,7 @@ void print_src_image(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_da
 
 int mosaik2_info(mosaik2_arguments *args) {
 
-	m2name mosaik2_db_name = args->mosaik2db;
+	m2name mosaik2_database_name = args->mosaik2db;
 	m2elem element_number = args->element_number;
 
 	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
@@ -15,17 +15,17 @@ int mosaik2_info(mosaik2_arguments *args) {
 	}
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_db_name);
+	init_mosaik2_database(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
 	md.database_image_resolution = read_database_image_resolution(&md);
 
 	if( args->has_element_identifier == ELEMENT_NUMBER ) {
-		print_element(args, mosaik2_db_name, &md, element_number-1);
+		print_element(args, mosaik2_database_name, &md, element_number-1);
 	} else if (args->has_element_identifier == ELEMENT_FILENAME ) {
 		m2elem element_number;
 		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
 		if(val==0)
-			print_element(args, mosaik2_db_name, &md, element_number);
+			print_element(args, mosaik2_database_name, &md, element_number);
 		else {
 			fprintf(stderr, "no filename found, must be equal with the original path and filename\n");
 			exit(EXIT_FAILURE);
@@ -33,10 +33,10 @@ int mosaik2_info(mosaik2_arguments *args) {
 
 	} else if( args->src_image != NULL ) {
 		mosaik2_database_read_database_id(&md);
-		print_src_image(args, mosaik2_db_name, &md);
+		print_src_image(args, mosaik2_database_name, &md);
 	} else {
 		mosaik2_database_read_database_id(&md);
-		print_database(args, mosaik2_db_name, &md);
+		print_database(args, mosaik2_database_name, &md);
 	}
 
 	return 0;

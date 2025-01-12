@@ -2,7 +2,7 @@
 
 int mosaik2_crop(mosaik2_arguments *args) {
 
-	char *mosaik2_db_name = args->mosaik2db;
+	m2name mosaik2_database_name = args->mosaik2db;
 	m2elem element_number = args->element_number;
 
 	if(args->has_element_identifier == ELEMENT_NUMBER && element_number < 1  ) {
@@ -11,7 +11,7 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	}
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_db_name);
+	init_mosaik2_database(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
 	int database_image_resolution = read_database_image_resolution(&md); // standard value should be 16
 

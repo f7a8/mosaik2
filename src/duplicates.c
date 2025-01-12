@@ -21,19 +21,19 @@ const int FILEHASHES_INDEX_INVALID = 0;
 
 int mosaik2_duplicates(mosaik2_arguments *args) {
 
-	m2name mosaik2_db_name_1 = args->mosaik2db;
-	m2name mosaik2_db_name_2 = mosaik2_db_name_1;
+	m2name mosaik2_database_name_1 = args->mosaik2db;
+	m2name mosaik2_database_name_2 = mosaik2_database_name_1;
 	if(args->mosaik2dbs_count > 0  ) {
-		mosaik2_db_name_2 = args->mosaik2dbs[0];
+		mosaik2_database_name_2 = args->mosaik2dbs[0];
 	}
 	int dry_run = args->dry_run;
 
 	mosaik2_database md0;
-	init_mosaik2_database(&md0, mosaik2_db_name_1);
+	init_mosaik2_database(&md0, mosaik2_database_name_1);
 	mosaik2_database_check(&md0);
 
 	mosaik2_database md1;
-	init_mosaik2_database(&md1, mosaik2_db_name_2);
+	init_mosaik2_database(&md1, mosaik2_database_name_2);
 	mosaik2_database_check(&md1);
 
 	if(dry_run < 0 || dry_run > 1) {

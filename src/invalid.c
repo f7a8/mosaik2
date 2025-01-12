@@ -33,7 +33,7 @@ void print_invalid_(m2name filename,int access) {
 
 int mosaik2_invalid(mosaik2_arguments *args) {
 
-	m2name mosaik2_db_name = args->mosaik2db;
+	m2name mosaik2_database_name = args->mosaik2db;
 	int ignore_old_invalids = args->ignore_old_invalids;
 	int dry_run = args->dry_run;
 	int no_hash_cmp = args->no_hash_cmp;
@@ -42,7 +42,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	m2elem invalid_count = 0;
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_db_name);
+	init_mosaik2_database(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
