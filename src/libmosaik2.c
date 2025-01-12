@@ -18,7 +18,7 @@ const int IS_PHASH_DUPLICATE = 2;
 const int IS_DUPLICATE = 1;
 const int IS_NO_DUPLICATE = 0;
 
-void init_mosaik2_context(mosaik2_context *ctx) {
+void mosaik2_context_init(mosaik2_context *ctx) {
 
 	memset(ctx, 0, sizeof(mosaik2_context));
 	memset(ctx->pids, 0, 1024*sizeof(pid_t));
@@ -28,7 +28,7 @@ void init_mosaik2_context(mosaik2_context *ctx) {
 	}
 }
 
-void init_mosaik2_database(mosaik2_database *md, m2name thumbs_db_name) {
+void mosaik2_database_init(mosaik2_database *md, m2name thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);
 	memset( (*md).imagecolors_filename,0,256);
@@ -154,7 +154,7 @@ void init_mosaik2_database(mosaik2_database *md, m2name thumbs_db_name) {
 	md->phash_sizeof = sizeof(unsigned long long) + sizeof(int);
 }
 
-void init_mosaik2_project(mosaik2_project *mp, m2ctext mosaik2_database_id, m2name dest_filename) {
+void mosaik2_project_init(mosaik2_project *mp, m2ctext mosaik2_database_id, m2name dest_filename) {
 	size_t mosaik2_database_id_len = strlen(mosaik2_database_id);
 	size_t dest_filename_len = strlen(dest_filename);
 
@@ -461,7 +461,7 @@ int get_file_type_from_buf(uint8_t *buf, size_t len) {
 	return FT_ERR;
 }
 
-m2elem read_thumbs_db_count(mosaik2_database *md) {
+m2elem mosaik2_database_read_element_count(mosaik2_database *md) {
 
 	off_t db_filesizes_size = get_file_size(md->filesizes_filename);
 	if(db_filesizes_size == 0)
@@ -471,7 +471,7 @@ m2elem read_thumbs_db_count(mosaik2_database *md) {
 	return (m2elem)(db_filesizes_size / sizeof(size_t));
 }
 
-uint8_t read_database_image_resolution(mosaik2_database *md) {
+uint8_t mosaik2_database_read_image_resolution(mosaik2_database *md) {
 	m2file database_image_resolution_file = m_fopen(md->database_image_resolution_filename, "rb");
 	int32_t database_image_resolution=0;
 	m_fread(&database_image_resolution, sizeof(database_image_resolution), database_image_resolution_file);
@@ -484,10 +484,10 @@ uint8_t read_database_image_resolution(mosaik2_database *md) {
 	return database_image_resolution;
 }
 
-uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
+m2elem mosaik2_database_read_duplicates_count(mosaik2_database *md) {
 	m2file file = m_fopen(md->duplicates_filename, "rb");
 	
-	uint32_t duplicates_count = 0;
+	m2elem duplicates_count = 0;
 	uint8_t buf[BUFSIZ];
 	while( feof(file) == 0) {
 		size_t s = fread(&buf, 1, BUFSIZ, file);
@@ -500,9 +500,9 @@ uint32_t read_thumbs_db_duplicates_count(mosaik2_database *md) {
 	return duplicates_count;
 }
 
-uint32_t read_thumbs_db_invalid_count(mosaik2_database *md) {
+m2elem mosaik2_database_read_invalid_count(mosaik2_database *md) {
 	m2file file = m_fopen(md->invalid_filename, "rb");
-	uint32_t count = 0;
+	m2elem count = 0;
 	uint8_t buf[BUFSIZ];
 	while( feof(file) == 0) {
 		size_t s = fread(&buf, 1, BUFSIZ, file);
@@ -515,35 +515,35 @@ uint32_t read_thumbs_db_invalid_count(mosaik2_database *md) {
 	return count;
 }
 
-uint32_t read_thumbs_db_valid_count(mosaik2_database *md) {
-  m2file file  = m_fopen(md->invalid_filename, "rb");
-  m2file file1 = m_fopen(md->duplicates_filename, "rb");
+m2elem mosaik2_database_read_valid_count(mosaik2_database *md) {
+	m2file file  = m_fopen(md->invalid_filename, "rb");
+	m2file file1 = m_fopen(md->duplicates_filename, "rb");
 
 	size_t file_size = get_file_size(md->invalid_filename);
 	size_t file1_size = get_file_size(md->duplicates_filename);
 
 	assert(file_size == file1_size);
 
-  uint32_t count = 0;
-  unsigned char buf[BUFSIZ];
-  unsigned char buf1[BUFSIZ];
+	m2elem count = 0;
+	unsigned char buf[BUFSIZ];
+	unsigned char buf1[BUFSIZ];
 
 	size_t s = 0, s1 = 0;
-  while( (s = fread(&buf, 1, BUFSIZ, file)) != 0 &&
-	      (s1 = fread(&buf1, 1, BUFSIZ,file1))!= 0 ) {
-    for(int i=0;i<s;i++) {
-      if(!(buf[i]!=0 || buf1[i]!=0)) // only 0s marks a valid entries
-        count++;
-    }
-  }
+	while( (s = fread(&buf, 1, BUFSIZ, file)) != 0 &&
+		  (s1 = fread(&buf1, 1, BUFSIZ,file1))!= 0 ) {
+	for(int i=0;i<s;i++) {
+		if(!(buf[i]!=0 || buf1[i]!=0)) // only 0s marks a valid entries
+			count++;
+		}
+	}
 
-  m_fclose( file );
-  m_fclose( file1 );
+	m_fclose( file );
+	m_fclose( file1 );
 
-  return count;
+	return count;
 }
 
-uint32_t read_thumbs_db_tileoffset_count(mosaik2_database *md) {
+uint32_t mosaik2_database_read_tileoffset_count(mosaik2_database *md) {
 	m2file file = m_fopen(md->tileoffsets_filename, "rb");
 	
 	uint32_t count = 0;
@@ -752,7 +752,7 @@ void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp) {
 	m_fclose(file);
 }
 
-size_t read_thumbs_db_size(mosaik2_database *md) {
+size_t mosaik2_database_read_size(mosaik2_database *md) {
 	return (size_t)
     ( get_file_size( md->imagestddev_filename)
 		+ get_file_size( md->imagecolors_filename)
@@ -775,14 +775,14 @@ size_t read_thumbs_db_size(mosaik2_database *md) {
 		+ get_file_size( md->tileoffsets_filename));
 }
 
-time_t read_thumbs_db_createdat(mosaik2_database *md) {
+time_t mosaik2_database_read_createdat(mosaik2_database *md) {
 	m2file file = m_fopen(md->createdat_filename, "rb");
 	time_t t=0;
 	m_fread(&t, sizeof(t), file);
 	m_fclose( file );
 	return t;
 }
-time_t read_thumbs_db_lastindexed(mosaik2_database *md) {
+time_t mosaik2_database_read_lastindexed(mosaik2_database *md) {
 	time_t t=0;
 
 	if(get_file_size(md->lastindexed_filename)== sizeof(t) ) {
@@ -792,7 +792,7 @@ time_t read_thumbs_db_lastindexed(mosaik2_database *md) {
 	}
 	return t;
 }
-time_t read_thumbs_db_lastmodified(mosaik2_database *md) {
+time_t mosaik2_database_read_lastmodified(mosaik2_database *md) {
 	time_t t=0;
 	if(get_file_size(md->lastmodified_filename)==sizeof(t)) {
 		m2file file = m_fopen(md->lastmodified_filename, "rb");
@@ -858,9 +858,9 @@ void mosaik2_database_check(mosaik2_database *md) {
 	m_access( md->tileoffsets_filename, F_OK);
 
 	// TODO make more plause checks
-	uint32_t element_count = read_thumbs_db_count(md);
+	m2elem element_count = mosaik2_database_read_element_count(md);
 	md->element_count = element_count;
-	uint8_t database_image_resolution = read_database_image_resolution(md);
+	uint8_t database_image_resolution = mosaik2_database_read_image_resolution(md);
 
 	assert(get_file_size(md->imagecolors_filename)     >= element_count * md->imagecolors_sizeof*database_image_resolution*database_image_resolution);
 
@@ -1369,9 +1369,9 @@ mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2
 }
 
 //over all valid and croppd elements
-void read_thumbs_db_histogram(mosaik2_database *md) {
-	uint32_t element_count = read_thumbs_db_count(md);
-	uint32_t valid_count = read_thumbs_db_valid_count(md);
+void mosaik2_database_read_histogram(mosaik2_database *md) {
+	m2elem element_count = mosaik2_database_read_element_count(md);
+	uint32_t valid_count = mosaik2_database_read_valid_count(md);
 	float valid_count_f = (float)valid_count;
 
 	memset(md->histogram_color, 0, sizeof(md->histogram_color));
@@ -1390,7 +1390,7 @@ void read_thumbs_db_histogram(mosaik2_database *md) {
 	m2file duplicates_file = m_fopen(md->duplicates_filename, "r");
 	m2file invalid_file = m_fopen(md->invalid_filename, "r");
 
-	uint8_t database_image_resolution = read_database_image_resolution(md);
+	uint8_t database_image_resolution = mosaik2_database_read_image_resolution(md);
 	unsigned char tiledims[] = {0,0};
 	
 	float histogram_color0[RGB];

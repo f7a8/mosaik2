@@ -32,7 +32,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	float stddev_ratio;
 	int color_distance = args->color_distance;
 	uint8_t database_image_resolution;
-	uint32_t thumbs_count;
+	m2elem element_count;
 	uint32_t SIZE_PRIMARY; // alias for  ti.total_primary_tile_count
 	uint32_t valid_md_element_count;
 	uint32_t needed_md_element_count;
@@ -69,14 +69,14 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_read_database_id(&md);
 
 	mosaik2_database_check(&md);
 
-	 mosaik2_project_check_dest_filename(dest_filename);
-	database_image_resolution = read_database_image_resolution(&md);
-	thumbs_count = read_thumbs_db_count(&md);
+	mosaik2_project_check_dest_filename(dest_filename);
+	database_image_resolution = mosaik2_database_read_image_resolution(&md);
+	element_count = mosaik2_database_read_element_count(&md);
 
 	if (database_image_resolution * database_image_resolution * (2 * RGB * UINT8_MAX) > UINT32_MAX) {
 		// can candidates_costs contain the badest possible costs?
@@ -99,7 +99,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	mosaik2_project mp = {.ratio = ratio, .unique = unique, .fast_unique = fast_unique, .primary_tile_count = primary_tile_count};
 
-	init_mosaik2_project(&mp, md.id, dest_filename);
+	mosaik2_project_init(&mp, md.id, dest_filename);
 
 	if (debug)
 		printf("primary_tile_count:%i,database_image_resolution:%i\n", primary_tile_count, database_image_resolution);
@@ -127,7 +127,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	if (debug)
 		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", ti.image_width, ti.image_height, ti.primary_tile_x_count, ti.primary_tile_y_count, ti.total_primary_tile_count, ti.tile_x_count, ti.tile_y_count, ti.lx, ti.ly, ti.offset_x, ti.offset_y, ti.pixel_per_primary_tile, ti.pixel_per_tile);
 
-	valid_md_element_count = read_thumbs_db_valid_count(&md);
+	valid_md_element_count = mosaik2_database_read_valid_count(&md);
 	needed_md_element_count = unique || fast_unique? ti.total_primary_tile_count : 1;
 	if( valid_md_element_count < needed_md_element_count ) {
 		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_md_element_count, unique ? "for unique ":"", needed_md_element_count);
@@ -374,14 +374,14 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 			if(args->quiet == 0) {
 
-				float new_percent_f = idx / (thumbs_count * 1.0);
+				float new_percent_f = idx / (element_count * 1.0);
 				uint8_t new_percent = round(new_percent_f * 100);
 				time_t new_time = time(NULL);
 
 				if (new_percent != old_percent && new_time != old_time) {
 					old_percent = new_percent;
 					old_time = new_time;
-					printf("%3i%%, %u/%u %s", old_percent, idx, thumbs_count, ctime(&new_time));
+					printf("%3i%%, %u/%u %s", old_percent, idx, element_count, ctime(&new_time));
 				}
 			}
 

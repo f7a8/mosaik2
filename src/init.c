@@ -48,7 +48,7 @@ int mosaik2_init(mosaik2_arguments *args) {
 
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 
 	check_resolution(database_image_resolution);
 

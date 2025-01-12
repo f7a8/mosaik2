@@ -174,10 +174,18 @@ struct mosaik2_database_struct {
 	int createdat_sizeof;
 	int phash_sizeof;
 
-	uint8_t database_image_resolution;
+	m2rezo database_image_resolution;
 	float histogram_color[3]; // all valid entries
 	float histogram_stddev[3];
 	m2elem element_count;
+	m2elem valid_element_count;
+	m2elem invalid_element_count;
+	m2elem duplicates_element_count;
+	m2elem tileoffset_element_count;
+	m2size db_size;
+	m2time createdat;
+	m2time lastmodified;
+	m2time lastindexed;
 };
 typedef struct mosaik2_database_struct mosaik2_database;
 

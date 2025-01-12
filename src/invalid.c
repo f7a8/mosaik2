@@ -42,7 +42,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	m2elem invalid_count = 0;
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
@@ -75,7 +75,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 
 
 
-	m2elem mosaik2_database_elements = read_thumbs_db_count(&md);
+	m2elem mosaik2_database_elements = mosaik2_database_read_element_count(&md);
 	if( args->has_element_identifier == ELEMENT_NUMBER && element_number > mosaik2_database_elements ) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);

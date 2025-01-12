@@ -29,11 +29,11 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	int dry_run = args->dry_run;
 
 	mosaik2_database md0;
-	init_mosaik2_database(&md0, mosaik2_database_name_1);
+	mosaik2_database_init(&md0, mosaik2_database_name_1);
 	mosaik2_database_check(&md0);
 
 	mosaik2_database md1;
-	init_mosaik2_database(&md1, mosaik2_database_name_2);
+	mosaik2_database_init(&md1, mosaik2_database_name_2);
 	mosaik2_database_check(&md1);
 
 	if(dry_run < 0 || dry_run > 1) {
@@ -203,8 +203,8 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 #ifdef HAVE_PHASH
 	if(args->has_phash_distance) {
 
-	read_thumbs_db_histogram(&md0);
-	read_thumbs_db_histogram(&md1);
+		mosaik2_database_read_histogram(&md0);
+		mosaik2_database_read_histogram(&md1);
 
 		m_fseeko(duplicates_file0, 0, SEEK_SET);
 		m_fseeko(duplicates_file1, 0, SEEK_SET);
@@ -346,7 +346,7 @@ void build_filehashes_index(mosaik2_database *md) {
 		exit(EXIT_FAILURE);
 	}
 	int dataset_len = MD5_DIGEST_LENGTH + sizeof(size_t);
-	uint32_t nmemb = read_thumbs_db_count(md);
+	m2elem nmemb = mosaik2_database_read_element_count(md);
 	int loop_size = ceil(nmemb * (dataset_len) / freeram);
 	uint32_t chunk_nmemb[loop_size];
 	for(int i=0;i<loop_size;i++) {

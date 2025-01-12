@@ -15,9 +15,9 @@ int mosaik2_info(mosaik2_arguments *args) {
 	}
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
-	md.database_image_resolution = read_database_image_resolution(&md);
+	md.database_image_resolution = mosaik2_database_read_image_resolution(&md);
 
 	if( args->has_element_identifier == ELEMENT_NUMBER ) {
 		print_element(args, mosaik2_database_name, &md, element_number-1);
@@ -47,22 +47,22 @@ void print_database(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_dat
 	printf("path=%s\n", mosaik2_db_name);
 	printf("id=%s\n", md->id);
 	printf("db-format-version=%i\n", MOSAIK2_DATABASE_FORMAT_VERSION);
-	printf("database-image-resolution=%i\n", read_database_image_resolution(md));
-	time_t createdat = read_thumbs_db_createdat(md);
-	time_t lastindexed = read_thumbs_db_lastindexed(md);
-	time_t lastmodified = read_thumbs_db_lastmodified(md);
+	printf("database-image-resolution=%i\n", mosaik2_database_read_image_resolution(md));
+	time_t createdat = mosaik2_database_read_createdat(md);
+	time_t lastindexed = mosaik2_database_read_lastindexed(md);
+	time_t lastmodified = mosaik2_database_read_lastmodified(md);
 
-	printf("db-size=%li\n", read_thumbs_db_size(md));
+	printf("db-size=%li\n", mosaik2_database_read_size(md));
 	printf("created-at=%s", ctime( &createdat));
 	printf("last-indexed=%s", lastindexed>0?ctime( &lastindexed):"-\n");
 	printf("last-modified=%s", lastmodified>0?ctime( &lastmodified):"-\n");
-	printf("element-count=%i\n", read_thumbs_db_count(md));
-	printf("duplicates-count=%i\n", read_thumbs_db_duplicates_count(md));
-	printf("invalid-count=%i\n", read_thumbs_db_invalid_count(md));
-	printf("valid-count=%i\n", read_thumbs_db_valid_count(md));
-	printf("tileoffsets-count=%i\n", read_thumbs_db_tileoffset_count(md));
+	printf("element-count=%i\n", mosaik2_database_read_element_count(md));
+	printf("duplicates-count=%i\n", mosaik2_database_read_duplicates_count(md));
+	printf("invalid-count=%i\n", mosaik2_database_read_invalid_count(md));
+	printf("valid-count=%i\n", mosaik2_database_read_valid_count(md));
+	printf("tileoffsets-count=%i\n", mosaik2_database_read_tileoffset_count(md));
 
-	read_thumbs_db_histogram(md);
+	mosaik2_database_read_histogram(md);
 
 	printf("histogram-color=%f %f %f\nhistogram-stddev=%f %f %f\n",
 			md->histogram_color[R], md->histogram_color[G], md->histogram_color[B],
@@ -70,7 +70,7 @@ void print_database(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_dat
 }
 
 void print_element(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_database *md, m2elem element_number) {
-	m2elem element_count = read_thumbs_db_count(md);
+	m2elem element_count = mosaik2_database_read_element_count(md);
 	if( args->has_element_identifier == ELEMENT_NUMBER && (element_number < 0 || element_number >= element_count )) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
@@ -79,7 +79,7 @@ void print_element(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_data
 	memset(&mde, 0, sizeof(mde));
 	mosaik2_database_read_element(md, &mde, element_number);
 
-	uint8_t database_image_resolution = read_database_image_resolution(md);
+	uint8_t database_image_resolution = mosaik2_database_read_image_resolution(md);
 	//int src_image_resolution = database_image_resolution;
 	mosaik2_tile_infos ti;
 	memset(&ti, 0, sizeof(ti));
@@ -147,7 +147,7 @@ void print_src_image(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_da
 
 	int image_width = gdImageSX(im);
 	int image_height = gdImageSY(im);
-	uint8_t database_image_resolution = read_database_image_resolution(md);
+	uint8_t database_image_resolution = mosaik2_database_read_image_resolution(md);
 	int src_image_resolution = args->num_tiles;
 
 	mosaik2_tile_infos ti;
@@ -212,7 +212,7 @@ void print_src_image(mosaik2_arguments *args, m2name mosaik2_db_name, mosaik2_da
 	histogram_stddev[G] = sqrt(histogram_stddev[G] / (total_pixel_count_f - 1));
 	histogram_stddev[B] = sqrt(histogram_stddev[B] / (total_pixel_count_f - 1));
 	printf("histogram-stddev:%f %f %f\n", histogram_stddev[R], histogram_stddev[G], histogram_stddev[B]);
-	read_thumbs_db_histogram(md);
+	mosaik2_database_read_histogram(md);
 
 	printf("histogram-color-similarity=%f\n",
 			sqrt(

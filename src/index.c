@@ -26,21 +26,21 @@ int mosaik2_index(mosaik2_arguments *args) {
 	uint32_t max_load_avg = args->max_load;
 
 	mosaik2_context ctx;
-	init_mosaik2_context(&ctx);
+	mosaik2_context_init(&ctx);
 	ctx.max_tiler_processes = get_max_tiler_processes(max_tiler_processes);
 	ctx.max_load_avg = get_max_load_avg(max_load_avg);
 	ctx.new_indexed_element = 0;
 
 	mosaik2_database md;
 
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
 	mosaik2_database_read_database_id(&md);
 	check_pid_file(&md);
 	write_pid_file(&md);
 
-	md.element_count = read_thumbs_db_count(&md);
-	md.database_image_resolution = read_database_image_resolution(&md);
+	md.element_count = mosaik2_database_read_element_count(&md);
+	md.database_image_resolution = mosaik2_database_read_image_resolution(&md);
 
 	process_input_data(args, &ctx, &md);
 
@@ -108,9 +108,9 @@ void remove_pid_file(mosaik2_database *md) {
 
 
 void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_database *md) {
-	md->database_image_resolution = read_database_image_resolution(md);
-	uint32_t i=read_thumbs_db_count(md);
-	uint32_t maxmemb=UINT32_MAX;
+	md->database_image_resolution = mosaik2_database_read_image_resolution(md);
+	m2elem i=mosaik2_database_read_element_count(md);
+	m2elem maxmemb=UINT32_MAX;
 	size_t len = 0;
 	char *lineptr = NULL;
 

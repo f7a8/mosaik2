@@ -70,12 +70,12 @@ if(debug) fprintf(stderr, "init\n");
 	for(uint32_t i=argv_start_idx_thumbs_db_names, i0=0; i<argv_end_idx_thumbs_db_names; i++,i0++) {
 		if(debug) fprintf( stderr, "check %i %s\n", i, args->mosaik2dbs[i]);
 		
-		init_mosaik2_database(&mds[i0], args->mosaik2dbs[i]);
+		mosaik2_database_init(&mds[i0], args->mosaik2dbs[i]);
 		mosaik2_database_check(&mds[i0]);
 		mosaik2_database_read_database_id(&mds[i0]);
-		candidates_count += read_thumbs_db_count(&mds[i0]);
+		candidates_count += mosaik2_database_read_element_count(&mds[i0]);
 
-		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
+		mosaik2_project_init(&mp, mds[i0].id, dest_filename);
 
 		if(debug)
 			fprintf(stderr,"thumbs_db_name:%s,dest_filename:%s,primarytiledis:%s\n", args->mosaik2dbs[i],dest_filename,mp.dest_primarytiledims_filename);
@@ -109,7 +109,7 @@ if(debug) fprintf(stderr, "init\n");
 		primary_tile_x_count = primary_tile_x_count_local;
 		primary_tile_y_count = primary_tile_y_count_local;
 
-		uint8_t database_image_resolution_local = read_database_image_resolution( &mds[i0] );
+		uint8_t database_image_resolution_local = mosaik2_database_read_image_resolution( &mds[i0] );
 		if(i == argv_start_idx_thumbs_db_names) {
 			database_image_resolution = database_image_resolution_local;
 		} else {
@@ -133,7 +133,7 @@ if(debug) fprintf(stderr, "init\n");
 
 	for(uint32_t i=argv_start_idx_thumbs_db_names,i0=0;i<argv_end_idx_thumbs_db_names;i++,i0++) {
 
-		init_mosaik2_project(&mp, mds[i0].id, dest_filename);
+		mosaik2_project_init(&mp, mds[i0].id, dest_filename);
 
 		m2file result_file = m_fopen(mp.dest_result_filename, "rb");
 		if(args->verbose)fprintf(stderr,"load result file %s (%s)\n", args->mosaik2dbs[i], mp.dest_result_filename);

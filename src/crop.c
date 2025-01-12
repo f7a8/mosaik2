@@ -11,9 +11,9 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	}
 
 	mosaik2_database md;
-	init_mosaik2_database(&md, mosaik2_database_name);
+	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
-	int database_image_resolution = read_database_image_resolution(&md); // standard value should be 16
+	int database_image_resolution = mosaik2_database_read_image_resolution(&md); // standard value should be 16
 
 	if (args->has_element_identifier == ELEMENT_FILENAME ) {
 		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
@@ -25,7 +25,7 @@ int mosaik2_crop(mosaik2_arguments *args) {
 		element_number--;
 	}
 
-	uint32_t element_count = read_thumbs_db_count(&md);
+	m2elem element_count = mosaik2_database_read_element_count(&md);
 	if( element_number >= element_count ) {
 		fprintf(stderr, "element number out of range\n");
 		exit(EXIT_FAILURE);
