@@ -291,7 +291,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nduplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
+		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nphash duplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
               args->verbose ? "yes" : "no",
               args->quiet ? "yes" : "no",
 
@@ -303,6 +303,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->fast_unique ? "yes" : "no",
               args->color_stddev_ratio,
               args->pixel_per_tile,
+              args->phash_distance,
               args->duplicate_reduction ? "yes" : "no",
               args->symlink_cache ? "yes" : "no",
               args->ignore_old_invalids ? "yes" : "no",
