@@ -316,6 +316,12 @@ int StartsWith(const char *pre, const char *str) {
 	lenstr = strlen(str);
 	return lenstr < lenpre ? 0 : memcmp(pre, str, lenpre) == 0;
 }
+int is_file ( const char* pathname ) {
+	struct stat statbuf;
+	m_stat(pathname, &statbuf);
+	return statbuf.st_mode & S_IFREG;
+}
+
 
 int is_file_local( const m2name filename ) {
 	if(!filename) {

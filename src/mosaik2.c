@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <error.h>
 
+
+
+#include "libmosaik2.h"
 #include "data_types.h"
 #include "mosaik2.h"
 
@@ -261,8 +264,15 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 					print_usage();
 					exit(EXIT_FAILURE);
 				}
-				args->src_image = argv[optind+1];
-				args->mosaik2db = argv[optind+2];
+				// more flexibility of the argument position of the file name
+				if(is_file(argv[optind+1])) {
+					args->src_image = argv[optind+1];
+					args->mosaik2db = argv[optind+2];
+				} else {
+					args->src_image = argv[optind+2];
+					args->mosaik2db = argv[optind+1];
+
+				}
 			} else {
 				args->mosaik2db = argv[optind+1];
 			}

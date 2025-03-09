@@ -124,6 +124,7 @@ unsigned char* read_stdin(size_t *);
 
 int EndsWith(const char *str, const char *suffix);
 int StartsWith(const char *pre, const char *str);
+int is_file ( const char* pathname );
 int is_file_local( const m2name filename );
 int is_file_wikimedia_commons( const m2name filename );
 void get_wikimedia_thumb_url(const char *url, char *thumb_pixel, char *dest, int dest_len);
