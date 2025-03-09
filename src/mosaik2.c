@@ -164,7 +164,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->mode = argv[optind];
 	int mode = -1;
 	for(int i=0;i<MODE_COUNT;i++) {
-		if(strncmp(args->mode, modes[i], strlen(args->mode))==0) {
+		if(strncmp(args->mode, modes[i], strlen(modes[i]))==0) {
 			mode=i; break;
 		}
 	}
@@ -291,7 +291,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nphash duplicate_reduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
+		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nphash duplicate = %i\nreduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
               args->verbose ? "yes" : "no",
               args->quiet ? "yes" : "no",
 
