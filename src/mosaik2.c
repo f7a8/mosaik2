@@ -36,21 +36,21 @@ int main(int argc, char **argv) {
 	mosaik2_arguments args;
 	get_mosaik2_arguments(&args, argc, argv);
 
-	if(strncmp( args.mode, "init", strlen("init")) == 0) {
+	if(strcmp( args.mode, "init") == 0) {
 		return mosaik2_init(&args);
-	} else if(strncmp( args.mode, "index", strlen("index")) == 0) {
+	} else if(strcmp( args.mode, "index") == 0) {
 		return mosaik2_index(&args);
-	} else if(strncmp( args.mode, "gathering", strlen("gathering")) == 0) {
+	} else if(strcmp( args.mode, "gathering") == 0) {
 		return mosaik2_gathering(&args);
-	} else if(strncmp( args.mode, "join", strlen("join")) == 0) {
+	} else if(strcmp( args.mode, "join") == 0) {
 		return mosaik2_join(&args);
-	} else if(strncmp( args.mode, "invalid", strlen("invalid")) == 0) {
+	} else if(strcmp( args.mode, "invalid") == 0) {
 		return mosaik2_invalid(&args);
-	} else if(strncmp( args.mode, "duplicates", strlen("duplicates")) == 0) {
+	} else if(strcmp( args.mode, "duplicates") == 0) {
 		return mosaik2_duplicates(&args);
-	} else if(strncmp( args.mode, "info", strlen("info")) == 0) {
+	} else if(strcmp( args.mode, "info") == 0) {
 		return mosaik2_info(&args);
-	} else if(strncmp( args.mode, "crop", strlen("crop")) == 0) {
+	} else if(strcmp( args.mode, "crop") == 0) {
 		return mosaik2_crop(&args);
 	}
 
@@ -112,8 +112,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 				break; //no modes_used because it appears in several modes
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
 			case 'i': args->ignore_old_invalids = 1; 
-								modes_used[MODE_DUPLICATES]++;
-								break;
+								break; //no modes_used because it appears in several modes
 			case 'j': args->max_jobs = atoi(optarg); 
 								modes_used[MODE_INDEX]++;
 								break;
@@ -157,7 +156,6 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			default: /* ? */ print_usage(); exit(EXIT_FAILURE); break;
 		}
 	}
-
 	if(optind >= argc) {
 		print_usage();
 		exit(EXIT_FAILURE);
@@ -185,6 +183,10 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	if(mode == MODE_GATHERING)
 	// special case, dry-run is valid in two modes, modes_used was not incremented for it
 	if(args->dry_run == 1 && !( mode == MODE_INVALID || mode == MODE_DUPLICATES ) ) {
+		print_usage();
+		exit(EXIT_FAILURE);
+	}
+	if(args->ignore_old_invalids==1 && !(mode==MODE_INVALID || mode == MODE_DUPLICATES)) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
