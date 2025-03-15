@@ -108,7 +108,7 @@ struct mosaik2_indextask_struct {
 	time_t end;
 	TASK_STATE state;
 	uint32_t idx;
-	char filename[1024]; // trade off, dont want to malloc that much. hoping it fits
+	char filename[MAX_FILENAME_LEN]; // trade off, dont want to malloc that much. hoping it fits
 	m2file file;
 	size_t filesize;
 	time_t lastmodified;
@@ -211,34 +211,41 @@ struct mosaik2_project_struct {
 	char dest_primarytiledims_filename[256];
 	char dest_result_filename[256];
 	char dest_imagedims_filename[256];
+	char dest_exclude_filename[256];
 	uint8_t ratio;
 	uint8_t unique;
 	uint8_t fast_unique;
 	size_t file_size;
 	uint8_t primary_tile_count;
-	char dest_html_filename[ 256 ]; 
-	char dest_src_filename[ 256 ];
+	char dest_html_filename[256]; 
+	char dest_src_filename[256];
 	mosaik2_database *mds;
 	uint8_t mds_len;
 	int image_height; // populated by read_image_dim( *mosaik2_project)
 	int image_width;  // populated by read_image_dim( *mosaik2_project)
 	int pixel_per_tile;
 	uint8_t primary_tile_x_count; //populated by mosaik2_project_read_primary_tile_dims( *mosaik2_project)
-	uint8_t primary_tile_y_count;//populated by mosaik2_project_read_primary_tile_dims( *mosaik2_project)
+	uint8_t primary_tile_y_count; //populated by mosaik2_project_read_primary_tile_dims( *mosaik2_project)
+	m2area *exclude_area;
+	m2elem exclude_count; // area elements
 };
-typedef struct mosaik2_project_struct          mosaik2_project;
+typedef struct mosaik2_project_struct mosaik2_project;
 
 struct mosaik2_project_result_struct {
 	uint32_t sortorder;
 	mosaik2_database *md;
-	uint8_t hash[16];
+	m2hash hash;
 	m2elem index; // index in thumbs_db
 	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
-	char thumbs_db_filenames[MAX_FILENAME_LEN];
-	char temp_filename[MAX_TEMP_FILENAME_LEN];
+	char thumbs_db_filenames[MAX_FILENAME_LEN]; //DEPRECATED
+	char temp_filename[MAX_TEMP_FILENAME_LEN]; // DEPRECATED
+	char cache_filename[MAX_TEMP_FILENAME_LEN];
+	char origin_filename[MAX_FILENAME_LEN];
+	int is_file_local;
 	int size;
+	int exclude;
 };
 typedef struct mosaik2_project_result_struct    mosaik2_project_result;
 
@@ -281,6 +288,8 @@ struct arguments_struct {
 	m2name element_filename;
 	int phash_distance;
 	int has_phash_distance;
+	char **exclude_area;
+	int exclude_count; // elements of exclude_area options
 };
 typedef struct arguments_struct mosaik2_arguments;
 

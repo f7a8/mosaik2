@@ -11,7 +11,7 @@
 
 #include "libmosaik2.h"
 
-#ifdef HAVE_CURL
+#ifdef HAVE_LIBCURL
 //for curl writing
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   size_t written = fwrite(ptr, size, nmemb, (m2file )stream);
@@ -29,7 +29,7 @@ int mosaik2_join(mosaik2_arguments *args) {
 	int local_cache = args->symlink_cache;
 	int debug = args->verbose;
 
-	char * home = getenv("HOME");
+	char *home = getenv("HOME");
 	char *pwd = getenv("PWD");
 
 	int ft =  mosaik2_project_check_dest_filename( dest_filename );
@@ -160,17 +160,20 @@ if(debug) fprintf(stderr, "init\n");
 			candidates0[j].costs = (float) atof( ptr ); ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_x = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			candidates0[j].off_y = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
+			candidates0[j].exclude = atoi( ptr );  ptr = strtok(NULL, "\n\t"); if(ptr==NULL)break;
 			j++;
 		}
-	
+
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			if(candidates0[i].costs < candidates[i].costs ) {
+			//simple merge of better images and adapt the exclude bit
+			if(candidates0[i].costs < candidates[i].costs || candidates0[i].exclude ) {
 				candidates[i].md = candidates0[i].md;
 				candidates[i].index = candidates0[i].index;
 				candidates[i].costs = candidates0[i].costs;
 				candidates[i].off_x = candidates0[i].off_x;
 				candidates[i].off_y = candidates0[i].off_y;
-			} 
+				candidates[i].exclude = candidates0[i].exclude;
+			}
 		}
 
 		free(candidates0);
@@ -181,51 +184,45 @@ if(debug) fprintf(stderr, "init\n");
 			fprintf(stderr,"%s:%i\n", candidates[i].md->thumbs_db_name, candidates[i].index);
 		}
 
-	
 	if(debug)
 		fprintf(stderr,"data is loaded (%i*%i=%i)\n",primary_tile_x_count,primary_tile_y_count,total_primary_tile_count);
 
 	qsort( candidates, total_primary_tile_count, sizeof(mosaik2_project_result), cmpfunc);
 	if(debug)
 		fprintf(stderr, "sort arr\n");
-	
+
 	if(debug)
 		for(uint32_t i=0;i<total_primary_tile_count;i++) {
-			printf("%i	%i	%f	%i	%i	%s\n",
-			candidates[i].sortorder, 
-			candidates[i].index, 
-			candidates[i].costs, 
-			candidates[i].off_x, 
+			printf("%i	%i	%f	%i	%i	%s	%i\n",
+			candidates[i].sortorder,
+			candidates[i].index,
+			candidates[i].costs,
+			candidates[i].off_x,
 			candidates[i].off_y,
-			candidates[i].md->thumbs_db_name);
+			candidates[i].md->thumbs_db_name,
+			candidates[i].exclude);
   	}
-	
+
+
+	mosaik2_create_cache_dir();
+
+
 	m2name thumbs_db_name="";
-	m2file thumbs_db_file = NULL;
-	m2file thumbs_db_hash = NULL;
+	m2file filenames_file = NULL;
+	m2file filehashes_file = NULL;
 
 	uint64_t j=0;
 	float total_costs = 0;
 	char buffer[MAX_FILENAME_LEN];
 
-	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
-	char mkdir_buf[sz+1];
-	memset(mkdir_buf,0,sz+1);
-	snprintf(mkdir_buf, sz+1, "%s/.mosaik2/mosaik2.hash",home);
-	m2ctext mkdir_path = dirname(mkdir_buf);
-	if(access(mkdir_path, W_OK)!=0) {
-		if(debug) fprintf(stderr, "cache dir (%s) is not writeable, try to mkdir it\n", mkdir_path);
-		//not accessible or writeable, try to create dir
-		if( mkdir(mkdir_path, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
-			fprintf(stderr, "cache directory (%s) could not be created\n", mkdir_path);
-			exit(EXIT_FAILURE);
-		}
-	}
-	
+
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
+
+		//when current canidate is from a diffent mosaik2 database
+		//open new files
 		if(strcmp(candidates[i].md->thumbs_db_name, thumbs_db_name)!=0) {
-			if(thumbs_db_file != NULL) m_fclose(thumbs_db_file);
-			if(thumbs_db_hash != NULL) m_fclose(thumbs_db_hash);
+			if(filenames_file != NULL) m_fclose(filenames_file);
+			if(filehashes_file != NULL) m_fclose(filehashes_file);
 
 			thumbs_db_name = candidates[i].md->thumbs_db_name;
 
@@ -246,22 +243,24 @@ if(debug) fprintf(stderr, "init\n");
 
 			j=0;
 
-			thumbs_db_file = m_fopen(mds[i_].filenames_filename, "r");
-			thumbs_db_hash = m_fopen(mds[i_].filehashes_filename, "r");
+			filenames_file = m_fopen(mds[i_].filenames_filename, "r");
+			filehashes_file = m_fopen(mds[i_].filehashes_filename, "r");
 			if(debug)
 				fprintf(stderr, "enrich data from results file %s\n", mds[i_].thumbs_db_name);
 		}
 
-
+		//TODO VERY INEFFICIENT
 		for(m2elem len=candidates[i].index;j<=len;j++) {
-			m_fgets(buffer, MAX_FILENAME_LEN, thumbs_db_file);
+			m_fgets(buffer, MAX_FILENAME_LEN, filenames_file);
 		}
 		strncpy(candidates[i].thumbs_db_filenames,buffer,strlen(buffer));
 		if(strlen(buffer)>0)	candidates[i].thumbs_db_filenames[strlen(buffer)-1]=0;
-		
-		
-		m_fseeko(thumbs_db_hash, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
-		m_fread(candidates[i].hash, MD5_DIGEST_LENGTH, thumbs_db_hash);
+		strncpy(candidates[i].origin_filename,buffer,strlen(buffer));
+		if(strlen(buffer)>0)	candidates[i].origin_filename[strlen(buffer)-1]=0;
+
+
+		m_fseeko(filehashes_file, MD5_DIGEST_LENGTH*candidates[i].index,SEEK_SET);
+		m_fread(candidates[i].hash, MD5_DIGEST_LENGTH, filehashes_file);
 
 		size_t sz;
 		sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -279,96 +278,86 @@ if(debug) fprintf(stderr, "init\n");
 		candidates[i].hash[8], candidates[i].hash[9], candidates[i].hash[10], candidates[i].hash[11],
 		candidates[i].hash[12], candidates[i].hash[13], candidates[i].hash[14], candidates[i].hash[15]);
 		strncpy(candidates[i].temp_filename,buf,strlen(buf));
-
+		strncpy(candidates[i].cache_filename,buf,strlen(buf));
 
 		total_costs += candidates[i].costs;
+		candidates[i].is_file_local = is_file_local( candidates[i].thumbs_db_filenames );
 	}
-	m_fclose(thumbs_db_file);
-	m_fclose(thumbs_db_hash);
+	m_fclose(filenames_file);
+	m_fclose(filehashes_file);
+
 
 	if(args->verbose)fprintf(stderr,"data enriched (filenames and hashes)\n");
 
 	qsort( candidates, total_primary_tile_count, sizeof(mosaik2_project_result), cmpfunc_back);
 
-	//download part
+	//download images from webresources, which are not cached already
+	//files in local filesystem arent touched here, as long they are mounted
 	for(uint32_t i=0;i<total_primary_tile_count;i++) {
-		if( access( candidates[i].temp_filename, F_OK ) == 0 ) {
-			if(!args->quiet)printf("%i/%i already exist %s:%i\n", i,total_primary_tile_count,candidates[i].md->thumbs_db_name,candidates[i].index );
+
+		//check if next file is already cached
+		//fprintf(stderr, "is_file_local:%i %s %s\n",candidates[i].is_file_local, candidates[i].origin_filename,candidates[i].cache_filename);
+
+		if( candidates[i].is_file_local == 1 ) {
+			if( access( candidates[i].origin_filename, F_OK ) == 0 ) {
+				if(!args->quiet)
+					printf("%i/%i local file already exist %s:%i\n", i,total_primary_tile_count,candidates[i].md->thumbs_db_name,candidates[i].index );
+				// TODO check hash
+				continue;
+			} else {
+				fprintf(stderr, "local file is not accessable (%s)\nmay have a look at the invalid mode",candidates[i].origin_filename);
+				exit(EXIT_FAILURE);
+			}
+		}
+		if( candidates[i].is_file_local == 0 && access( candidates[i].cache_filename, F_OK ) == 0 ) {
+			if(!args->quiet)printf("%i/%i chached file already exist %s:%i\n", i,total_primary_tile_count,candidates[i].md->thumbs_db_name,candidates[i].index );
 			// TODO check hash
 			continue;
 		}
-		/*if(errno == ENOENT) { //dangeling symlink
-			fprintf(stderr,"%i/%i found dangling symbolic link %s for %s:%li %s\nthose bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n", i,total_primary_tile_count, candidates[i].temp_filename, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
-			fprintf(stderr,"those bad symlinks can be removed by `find ~/.mosaik2/ -xtype l -delete`\n" );
-			fprintf(stderr,"you may want have a look at the invalidate mode\n" );
-			exit(EXIT_FAILURE);
-		}*/
 
-	if(is_file_local( candidates[i].thumbs_db_filenames )) {
-
-		//TODO
-		if(local_cache==1) {
-			if(!args->quiet)fprintf(stdout,"%i/%i copy %s:%i %s", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
-			File_Copy( candidates[i].thumbs_db_filenames, candidates[i].temp_filename);
-			if(!args->quiet) fprintf(stdout,".\n");
-		} else {
-
-			if(!args->quiet) {
-				fprintf(stdout,"%i/%i create symlink %s:%i %s\n",
-			        i, total_primary_tile_count,
-			        candidates[i].md->thumbs_db_name, candidates[i].index,
-			        candidates[i].thumbs_db_filenames );
-			}
-			
-			int absolute = candidates[i].thumbs_db_filenames[0] == '/' ;
-
-				int target_len = absolute ? strlen(candidates[i].thumbs_db_filenames) :  strlen(pwd) + 1 + strlen(candidates[i].thumbs_db_filenames);
-				char target[target_len+1];
-				memset(target, 0, target_len+1);
-				if(absolute)
-					strncat(target, candidates[i].thumbs_db_filenames, target_len);
-				else {
-					strncat(target, pwd, strlen(pwd));
-					strcat(target, "/");
-					strncat(target, candidates[i].thumbs_db_filenames, strlen(candidates[i].thumbs_db_filenames));
-				}
-
-				int simlink = symlink(target, candidates[i].temp_filename);
-				if(simlink != 0) {
-					fprintf(stderr, "error creating symlink %s for %s\n", candidates[i].temp_filename, target);
-					perror("error message =>");
-					exit(EXIT_FAILURE);
-				}
-			}
-
-		} else {
-#ifdef HAVE_CURL
+#ifdef HAVE_LIBCURL
 			printf("%i/%i downloading %s:%i %s\n", i,total_primary_tile_count, candidates[i].md->thumbs_db_name,candidates[i].index,candidates[i].thumbs_db_filenames );
 
-			CURL *curl_handle;
-			m2file pagefile;
+			CURL *curl;
+			CURLcode res;
+
+			m2file download_file = m_fopen(candidates[i].cache_filename, "w+b");
 			curl_global_init(CURL_GLOBAL_ALL);
 
-			curl_handle = curl_easy_init();
-			//printf("[%s]\n", candidates[i].thumbs_db_filenames);
-			curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "mosaik2");
-			curl_easy_setopt(curl_handle, CURLOPT_URL, candidates[i].thumbs_db_filenames);
-			curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 0L);
-			curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
-			curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
-			pagefile = m_fopen(candidates[i].temp_filename, "wb");
-			if(pagefile) {
-				curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, pagefile);
-				curl_easy_perform(curl_handle);
-				m_fclose(pagefile);
+			curl = curl_easy_init();
+			char errbuf[CURL_ERROR_SIZE];
+			errbuf[0] = 0;
+			if(curl) {
+				curl_easy_setopt(curl, CURLOPT_USERAGENT, "mosaik2");
+				curl_easy_setopt(curl, CURLOPT_URL, candidates[i].origin_filename);
+				curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+				curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, download_file);
+				curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+
+				res = curl_easy_perform(curl);
+				if(res != CURLE_OK) {
+					size_t len = strlen(errbuf);
+					fprintf(stderr, "libcurl: (%d) ", res);
+					if(len)
+						fprintf(stderr, "%s%s", errbuf,
+								((errbuf[len - 1] != '\n') ? "\n" : ""));
+					else
+						fprintf(stderr, "%s\n", curl_easy_strerror(res));
+					exit(EXIT_FAILURE);
+				}
+				m_fclose(download_file);
+				curl_easy_cleanup(curl);
+				curl_global_cleanup();
 			}
-			curl_easy_cleanup(curl_handle);
-			curl_global_cleanup();
 #else
 			fprintf(stderr, "mosaik2 was compiled without curl support, no downloads are possible, only loading images from the local filesystem\n");
+			exit(EXIT_FAILURE);
 #endif
-		}
 	}
+
+
 	if(args->verbose)printf("join mosaik2 for real\n");
 	gdImagePtr out_im = gdImageCreateTrueColor(dest_tile_width*primary_tile_x_count,dest_tile_width*primary_tile_y_count);
 	if(out_im == NULL) {
@@ -383,14 +372,37 @@ if(debug) fprintf(stderr, "init\n");
 
 	fprintf(html_out, "<html><body><table>");
 	gdImagePtr im;
+	m2elem exclude_count = 0;
 	for(int y=0;y<primary_tile_y_count;y++) {
 		fprintf(html_out, "<tr>");
 		for(int x=0;x<primary_tile_x_count;x++) {
 			int primary_tile_idx = y*primary_tile_x_count+x;
-      
-			if(!args->quiet)
-				printf("%i/%i %s from %s\n",primary_tile_idx,total_primary_tile_count,candidates[primary_tile_idx].temp_filename,candidates[primary_tile_idx].thumbs_db_filenames);
-			im = read_image_from_file(candidates[primary_tile_idx].temp_filename);
+
+			if ( candidates[primary_tile_idx].exclude){
+				exclude_count++;
+				fprintf(html_out, "<td></td>");
+				fprintf(src_out,"%i: EXCLUDED\n", primary_tile_idx);
+				if(!args->quiet)
+				printf("%i/%i EXCLUDED\n",primary_tile_idx,total_primary_tile_count);
+
+				// resize no image
+				continue;
+			}
+
+			if(candidates[primary_tile_idx].is_file_local) {
+				if(!args->quiet) {
+					printf("%i/%i %s from local file %s\n",primary_tile_idx,total_primary_tile_count,candidates[primary_tile_idx].temp_filename,candidates[primary_tile_idx].thumbs_db_filenames);
+				}
+				im = read_image_from_file(candidates[primary_tile_idx].origin_filename);
+			} else {
+				if(!args->quiet) {
+					printf("%i/%i %s from chached file %s\n",primary_tile_idx,total_primary_tile_count,
+					candidates[primary_tile_idx].thumbs_db_filenames,
+					candidates[primary_tile_idx].cache_filename);
+				}
+
+				im = read_image_from_file(candidates[primary_tile_idx].cache_filename);
+			}
 
 			fprintf(html_out, "<td");
 			if(im==NULL) {
@@ -412,7 +424,7 @@ if(debug) fprintf(stderr, "init\n");
 					get_wikimedia_file_url(url, url_file, strlen(url_file));
 					fprintf(stderr, "3\n");
 					fprintf(html_out, "<a href='%s'>", url_file);
-				} 
+				}
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url_thumb,dest_tile_width,dest_tile_width);
 				if(is_file_commons==1) {
 					fprintf(html_out, "</a>\n");
@@ -421,7 +433,7 @@ if(debug) fprintf(stderr, "init\n");
 					fprintf(src_out,"%i: %s\n", primary_tile_idx, url_thumb);
 				}
 				fprintf(html_out, "</td>");
-				
+
 				continue;
 			}
 			fprintf(html_out, ">");
@@ -432,8 +444,6 @@ if(debug) fprintf(stderr, "init\n");
 			memset(url_file, '\0', 1000);
 			memset(url_thumb, '\0', 1000);
 			int is_file_commons = is_file_wikimedia_commons(url);
-			if(debug)
-			       	fprintf(stderr,"is_file_commons:%i\n", is_file_commons);
 			if(debug && is_file_commons==1) {
 				fprintf(stderr, "url:[%s] ", url);
 
@@ -444,36 +454,36 @@ if(debug) fprintf(stderr, "init\n");
 				if(debug) fprintf(stderr, " [%s]\n", url_file);
 				fprintf(html_out, "<a href='%s'>", url_file);
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url_thumb, dest_tile_width, dest_tile_width);
-			
+
 				fprintf(html_out, "</a>\n");
 				fprintf(src_out,"%s\n", url_file);
 
 				//free(url_thumb);
 				//free(url_file);
-			
+
 			} else {
 				fprintf(html_out, "<img src='%s' width='%i' height='%i'/>", url, dest_tile_width, dest_tile_width);
-				
+
 				fprintf(src_out,"%s\n", url);
 				if(x==primary_tile_x_count-1) {
 					fprintf(src_out, "\n");
 				}
 			}
 			fprintf(html_out, "</td>");
-			
+
 			gdImageSetInterpolationMethod(im, GD_GAUSSIAN );
 
 			uint32_t width = gdImageSX(im);
 			uint32_t height = gdImageSY(im);
-			
+
 			int short_dim = width<height?width:height;
 			//int long_dim  = width<height?height:width;
-			 
+
 			int pixel_per_tile = ( short_dim - (short_dim % database_image_resolution) ) / database_image_resolution;
-			
+
 			int tile_x_count;
 			int tile_y_count;
-			 
+
 			if(short_dim == width){
 			  tile_x_count = database_image_resolution;
 			  tile_y_count = height / pixel_per_tile;
@@ -481,7 +491,7 @@ if(debug) fprintf(stderr, "init\n");
 			  tile_x_count = width / pixel_per_tile;
 			  tile_y_count = database_image_resolution;
 			}
- 
+
 			int offset_x = ((width - tile_x_count * pixel_per_tile)/2);
  			int offset_y = ((height - tile_y_count * pixel_per_tile)/2);
 
@@ -510,13 +520,13 @@ if(debug) fprintf(stderr, "init\n");
 			int srcW = database_image_resolution*pixel_per_tile;
 			int srcH = database_image_resolution * pixel_per_tile;
 
-			gdImageCopyResized ( 
+			gdImageCopyResized (
 					out_im, im,
 					dstX, dstY,
 					srcX, srcY,
 					dstW, dstH,
 					srcW, srcH);
-  
+
 			gdImageDestroy(im);
 		}
 		fprintf(html_out, "</tr>");
@@ -540,8 +550,11 @@ if(debug) fprintf(stderr, "init\n");
 
 	out = m_fopen(dest_filename, "r+");
 	char comment[100];
-	memset(comment, 0, 100);	
-	snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, database_image_resolution, costs);
+	memset(comment, 0, 100);
+	if(exclude_count>0)
+		snprintf(comment, 100, "mosaik2 (%ix%i-%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, exclude_count, candidates_count, database_image_resolution, costs);
+	else
+		snprintf(comment, 100, "mosaik2 (%ix%i from %li -r%i) => %f", primary_tile_x_count, primary_tile_y_count, candidates_count, database_image_resolution, costs);
 	off_t out_file_size = get_file_size(dest_filename);
 	inject_exif_comment(out, out_file_size, comment, strlen(comment));
 	m_fclose(out);
@@ -588,12 +601,12 @@ void inject_exif_comment(m2file out, off_t out_file_size, char *comment, size_t 
 			return;
 		}
 
-		int comment_len0 = comment_len;		
+		int comment_len0 = comment_len;
 		if(exif_length < comment_len0)
 			comment_len0 = exif_length;
 
 		fseeko(out, exif_offset-2, SEEK_SET);
-	
+
 		char new_exif_length[2] = {comment_len0 / 256, comment_len0 % 256};
 
 		if( fwrite(new_exif_length, 2, 1, out) != 1) {

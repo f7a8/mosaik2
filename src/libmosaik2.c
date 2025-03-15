@@ -28,6 +28,22 @@ void mosaik2_context_init(mosaik2_context *ctx) {
 	}
 }
 
+void mosaik2_create_cache_dir() {
+	char *home = getenv("HOME");
+	size_t sz = snprintf(NULL, 0, "%s/.mosaik2/mosaik2.hash",home);
+	char mkdir_buf[sz+1];
+	memset(mkdir_buf,0,sz+1);
+	snprintf(mkdir_buf, sz+1, "%s/.mosaik2/mosaik2.hash",home);
+	m2ctext mkdir_path = dirname(mkdir_buf);
+	if(access(mkdir_path, W_OK)!=0) {
+		//not accessible or writeable, try to create dir
+		if( mkdir(mkdir_path, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
+			fprintf(stderr, "cache directory (%s) could not be created\n", mkdir_path);
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 void mosaik2_database_init(mosaik2_database *md, m2name thumbs_db_name) {
 
 	memset( (*md).thumbs_db_name,0,256);
@@ -173,6 +189,10 @@ void mosaik2_project_init(mosaik2_project *mp, m2ctext mosaik2_database_id, m2na
 	memset(mp->dest_imagedims_filename, 0, 256);
 	strncpy(mp->dest_imagedims_filename, mp->dest_filename, dest_filename_len);
 	strcat(mp->dest_imagedims_filename, ".imagedims.txt");
+
+	memset(mp->dest_exclude_filename, 0, 256);
+	strncpy(mp->dest_exclude_filename, mp->dest_filename, dest_filename_len);
+	strcat(mp->dest_exclude_filename, ".exclude.txt");
 
  	memset(mp->dest_result_filename, 0, 256);
 	thumbs_db_ending=".result";
@@ -996,7 +1016,7 @@ int File_Copy(char FileSource[], char FileDestination[])
 
 
 
-#ifdef HAVE_EXIF
+#ifdef HAVE_LIBEXIF
 uint8_t get_image_orientation(unsigned char *buffer, size_t buf_size) {
 
 	ExifData *ed;
@@ -1214,13 +1234,12 @@ void check_resolution(uint32_t resolution) {
 }
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, m2file stream) {
-	fprintf(stderr, "write_data\n");
     size_t written;
     written = fwrite(ptr, size, nmemb, stream);
     return written;
 }
 
-int mosaik2_indextask_read_image(mosaik2_indextask *task) {
+int mosaik2_indextask_read_image(mosaik2_database *md, mosaik2_indextask *task) {
 	if(is_file_local( task->filename )) {
 		struct stat st;
 		m_stat(task->filename, &st);
@@ -1233,24 +1252,36 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 		m_fclose(file);
 		
 	} else {
-#ifdef HAVE_CURL
-		fprintf(stderr, "only reading of local files is currently implemented\n");
-		exit(1);
-#else
-		fprintf(stderr, "only reading of local files is currently implemented\n");
-		exit(1);
-#endif
-		/*CURL *curl;
+#ifdef HAVE_LIBCURL
+		CURL *curl;
 		CURLcode res;
-		char filename[100];
-		snprintf(filename,100,"download_temp_file_%i",task->idx); 
-		m2file tmpfile =m_fopen(filename, "w+");
+		//TODO the use of `tmpnam' is dangerous, better use `mkstemp'
+		m2name tmpfilename = tmpnam(NULL); 
+		m2file tmpfile = m_fopen(tmpfilename,"w+b");
+
 		curl = curl_easy_init();
+		char errbuf[CURL_ERROR_SIZE];
+		errbuf[0] = 0;
 		if(curl) {
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, "mosaik2");
 			curl_easy_setopt(curl, CURLOPT_URL, task->filename);
+			curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, tmpfile);
+			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+
 			res = curl_easy_perform(curl);
+			if(res != CURLE_OK) {
+				size_t len = strlen(errbuf);
+				fprintf(stderr, "libcurl: (%d) ", res);
+				if(len)
+					fprintf(stderr, "%s%s", errbuf,
+							((errbuf[len - 1] != '\n') ? "\n" : ""));
+				else
+					fprintf(stderr, "%s\n", curl_easy_strerror(res));
+				exit(EXIT_FAILURE);
+  			}
 			struct stat st;
 			m_stat(get_file_name(tmpfile), &st);
 			task->filesize = st.st_size;
@@ -1260,7 +1291,12 @@ int mosaik2_indextask_read_image(mosaik2_indextask *task) {
 			m_fread(task->image_data, task->filesize, tmpfile);
 			m_fclose(tmpfile);
 			curl_easy_cleanup(curl);
-		}*/
+		}
+#else
+		fprintf(stderr, "mosaik2 was compiled without curl support, no downloads are possible, only loading images from the local filesystem\n");
+		exit(EXIT_FAILURE);
+#endif
+		
 	}
 	return 0;
 }
@@ -1336,6 +1372,57 @@ void mosaik2_project_read_image_dims(mosaik2_project *mp) {
 
 	m_fclose(file);
 }
+void mosaik2_project_read_exclude_area(mosaik2_project *mp, mosaik2_tile_infos *ti, mosaik2_arguments *args) {
+
+	mp->exclude_count = args->exclude_count;
+	m2area *areas = (m2area *) m_malloc(mp->exclude_count *sizeof(m2area));
+	mp->exclude_area = areas;
+	char **area_string = args->exclude_area;
+
+//	fprintf(stderr, "exclude_count:%i\n", mp->exclude_count);
+//	fprintf(stderr, "exclude_area:[%s]\n",args->exclude_area[0]);
+
+	for(int i=0;i<mp->exclude_count;i++ ) {
+
+		if (sscanf(area_string[i], "%u,%u,%u,%u", &(areas->start_x), &(areas->start_y),
+				&(areas->end_x), &(areas->end_y)) == 4) {
+
+			if (areas->start_x > areas->end_x || areas->start_y > areas->end_y) {
+				fprintf(stderr, "invalid exclude area range[%s], have a look to the man page\n",area_string[i]);
+				exit(EXIT_FAILURE);
+			}
+			if(	       areas->start_x < 0
+					|| areas->start_y < 0
+					|| areas->end_x < areas->start_x
+					|| areas->end_y < areas->start_y
+					|| areas->start_x > ti->primary_tile_x_count
+					|| areas->start_y > ti->primary_tile_y_count
+					|| areas->end_x > ti->primary_tile_x_count
+					|| areas->end_y > ti->primary_tile_y_count ) {
+				fprintf(stderr, "exclude area is out of range [%s] "
+						"( possible exclude range x between 0 and %u and y between 0 and %u )\n",
+						area_string[i], ti->primary_tile_x_count,ti->primary_tile_y_count);
+				/*fprintf(stderr, "%i %i %i %i %i %i %i %i\n", areas->start_x < 0
+					, areas->start_y < 0
+					, areas->end_x < areas->start_x
+					, areas->end_y < areas->start_y
+					, areas->start_x > ti->primary_tile_x_count
+					, areas->start_y > ti->primary_tile_y_count
+					, areas->end_x > ti->primary_tile_x_count
+					, areas->end_y > ti->primary_tile_y_count);*/
+				exit(EXIT_FAILURE);
+			}
+			/*fprintf(stderr, "exlucde %i:%i (%i-%i)*(%i-%i)\n", i,(areas->end_x-areas->start_x)*(areas->end_y-areas->start_y),
+					areas->end_x,areas->start_x,areas->end_y,areas->start_y);*/
+		} else {
+			fprintf(stderr, "invalid exclude area format [%s]\n",
+					area_string[i]);
+			exit(EXIT_FAILURE);
+		}
+		areas++;
+	}
+}
+
 
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count) {
 
@@ -1657,7 +1744,8 @@ void m_munmap(void *addr, size_t length) {
 m2file m_tmpfile(void) {
 	m2file f = tmpfile();
 	if(f == NULL) {
-		perror("tmpfile() failed");
+		fprintf(stderr, "m_tmpfile: could not create temporary file\n");
+		perror("error");
 		exit(EXIT_FAILURE);
 	}
 	return f;

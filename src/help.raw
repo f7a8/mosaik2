@@ -9,6 +9,7 @@ mosaik2 -- creates real photo mosaics. ready for large data sets.
   -d          Fast but not complete reduction of duplicates processor count
   -D DIST     Color-Distance-Method: manhatten (default), euclidian, chebyshev
   -e SEARCH   operate only on the SEARCHs database element
+  -E AREA     Exclude areas from image processing
   -i          Ignore old invalid images
   -j COUNT    Limit concurrent worker jobs to COUNT (default
   -l LOAD     Soft limit the system load to LOAD (default 0, means off)

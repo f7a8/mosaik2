@@ -23,6 +23,30 @@
 #define MODE_INFO 6
 #define MODE_CROP 7
 #define MODE_COUNT 8
+#define OPTION_D_LO 0
+#define OPTION_D_HI 1
+#define OPTION_H 2
+#define OPTION_E_LO 3
+#define OPTION_E_HI 4
+#define OPTION_I 5
+#define OPTION_J 6
+#define OPTION_L 7
+#define OPTION_N 8
+#define OPTION_Q 9
+#define OPTION_P_LO 10
+#define OPTION_P_HI 11
+#define OPTION_R_LO 12
+#define OPTION_R_HI 13
+#define OPTION_S 14
+#define OPTION_T 15
+#define OPTION_U_LO 16
+#define OPTION_U_HI 17
+#define OPTION_V_LO 18
+#define OPTION_V_HI 19
+#define OPTION_Y 20
+#define OPTION_COUNT 21
+
+
 
 void print_usage();
 void print_help();
@@ -77,11 +101,54 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 
 	char *modes[] = {"init", "index", "gathering", "join", "duplicates", "invalid", "info","crop"};
 	
-	int modes_used[] = {0,0,0,0,0,0,0,0,0};
+	int modes_used[MODE_COUNT] = {0};
+	// count usage of options, to prevent multiple occurances of the same option
+	int options_used[OPTION_COUNT] = {0};
 
-	char *all_options = "dD:he:ij:l:nqp:P:r:R:st:uUvVy?";
+	char *all_options = "dD:he:E:ij:l:nqp:P:r:R:st:uUvVy?";
+	char *all_options_array[] = {"d","D","h","e","E","i","j","l","n","q","p","P","r","R","s","t","u","U","v","V","y"};
 
 	int opt;
+	while((opt = getopt(argc, argv, all_options)) != -1 ) {
+		switch(opt) {
+			case 'd': options_used[OPTION_D_LO]++; break;
+			case 'D': options_used[OPTION_D_HI]++; break;
+			case 'e': options_used[OPTION_E_LO]++; break;
+			case 'E': options_used[OPTION_E_HI]++; break;
+			case 'h': options_used[OPTION_H]++; break;
+			case 'i': options_used[OPTION_I]++; break;
+			case 'j': options_used[OPTION_J]++; break;
+			case 'l': options_used[OPTION_L]++; break;
+			case 'n': options_used[OPTION_N]++;	break;
+			case 'p': options_used[OPTION_P_LO]++; break;
+			case 'P': options_used[OPTION_P_HI]++; break;
+			case 'q': options_used[OPTION_Q]++; break;
+			case 'r': options_used[OPTION_R_LO]++; break;
+			case 'R': options_used[OPTION_R_HI]++; break;
+			case 's': options_used[OPTION_S]++; break;
+			case 't': options_used[OPTION_T]++; break;
+			case 'u': options_used[OPTION_U_LO]++; break;
+			case 'U': options_used[OPTION_U_HI]++; break;
+			case 'v': options_used[OPTION_V_LO]++; break;
+			case 'V': options_used[OPTION_V_HI]++; break;
+			case 'y': options_used[OPTION_Y]++; break;
+		}
+	};
+
+	for (int option_i = 0; option_i < OPTION_COUNT; option_i++) {
+		if (option_i != OPTION_E_HI && options_used[option_i] > 1) {
+			fprintf(stderr, "option %s is allowed only one time.\n\n",
+					all_options_array[option_i]);
+			print_usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	args->exclude_count = options_used[OPTION_E_HI];
+	args->exclude_area = (char **)m_calloc(args->exclude_count, sizeof(char *));
+
+	int e=0;
+	optind=1; // reset getopt
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
 			case 'd': args->duplicate_reduction = 1; 
@@ -110,8 +177,14 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 					args->has_element_identifier = 2; //ELEMENT_FILENAME;
 				}
 				break; //no modes_used because it appears in several modes
+			case 'E':
+				args->exclude_area[e] = argv[optind-1];
+				//fprintf(stderr, "argparser %i:[%s]\n", e, args->exclude_area[e] );
+				e++;
+				modes_used[MODE_GATHERING]++;
+				break;
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
-			case 'i': args->ignore_old_invalids = 1; 
+			case 'i': args->ignore_old_invalids = 1;
 								break; //no modes_used because it appears in several modes
 			case 'j': args->max_jobs = atoi(optarg); 
 								modes_used[MODE_INDEX]++;
@@ -150,12 +223,14 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 								modes_used[MODE_GATHERING]++;
 								break;
 			case 'v': print_version(); exit(EXIT_SUCCESS); 
-			case 'V': args->verbose = 1; break;// no modes_used because it appears in serveral modes 
+			case 'V': args->verbose = 1; break;// no modes_used because it appears in serveral modes
 			case 'y': args->dry_run = 1; break; // no modes_used because it appears in serveral modes
 
 			default: /* ? */ print_usage(); exit(EXIT_FAILURE); break;
 		}
 	}
+
+
 	if(optind >= argc) {
 		print_usage();
 		exit(EXIT_FAILURE);
@@ -311,6 +386,15 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
             		  args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
               args->num_tiles);
+		fprintf(stderr, "exclude_area = ");
+		if(args->exclude_count==0) {
+			fprintf(stderr, "no\n");
+		} else {
+			for(int i=0;i<args->exclude_count;i++) {
+				fprintf(stderr, "%s ", args->exclude_area[i]);
+			}
+			fprintf(stderr, "\n");
+		}
 		if(args->has_element_identifier == 1 ) {
 			fprintf(stderr, "element_number = %i\n", args->element_number);
 		} else {
@@ -321,6 +405,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		} else {
 			fprintf(stderr, "element_filename = none\n");
 		}
+
 		fprintf(stderr, "\n");
 	}
 }
@@ -381,4 +466,8 @@ void cleanup(mosaik2_arguments *args) {
 	if( args->has_element_identifier == 2) {
 		free( args->element_filename );
 	}
+	if( args->exclude_count>0) {
+		free(args->exclude_area);
+	}
+
 }

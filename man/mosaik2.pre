@@ -10,7 +10,7 @@ mosaik2 \- creates real photo mosaics. ready for large data sets.
 .br
 \fBmosaik2\fR index      [-V|-q] [-j <COUNT>] [-l <LOAD>] \fImosaik2db\fR < \fIfile-list\fR
 .PP
-\fBmosaik2\fR gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D <DIST>] \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
+\fBmosaik2\fR gathering  [-V|-q] [-t <NUM>] [-u|-U] [-R <PERCENT>] [-D <DIST>] [-E <AREA>] \fIdest-image\fR \fImosaik2db\fR < \fIsrc-image\fR
 .br
 \fBmosaik2\fR join       [-V|-q] [-p <PIXEL>] [-s] [-d] \fIdest-image\fR \fImosaik2db\fR-0 [\fImosaik2db\fR-N ...]
 .PP
@@ -102,6 +102,23 @@ The \fBchebyshev\fR distance is the fastest but most inaccurate method, where th
 \fB-e\fR search
 .RS 4
 Execute the MODE only for a specific database candidate and not for the entire database. Searching can be done with the element number (first one starts with 1) or the file name as it was indexed. File names are found by matching from the beginning, the end can be omitted. For example: Entry 1: "../pic2.jpg", Entry 2: "../pic1.jpg". Search for "pic" finds no file, because no matching beginning. Search for "../pic" finds "../pic2.jpg", because first hit. Search for "../pic1.jpg" finds "../pic1.jpg" as expected.
+.RE
+.PP
+\fB-E\fR exclude-area
+.RS 4
+Specifies an rectangular area that is excluded from mosaic processing and will stay empty in the final image. This can be useful if another graphic or logo is to be inserted later using a graphics program, and you want to use your good pictures later in visible positions. The format is a comma-separated naming of row and column indices "start-x,start-y,end-x,end-y". For example: the x marked primary tiles
+.PP
+.nf
+  x 0123456789
+y  .----------.
+0  |          |
+1  |  xxxxxx  |
+2  |  xxxxxx  |
+3  |          |
+   .----------.
+.fi
+.PP
+would be specified as "2,1,7,2". Several (overlapping) areas are allowed in \fBgathering\fR mode. When \fBjoin\fRing multiple mosaik2db together, all exclude areas will be merged. You can obtain the resulting primary tile dimension (row with primary-tiles=NxM) with the \fBinfo\fR mode by specifying the \fIsrc-image\fR and same -t <NUM> parameter.
 .RE
 .PP
 \fB-h\fR

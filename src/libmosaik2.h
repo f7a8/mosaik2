@@ -30,11 +30,11 @@
 
 #define MD5_DIGEST_LENGTH 16
 
-#ifdef HAVE_CURL
+#ifdef HAVE_LIBCURL
 #include <curl/curl.h>
 #endif
 
-#ifdef HAVE_EXIF
+#ifdef HAVE_LIBEXIF
 #include <libexif/exif-data.h>
 #endif
 
@@ -86,6 +86,7 @@ extern const int IS_DUPLICATE;
 extern const int IS_NO_DUPLICATE;
 
 void mosaik2_context_init(mosaik2_context *ctx);
+void mosaik2_create_cache_dir();
 void mosaik2_database_check(mosaik2_database *md);
 //void mosaik2_database_check_name(char *mosaik2_database_name);
 float mosaik2_database_costs(mosaik2_database *md, mosaik2_database_element *mde);
@@ -109,12 +110,13 @@ time_t mosaik2_database_read_lastindexed(mosaik2_database *md);
 time_t mosaik2_database_read_lastmodified(mosaik2_database *md);
 size_t mosaik2_database_read_size(mosaik2_database *md);
 void mosaik2_database_read_histogram(mosaik2_database *md);
-int mosaik2_indextask_read_image(mosaik2_indextask *);
+int mosaik2_indextask_read_image(mosaik2_database *md, mosaik2_indextask *);
 void mosaik2_project_check(mosaik2_project *mp);
 int  mosaik2_project_check_dest_filename(m2name dest_filename);
 void mosaik2_project_init(mosaik2_project *mp, m2ctext mosaik2_database_name, m2name dest_filename);
 void mosaik2_project_read_image_dims(mosaik2_project *mp);
 void mosaik2_project_read_primary_tile_dims(mosaik2_project *mp);
+void mosaik2_project_read_exclude_area(mosaik2_project *mp, mosaik2_tile_infos *ti, mosaik2_arguments *args);
 mosaik2_project_result *mosaik2_project_read_result(mosaik2_project *mp, mosaik2_database *md, int total_primary_tile_count);
 void mosaik2_tile_infos_init(mosaik2_tile_infos *ti, int database_image_resolution, int src_image_resolution, int image_width, int image_height);
 void mosaik2_tile_image( mosaik2_tile_infos *ti, gdImagePtr *im, double *colors, double *stddev);
@@ -193,6 +195,9 @@ m2file m_tmpfile(void);
 int m_sysinfo(struct sysinfo *info);
 void m_access(m2ctext pathname, int mode);
 
+char *get_file_name(m2file file);
+char *get_fd_name(int fd);
+
 
 /* Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
 /* Adaption: Element types are changed from int to mosaik2_database_candidate -------------------------------------------- */
@@ -218,5 +223,4 @@ int min_heap_delete(Heap* h, int n, mosaik2_database_candidate *key);
 int min_heap_pop(Heap* h, mosaik2_database_candidate *k);
 int min_heap_peek(Heap *h, mosaik2_database_candidate *k);
 /* END: Max-Heap and Min-Heap from https://de.wikibooks.org/wiki/Algorithmen_und_Datenstrukturen_in_C/_Heaps under CC BY-SA 3.0 */
-char *get_file_name(m2file file);
-char *get_fd_name(int fd);
+

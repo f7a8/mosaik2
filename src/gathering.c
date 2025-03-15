@@ -42,6 +42,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	long double *stddev;
 	int *colors_int;
 	int *stddev_int;
+	uint8_t *exclude; //bitmap over all primary tiles, 1 means exclude,0 include
 
 
 	m2file thumbs_db_tiledims_file;
@@ -94,12 +95,15 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
+
+
 	image_ratio = ratio / 100.0;
 	stddev_ratio = 1.0 - image_ratio;
 
 	mosaik2_project mp = {.ratio = ratio, .unique = unique, .fast_unique = fast_unique, .primary_tile_count = primary_tile_count};
 
 	mosaik2_project_init(&mp, md.id, dest_filename);
+
 
 	if (debug)
 		printf("primary_tile_count:%i,database_image_resolution:%i\n", primary_tile_count, database_image_resolution);
@@ -119,6 +123,8 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
+	mosaik2_project_read_exclude_area(&mp, &ti, args);
+
 	if (debug)
 		fprintf(stdout, "ti.pixel_per_tile=ti.short_dim / ti.tile_count => %i = %i / %i\n", ti.pixel_per_tile, ti.short_dim, ti.tile_count);
 
@@ -128,7 +134,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 		printf("image_dims:%i %i, primary_tile_dims:%i %i(%i), tile_dims:%i %i, l:%i %i, off:%i %i pixel_per:%i %i\n", ti.image_width, ti.image_height, ti.primary_tile_x_count, ti.primary_tile_y_count, ti.total_primary_tile_count, ti.tile_x_count, ti.tile_y_count, ti.lx, ti.ly, ti.offset_x, ti.offset_y, ti.pixel_per_primary_tile, ti.pixel_per_tile);
 
 	valid_md_element_count = mosaik2_database_read_valid_count(&md);
-	needed_md_element_count = unique || fast_unique? ti.total_primary_tile_count : 1;
+	needed_md_element_count = unique || fast_unique? ti.total_primary_tile_count - mp.exclude_count : 1;
 	if( valid_md_element_count < needed_md_element_count ) {
 		fprintf(stderr, "there are too few valid candidates (%u) %sthan needed (%u)\n", valid_md_element_count, unique ? "for unique ":"", needed_md_element_count);
 		exit(EXIT_FAILURE);
@@ -165,7 +171,18 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	colors_int   = m_calloc(ti.total_tile_count * RGB, sizeof(int));
 	stddev       = m_calloc(ti.total_tile_count * RGB, sizeof(long double));
 	stddev_int   = m_calloc(ti.total_tile_count * RGB, sizeof(int));
+	exclude	     = m_calloc(ti.total_primary_tile_count, sizeof(uint8_t));
 
+	for(int a=0;a < mp.exclude_count;a++) {
+		for(m2elem tile_x=mp.exclude_area[a].start_x;tile_x<mp.exclude_area[a].end_x;tile_x++) {
+			for(m2elem tile_y=mp.exclude_area[a].start_y;tile_y<mp.exclude_area[a].end_y;tile_y++) {
+				m2elem tile_idx = tile_y * ti.primary_tile_x_count + tile_x;
+				exclude[tile_idx]=1;
+				//fprintf(stderr, "exclude area:%i, tile_id:%u\n", a, tile_idx);
+			}
+		}
+	}
+	free(mp.exclude_area);
 	for (int j = 0, j1 = ti.offset_y; j1 < ti.ly; j++, j1++) {
 		for (int i = 0, i1 = ti.offset_x; i1 < ti.lx; i++, i1++) {
 			// i runs from 0 to length of cropped area
@@ -441,6 +458,9 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 					uint32_t primary_tile_idx = ti.primary_tile_x_count * primary_y + primary_x;
 
+					if(exclude[primary_tile_idx] == 1)
+						continue;
+
 					memset(&mdc_best_shift, 0, sizeof(mdc_best_shift));
 					memset(&mdc_worst, 0, sizeof(mdc_worst));
 					mdc_best_shift.costs = FLT_MAX;
@@ -647,10 +667,11 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 	free(colors_int);
 	free(stddev_int);
-
 	//transform the max_heap to an ordered array
 	mosaik2_database_candidate mdc_tmp[max_candidates_len];
 	for(uint32_t i=0;i<SIZE_PRIMARY;i++) {
+		if(exclude[i] == 1)
+			continue;
 		for(int32_t j=max_candidates_len-1;j>=0;j--) {
 			max_heap_pop(&heap[i], &mdc_tmp[j]);
 		}
@@ -662,14 +683,13 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 	 * search the best unique candidate. this is not a very sophisticated algorithm, but is has not very much overhead and is not a huge bottleneck in the gathering program.
 	 * candidates are checked with each other if there are duplicates. If there are the duplicate with the higher cost is popped, so the next candidate at its position will be compared also to all others. This is repeated until there is no duplicate any more.
 	 */
-
 	if (unique == 1) {
 		int unique_run;
 		do {
 			unique_run = 1;
 			for (uint32_t i = 0; i < SIZE_PRIMARY - 1; i++) {
 				for (uint32_t j = 0; j < SIZE_PRIMARY; j++) { // starting at 0 is attended. 
-					if (i == j)
+					if (i == j || exclude[i] || exclude[j])
 						continue;
 					uint32_t offset_i = i * max_candidates_len + candidates_elect[i];
 					uint32_t offset_j = j * max_candidates_len + candidates_elect[j];
@@ -704,9 +724,11 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 			candidate_best_costs = mdc[offset].costs;
 		if(mdc[offset].costs>candidate_worst_costs)
 			candidate_worst_costs = mdc[offset].costs;
-		fprintf(mosaik2_result, "%i	%i	%f	%i	%i\n", i, mdc[offset].candidate_idx, mdc[offset].costs, mdc[offset].off_x, mdc[offset].off_y);
+		fprintf(mosaik2_result, "%i	%i	%f	%i	%i	%i\n", i, mdc[offset].candidate_idx, mdc[offset].costs, mdc[offset].off_x, mdc[offset].off_y, exclude[i]);
 	}
 	m_fclose(mosaik2_result);
+	free(exclude);
+
 
 	if(args->quiet != 1) {
 		printf("candidate heap list insert:%i pop:%i toobad:%i\n", candidates_insert, candidates_pop, candidates_toobad);
@@ -726,6 +748,7 @@ int mosaik2_gathering(mosaik2_arguments *args) {
 
 
 	free(mdc);
+
 	return 0;
 }
 

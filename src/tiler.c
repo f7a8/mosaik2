@@ -4,7 +4,7 @@
 
 int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indextask *task) {
 	//	print_usage("t read0");
-	if( mosaik2_indextask_read_image(task) ) {
+	if( mosaik2_indextask_read_image(md, task) ) {
 		fprintf(stderr, "could not read image\n");
 		exit(EXIT_FAILURE);
 	}
