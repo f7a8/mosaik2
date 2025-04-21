@@ -6,7 +6,7 @@
 #define MAX_TEMP_FILENAME_LEN 100
 
 #define MOSAIK2_DATABASE_FORMAT_VERSION 7
-#define MOSAIK2_VERSION "0.3"
+#define MOSAIK2_VERSION "0.31"
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
