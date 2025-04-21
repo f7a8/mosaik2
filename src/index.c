@@ -35,7 +35,9 @@ int mosaik2_index(mosaik2_arguments *args) {
 
 	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
+	mosaik2_database_lock_writer(&md);
 	mosaik2_database_read_database_id(&md);
+
 	check_pid_file(&md);
 	write_pid_file(&md);
 
@@ -52,7 +54,7 @@ int mosaik2_index(mosaik2_arguments *args) {
 uint32_t get_max_tiler_processes(uint32_t max_tiler_processes) {
 	if(max_tiler_processes < 1)
 		return sysconf(_SC_NPROCESSORS_ONLN);
-	if(max_tiler_processes<=MOSAIK2_CONTEXT_MAX_TILER_PROCESSES)
+	if(max_tiler_processes <= MOSAIK2_CONTEXT_MAX_TILER_PROCESSES)
 		return max_tiler_processes;
 	fprintf(stderr, "max_tiler_processes is limited to %i\n", MOSAIK2_CONTEXT_MAX_TILER_PROCESSES);
 	exit(EXIT_FAILURE);
@@ -101,7 +103,7 @@ void write_pid_file(mosaik2_database *md) {
 void remove_pid_file(mosaik2_database *md) {
 	if((remove(md->pid_filename)) < 0) {
 		fprintf(stderr, "could not remove active pid file (%s)", md->pid_filename);
-		perror("error");
+		perror(NULL);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -115,17 +117,18 @@ void process_input_data(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_d
 	char *lineptr = NULL;
 
 	ssize_t readcount;
-	m2file stdin0 = stdin;
+	m2file stdin0 = /*stdin;
 	if(stdin0==NULL) {
 		perror("failed open file");
 		exit(1);
-	}
+	}*/
+	m_fopen(args->index_filelist,"r");
 	ctx->start_t = time(NULL);
 	while( (readcount = getline(&lineptr, &len, stdin0)) > 0 && exiting == 0 && i < maxmemb) {
 		process_next_line(args, ctx, md, lineptr, i++,stdin0);
 		ctx->new_indexed_element++;
 	}
-	free(lineptr);
+	m_free((void**)&lineptr);
 	if(exiting == 1) {
 		fprintf(stderr, "received SIGINT, exiting after %i lines\n", i);
 	}
@@ -147,17 +150,21 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 
 	char *token0 = strtok(line, "\n");
 	if(token0 == NULL  ) {
-		errx(EINVAL, "could not split line to newline (%s) filename is empty. (linenumber:%i, line:[%s])\n",token0,i, line);
+		fprintf(stderr, "could not split line to newline filename is empty. (linenumber:%i, line:[%s])\n",i, line);
+		exit(EXIT_FAILURE);
 	}
 
 	if(strlen(token0)>=sizeof(task.filename)) {
-		errx(EINVAL, "ups, this filename is to long. sorry you have to remove or rename anything, that exceeds %li characters\n", sizeof(task.filename));
+		fprintf(stderr,  "ups, this filename is to long. sorry you have to remove or rename anything, that exceeds %li characters\n", sizeof(task.filename));
+		exit(EXIT_FAILURE);
 	}
 
-	strncpy(task.filename, token0, strlen(token0)+1);
+	//strncpy(task.filename, token0, strlen(token0)+1);
+	concat(task.filename, token0);
 
-	task.lastmodified = time(NULL);//may be overwritten with acutal modified timestamp
-	task.lastindexed = time(NULL);
+	time_t t = time(NULL);
+	task.lastmodified = t;//may be overwritten with acutal modified timestamp
+	task.lastindexed = t;
 	//here to fork
 
 	//fprintf(stdout,"%i cp: %i mp: %i\n", getpid(), ctx->current_tiler_processes, ctx->max_tiler_processes);
@@ -182,7 +189,7 @@ void process_next_line(mosaik2_arguments *args, mosaik2_context *ctx, mosaik2_da
 		if(args->quiet == 0 || ctx->new_indexed_element == 0 || ctx->new_indexed_element % 1000 == 0) {
 			int jobs = ctx->current_tiler_processes + 1;
 			double img_per_min = 60.*ctx->new_indexed_element/(time(NULL)-ctx->start_t);
-			fprintf(stdout, "#%i, jobs:%i img/min:%.2f load:%.2f\n", i, jobs, img_per_min, load);
+			fprintf(stdout, "#%i, jobs:%i img/min:%.2f load:%.2f\n", i+1, jobs, img_per_min, load);
 			exit(0);
 		}
 		exit(0);
@@ -199,8 +206,8 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	// duration 0.2 ms
 	// lock the lockfile to make all other forked processes wait this process finishp
 
-	m2file lockfile_file = m_fopen( md->lock_filename, "r");
-	int lockfile_fd = fileno(lockfile_file);
+	m2file lockfile = m_fopen( md->lock_index_filename, "r");
+	int lockfile_fd = fileno(lockfile);
 	if(lockfile_fd == -1) {
 		fprintf(stderr, "could not open lock fd\n");
 		exit(EXIT_FAILURE);
@@ -213,7 +220,6 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	}
 
 	m2file imagecolors_file = m_fopen( md->imagecolors_filename, "a");
-	m2file imagestddev_file = m_fopen( md->imagestddev_filename, "a");
 	m2file imagedims_file = m_fopen( md->imagedims_filename, "a");
 	m2file image_index_file = m_fopen( md->image_index_filename, "a");
 	m2file filenames_file = m_fopen( md->filenames_filename, "a");
@@ -235,7 +241,6 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	off_t image_offset = ftello(imagecolors_file);
 	m_fwrite(&image_offset, sizeof(off_t), image_index_file);
 	m_fwrite(task->colors, RGB*task->total_tile_count, imagecolors_file);
-	m_fwrite(task->stddev, RGB*task->total_tile_count, imagestddev_file);
 
 	m_fwrite(&task->imagedims, md->imagedims_sizeof, imagedims_file);
 
@@ -263,7 +268,6 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 
 
 	m_fclose( imagecolors_file );
-	m_fclose( imagestddev_file );
 	m_fclose( imagedims_file );
 	m_fclose( image_index_file );
 	m_fclose( filenames_file );
@@ -278,11 +282,9 @@ void mosaik2_index_write_to_disk(mosaik2_database *md, mosaik2_indextask *task) 
 	m_fclose( tileoffsets_file );
 
 	//print_usage("unflock");
-	if (flock(lockfile_fd, LOCK_UN) == -1) {
-		fprintf(stderr,"flock error");
-		exit(EXIT_FAILURE);
-	}
-	m_fclose( lockfile_file );
+	m_flock(lockfile_fd, LOCK_UN);
+
+	m_fclose( lockfile );
 
 }
 
@@ -292,7 +294,7 @@ void mosaik2_index_add_tiler_pid(mosaik2_context *ctx, pid_t pid) {
 		exit(EXIT_FAILURE);
 	}
 	int inserted=0;
-	for(int i=0; i < MOSAIK2_CONTEXT_MAX_TILER_PROCESSES; i++) {
+	for(uint32_t i=0; i < MOSAIK2_CONTEXT_MAX_TILER_PROCESSES; i++) {
 		if(ctx->pids[i] == 0) {
 			ctx->pids[i] = pid;
 			ctx->current_tiler_processes++;

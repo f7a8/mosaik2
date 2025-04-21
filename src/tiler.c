@@ -4,17 +4,18 @@
 
 int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indextask *task) {
 	//	print_usage("t read0");
-	if( mosaik2_indextask_read_image(md, task) ) {
+	if( mosaik2_indextask_read_image(/*md, */task) ) {
 		fprintf(stderr, "could not read image\n");
 		exit(EXIT_FAILURE);
 	}
 	//print_usage("t read1");
 
 	uint32_t file_size = task->filesize;
-	check_resolution(md->database_image_resolution);
+	//TODO to late?
+	//check_resolution(md->database_image_resolution);
 
-	int min_file_size = 10000;
-	int max_file_size = 100000000;
+	uint32_t min_file_size = 10000;
+	uint32_t max_file_size = 100000000;
 	if(file_size < min_file_size) {
 		fprintf(stderr, "image file_size (%i) must be at least %i bytes\n", file_size, min_file_size);
 		exit(EXIT_FAILURE);
@@ -25,29 +26,26 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	}
 
 	int debug=0;
-	int debug1=0;
 	int out  = 0;
-	unsigned char *buffer = task->image_data;
+	//unsigned char *buf = task->image_data;
 
-	int file_type = get_file_type_from_buf(buffer,file_size);
+	m2ftype file_type = get_file_type_from_buf(task->image_data, file_size);
 	if(file_type == FT_ERR) {
-		fprintf(stderr, "illegal image type 0\n");
+		fprintf(stderr, "illegal image type (%s)\n", task->filename);
 		exit(EXIT_FAILURE);
 	}
 
 	//print_usage("t_create0");
-	gdImagePtr im = read_image_from_buf(buffer, file_size);
+	gdImagePtr im = read_image_from_buf(task->image_data, file_size);
 
-	mosaik2_tile_infos ti;
-	memset(&ti, 0, sizeof(ti));
-	mosaik2_tiler_infos_init(&ti, md->database_image_resolution, gdImageSX(im), gdImageSY(im));
+	mosaik2_tile_infos ti = {0};
+	mosaik2_tiler_infos_init(&ti, md->database_image_resolution, (uint32_t)gdImageSX(im), (uint32_t)gdImageSY(im));
 
 	task->imagedims[0] = ti.image_width;
 	task->imagedims[1] = ti.image_height;
 	task->tiledims[0]= ti.tile_x_count;
 	task->tiledims[1]= ti.tile_y_count;
 	task->total_tile_count = ti.total_tile_count;
-
 
 	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
@@ -62,7 +60,7 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 		fprintf(stderr, "could not iit digest content\n");
 		exit(EXIT_FAILURE);
 	}
-	if(!EVP_DigestUpdate(mdctx, buffer, file_size)) {
+	if(!EVP_DigestUpdate(mdctx, task->image_data, file_size)) {
 		fprintf(stderr, "could not update digest\n");
 		exit(EXIT_FAILURE);
 	}
@@ -82,36 +80,32 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	//print_usage("t_diggest");
 
 
-	//	if(out) printf(" %02X%02X%02X %02X%02X%02X",red,green,blue, (int)round(abw_red),(int)round(abw_green),(int)round(abw_blue));
-	free(buffer); // no need anymore of image byte data
+	m_free((void**)&task->image_data); // no need anymore of image byte data
 
 
-	if(debug1)printf("width:%i, height:%i, lx:%i, ly:%i, offx:%i, offy:%i tile_dims:%i %i, pixel_per_tile:%i\n", ti.image_width, ti.image_height,ti.lx,ti.ly,ti.offset_x,ti.offset_y,ti.tile_x_count,ti.tile_y_count,ti.pixel_per_tile);
+	if(args->verbose)printf("width:%i, height:%i, lx:%i, ly:%i, offx:%i, offy:%i tile_dims:%i %i, pixel_per_tile:%i\n", ti.image_width, ti.image_height,ti.lx,ti.ly,ti.offset_x,ti.offset_y,ti.tile_x_count,ti.tile_y_count,ti.pixel_per_tile);
 
 
 
 	if(out) printf("%04X %04X %02X %02X", ti.image_width, ti.image_height, ti.tile_x_count, ti.tile_y_count);
-	if(debug1) fprintf(stderr,"gathering imagedata\n");
+	if(args->verbose) fprintf(stderr,"gathering imagedata\n");
 
 	double colors[RGB*ti.total_tile_count];
-	double stddev[RGB*ti.total_tile_count];
 
 	memset(&colors, 0, RGB*ti.total_tile_count*sizeof(double));
-	memset(&stddev, 0, RGB*ti.total_tile_count*sizeof(double));
 
 	task->colors = m_calloc(RGB*ti.total_tile_count, sizeof(uint8_t));
-	task->stddev = m_calloc(RGB*ti.total_tile_count, sizeof(uint8_t));
 
 	int red0, green0, blue0;
-	for(int j=0,j1=ti.offset_y;j1<ti.ly;j++,j1++){
-		for(int i=0,i1=ti.offset_x;i1<ti.lx;i++,i1++){
+	for(uint32_t j=0,j1=ti.offset_y;j1<ti.ly;j++,j1++){
+		for(uint32_t i=0,i1=ti.offset_x;i1<ti.lx;i++,i1++){
 
 			//i and j are running from zero to the length of the cropped area
 			//i1 and j1 are dealing with the corrected offset, so they are pointig to the valid pixels
 
-			int tile_x = i/ti.pixel_per_tile;
-			int tile_y = j/ti.pixel_per_tile;
-			int tile_idx = tile_y * ti.tile_x_count + tile_x;
+			uint32_t tile_x = i/ti.pixel_per_tile;
+			uint32_t tile_y = j/ti.pixel_per_tile;
+			uint32_t tile_idx = tile_y * ti.tile_x_count + tile_x;
 			int color =  gdImageTrueColorPixel(im,i1,j1);
 
 			red0 =   gdTrueColorGetRed(color);
@@ -127,49 +121,19 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 	}
 
 
-	if(debug1) fprintf(stderr,"tiling stddev data\n");
-
-	double red2, green2, blue2;
-
-	//double total_tile_count_d = total_tile_count;
-	for(int j=0,j1=ti.offset_y;j1<ti.ly;j++,j1++){
-		for(int i=0,i1=ti.offset_x;i1<ti.lx;i++,i1++){
-			//if(debug) printf("avg_blue0:%f i:%i i1:%i lx:%i\n", colors_blue[0],i ,i1, lx);
-
-			int tile_x = i/ti.pixel_per_tile;
-			int tile_y = j/ti.pixel_per_tile;
-			int tile_idx = tile_y * ti.tile_x_count + tile_x;
-			int color =  gdImageTrueColorPixel(im,i1,j1);
-
-			int red0 =   gdTrueColorGetRed(color);
-			int green0 = gdTrueColorGetGreen(color);
-			int blue0 =  gdTrueColorGetBlue(color);
-
-			red2 =   colors[tile_idx*RGB+R] - red0;
-			green2 = colors[tile_idx*RGB+G] - green0;
-			blue2 =  colors[tile_idx*RGB+B] - blue0;
-
-			stddev[tile_idx*RGB+R] += pow(red2,2);// * red2;
-			stddev[tile_idx*RGB+G] += pow(green2,2);// * green2;
-			stddev[tile_idx*RGB+B] += pow(blue2,2);// * blue2;
-		}
-	}
-	//print_usage("t_stddev");
-
 	gdImageDestroy(im);
 
-	if(debug1)printf("dim:%i %i,off:%i %i,l:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n",ti.image_width,ti.image_height,ti.offset_x,ti.offset_y,ti.lx,ti.ly,ti.tile_x_count,ti.tile_y_count,ti.pixel_per_tile,ti.total_pixel_per_tile);
+	if(args->verbose)printf("dim:%i %i,off:%i %i,l:%i %i,tile_count:%i %i,pixel_per_tile:%i %f\n",ti.image_width,ti.image_height,ti.offset_x,ti.offset_y,ti.lx,ti.ly,ti.tile_x_count,ti.tile_y_count,ti.pixel_per_tile,ti.total_pixel_per_tile);
 
 
-	if(debug1)fprintf(stderr,"starting output\n");
-	double stddev_red, stddev_green, stddev_blue;
+	if(args->verbose)fprintf(stderr,"starting output\n");
 
-	for(int y=0;y<ti.tile_y_count;y++) {
+	for(uint32_t y=0;y<ti.tile_y_count;y++) {
+		for(uint32_t x=0;x<ti.tile_x_count;x++) {
 
-		for(int x=0;x<ti.tile_x_count;x++) {
-			int i= y*ti.tile_x_count+x;
+ 			uint32_t i= y*ti.tile_x_count+x;
 
-			if(debug1) fprintf(stderr,"%i ", i);
+			if(args->verbose) fprintf(stderr,"%i ", i);
 
 			red0 =   (int)round(colors[i*RGB+R]);
 			green0 = (int)round(colors[i*RGB+G]);
@@ -179,31 +143,23 @@ int mosaik2_tiler(mosaik2_arguments *args, mosaik2_database *md, mosaik2_indexta
 			task->colors[i*RGB+G] = green0;
 			task->colors[i*RGB+B] = blue0;
 
-			stddev_red =   sqrt(stddev[i*RGB+R]/ ( ti.total_pixel_per_tile - 1.0 ));
-			stddev_green = sqrt(stddev[i*RGB+G]/ ( ti.total_pixel_per_tile - 1.0 ));
-			stddev_blue =  sqrt(stddev[i*RGB+B]/ ( ti.total_pixel_per_tile - 1.0 ));
-			// to better utilize the byte space
-			// in most cases below 255 ..
-			task->stddev[i*RGB+R] = stddev_red   * 2 > 255 ? 255 : stddev_red   * 2;
-			task->stddev[i*RGB+G] = stddev_green * 2 > 255 ? 255 : stddev_green * 2;
-			task->stddev[i*RGB+B] = stddev_blue  * 2 > 255 ? 255 : stddev_blue  * 2;
+			
+			
 
 
-			if(debug)printf( "%i:%02X%02X%02X %i,%i,%i  %02X%02X%02X\n",i,red0,green0,blue0,red0,green0,blue0,(int)round(stddev_red),(int)round(stddev_green),(int)round(stddev_blue));
-			if(out) printf(" %02X%02X%02X %02X%02X%02X",red0,green0,blue0, (int)round(stddev_red),(int)round(stddev_green),(int)round(stddev_blue));
+			if(debug)printf( "%i:%02X%02X%02X %i,%i,%i\n",i,red0,green0,blue0,red0,green0,blue0);
+			if(out) printf(" %02X%02X%02X",red0,green0,blue0);
 		}
 	}
-	if(debug1) fprintf(stderr,"ending\n");
+	if(args->verbose) fprintf(stderr,"ending\n");
 	//print_usage("t_final");
 
 	//TODO
 	//if(args->dry_run == 0)
 	mosaik2_index_write_to_disk(md, task);
 
-	free(task->colors);
-	free(task->stddev);
+	m_free((void**)&task->colors);
 
 	return 0;
-
 }
 

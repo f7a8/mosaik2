@@ -8,7 +8,7 @@
 #include "libmosaik2.h"
 
 /* automatically invalid detection is written to the first bit and preserves existing user defined invalid states in other bits */
-void mark_invalid(m2file invalid_file, size_t nmemb, m2name filename ) {
+void mark_invalid(m2file invalid_file, size_t nmemb) {
 
 	// need to be an opend file	
 	m_fseeko(invalid_file, nmemb, SEEK_SET);
@@ -44,6 +44,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	mosaik2_database md;
 	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
+	
 
 	if(ignore_old_invalids<0 || ignore_old_invalids >1) {
 		fprintf(stderr, "ingore_old_invalids must be 0 or 1\n");
@@ -62,6 +63,11 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	if(args->has_element_identifier == ELEMENT_NUMBER && args->element_number < 1 ) {
 		fprintf(stderr, "illegal value of element_number. exit\n");
 		exit(EXIT_FAILURE);
+	}
+	if(dry_run) {
+		mosaik2_database_lock_reader(&md);
+	} else {
+		mosaik2_database_lock_writer(&md);
 	}
 	element_number = args->element_number - 1;
 
@@ -109,10 +115,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	for(m2elem j=0;j<mosaik2_database_elements;j++) {
 		memset(buf,0,MAX_FILENAME_LEN);
 		m_fgets(buf, MAX_FILENAME_LEN, filenames_file);
-		size_t buflen = strlen( buf);
+		/*size_t buflen = strlen( buf);
 		if(buflen>0 && buf[buflen-1]=='\n') {
 			buf[buflen-1]=0;
-		}
+		}*/
 		if(debug)fprintf(stderr,"filename:%s\n", buf);
 
 		// IS THIS ELEMENT ALREADY INVALID? THAN SKIP IT
@@ -125,10 +131,10 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 			continue;
 		}
 
-		if(is_file_wikimedia_commons(buf)) {
+		/*if(is_file_wikimedia_commons(buf)) {
 			//TODO extend print_invalid for urls
 			fprintf(stderr, "not implemented\n"); exit(EXIT_FAILURE);
-		} else {
+		} else */{
 			if(debug) fprintf(stderr, "check access\n"); 
 			
 			int access_code = access( buf, R_OK );
@@ -139,7 +145,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				if(debug)fprintf(stderr, "%i. file (%s) cannot be accessed => %s\n", j, buf, strerror(errno));
 				print_invalid_(buf,access_code);
 				if(!dry_run) {
-					mark_invalid(invalid_file,j,md.invalid_filename);
+					mark_invalid(invalid_file,j);
 					invalid_count++;
 				}
 				continue;
@@ -157,7 +163,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 				struct stat file_stat;
 				m_stat( buf, &file_stat);
 				time_t cur_timestamp = file_stat.st_mtim.tv_sec;
-				off_t cur_filesize = file_stat.st_size;
+				size_t cur_filesize = (size_t)file_stat.st_size;
 
 				if(debug) fprintf(stderr, "old_timestamp: %li, new_timestamp: %li\n", old_timestamp, cur_timestamp);
 
@@ -170,7 +176,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					if(debug)fprintf(stdout, "file version with different timestamps for (%s) available, mark this file as invalid\n",buf);
 					print_invalid( buf);
 					if(!dry_run) {
-						mark_invalid(invalid_file, j,md.invalid_filename);
+						mark_invalid(invalid_file, j);
 						invalid_count++;
 					}
 					continue;
@@ -187,7 +193,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 					fprintf(stderr, "file (%s) version with different filesize (old:%li cur:%li) available => invalid\n",buf, old_filesize, cur_filesize);
 					print_invalid(buf);
 					if(!dry_run) {
-						mark_invalid(invalid_file,j,md.invalid_filename);
+						mark_invalid(invalid_file,j);
 						invalid_count++;
 					}
 					
@@ -247,7 +253,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 						fprintf(stderr, "file hashes mismatch, mark file (%s) as invalid\n", buf);
 						print_invalid(buf);
 						if(!dry_run) {
-							mark_invalid(invalid_file,j,md.invalid_filename);
+							mark_invalid(invalid_file,j);
 							invalid_count++;
 						}
 					}
@@ -263,10 +269,7 @@ int mosaik2_invalid(mosaik2_arguments *args) {
 	m_fclose(filehashes_file);
 
 	if(invalid_count>0) {
-		m2file lastmodified_file = m_fopen(md.lastmodified_filename, "w");
-		time_t now = time(NULL);
-		m_fwrite(&now, md.lastmodified_sizeof, lastmodified_file);
-		m_fclose(lastmodified_file);
+		mosaik2_database_touch_lastmodified(&md);
 	}
 
 	return 0;

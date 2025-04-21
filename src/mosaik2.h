@@ -5,19 +5,19 @@
 #define MAX_FILENAME_LEN 1024
 #define MAX_TEMP_FILENAME_LEN 100
 
-#define MOSAIK2_DATABASE_FORMAT_VERSION 6
+#define MOSAIK2_DATABASE_FORMAT_VERSION 7
 #define MOSAIK2_VERSION "0.3"
 
 extern const int FT_JPEG;
 extern const int FT_PNG;
 extern const int FT_ERR;
 
-extern uint8_t ORIENTATION_TOP_LEFT;
-extern uint8_t ORIENTATION_RIGHT_TOP;
-extern uint8_t ORIENTATION_BOTTOM_RIGHT;
-extern uint8_t ORIENTATION_LEFT_BOTTOM;
+extern m2orient ORIENTATION_TOP_LEFT;
+extern m2orient ORIENTATION_RIGHT_TOP;
+extern m2orient ORIENTATION_BOTTOM_RIGHT;
+extern m2orient ORIENTATION_LEFT_BOTTOM;
 
-static int const MOSAIK2_CONTEXT_MAX_TILER_PROCESSES = 1024;
+static uint32_t const MOSAIK2_CONTEXT_MAX_TILER_PROCESSES = 1024;
 
 static int const MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN = 1;
 static int const MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN = 2;
@@ -41,20 +41,21 @@ struct mosaik2_context_struct {
 
 	// starts every index process at 0, important for image per second info in index mode
 	uint32_t new_indexed_element;
+	
 };
 
 typedef struct mosaik2_context_struct mosaik2_context;
 
 struct mosaik2_tile_infos_struct {
 
-	int image_width;
-	int image_height;
-	unsigned char src_image_resolution; // -t count of mosaic elements at the shorter src-image side
-	unsigned char database_image_resolution;
+	uint32_t image_width;
+	uint32_t image_height;
+	m2rezo src_image_resolution; // -t count of mosaic elements at the shorter src-image side
+	m2rezo database_image_resolution;
 
-	int short_dim;
+	uint32_t short_dim;
 	uint32_t pixel_per_tile;
-	double total_pixel_per_tile;
+	float total_pixel_per_tile;
 	uint32_t total_pixel_per_primary_tile;
 	uint32_t pixel_per_primary_tile;
 	uint32_t total_pixel_count; // only recognized pixel count
@@ -73,7 +74,7 @@ struct mosaik2_tile_infos_struct {
 	 * initial values
 	 * database_image_resolution 3
 	 * src_image_resolution 2
-	 * image_width 19
+	 * image_width 19_init
 	 * image_height 6
 	 
 	 * are controlling this values
@@ -114,7 +115,7 @@ struct mosaik2_indextask_struct {
 	time_t lastmodified;
 	time_t lastindexed;
 	uint8_t tile_count;
-	unsigned char *image_data;
+	void *image_data;
 
 	int imagedims[2];
 	uint8_t tiledims[2];
@@ -122,14 +123,12 @@ struct mosaik2_indextask_struct {
 
 	uint32_t total_tile_count;	
 	uint8_t *colors;
-	uint8_t *stddev;
 };
 
 typedef struct mosaik2_indextask_struct mosaik2_indextask;
 
 struct mosaik2_database_struct {
 	char thumbs_db_name[256];
-	char imagestddev_filename[256];
 	char imagecolors_filename[256];
 	char imagedims_filename[256];
 	char image_index_filename[256];
@@ -149,14 +148,14 @@ struct mosaik2_database_struct {
 	char version_filename[256];
 	char readme_filename[256];
 	char pid_filename[256];
-	char lock_filename[256];
+	char lock_index_filename[256]; // relevant to synchronize in indexing mode
+	char lock_database_filename[256]; // for data integrity, to prevent write and read operations simultaneously
 	char tileoffsets_filename[256];
 	char lastmodified_filename[256];
 	char lastindexed_filename[256];
 	char createdat_filename[256];
 	char phash_filename[256];
 
-	int imagestddev_sizeof;
 	int imagecolors_sizeof;
 	int imagedims_sizeof;
 	int image_index_sizeof;
@@ -168,6 +167,7 @@ struct mosaik2_database_struct {
 	int tiledims_sizeof;
 	int invalid_sizeof;
 	int duplicates_sizeof;
+	int databaseimageresolution_sizeof;
 	int tileoffsets_sizeof;
 	int lastmodified_sizeof;
 	int lastindexed_sizeof;
@@ -176,7 +176,6 @@ struct mosaik2_database_struct {
 
 	m2rezo database_image_resolution;
 	float histogram_color[3]; // all valid entries
-	float histogram_stddev[3];
 	m2elem element_count;
 	m2elem valid_element_count;
 	m2elem invalid_element_count;
@@ -193,32 +192,35 @@ struct mosaik2_database_element_struct {
 	mosaik2_database *md;
 	m2elem element_number;
 	unsigned char hash[MD5_DIGEST_LENGTH];
+	#ifdef HAVE_PHASH
+	int has_phash;
+	m2phash phash;
+	#endif
 	m2name filename;
-	ssize_t filesize;
-	int imagedims[2];
+	size_t filesize;
+	uint32_t imagedims[2];
 	unsigned char tiledims[2];
 	time_t timestamp;
 	unsigned char duplicate;
 	unsigned char invalid;
 	unsigned char tileoffsets[2];
 	float histogram_color[3];
-	float histogram_stddev[3];
 };
 typedef struct mosaik2_database_element_struct mosaik2_database_element;
 
 struct mosaik2_project_struct {
 	char dest_filename[256];
-	char dest_primarytiledims_filename[256];
+	//char dest_primarytiledims_filename[256];
 	char dest_result_filename[256];
-	char dest_imagedims_filename[256];
-	char dest_exclude_filename[256];
-	uint8_t ratio;
+	char src_filename[MAX_FILENAME_LEN+1];
 	uint8_t unique;
 	uint8_t fast_unique;
 	size_t file_size;
-	uint8_t primary_tile_count;
+	m2rezo primary_tile_count; 
 	char dest_html_filename[256]; 
+	char dest_html2_filename[256];
 	char dest_src_filename[256];
+	char dest_tile_infos_filename[256];
 	mosaik2_database *mds;
 	uint8_t mds_len;
 	int image_height; // populated by read_image_dim( *mosaik2_project)
@@ -239,7 +241,7 @@ struct mosaik2_project_result_struct {
 	float costs;
 	uint8_t off_x;
 	uint8_t off_y;
-	char thumbs_db_filenames[MAX_FILENAME_LEN]; //DEPRECATED
+	__attribute__((deprecated)) \
 	char temp_filename[MAX_TEMP_FILENAME_LEN]; // DEPRECATED
 	char cache_filename[MAX_TEMP_FILENAME_LEN];
 	char origin_filename[MAX_FILENAME_LEN];
@@ -267,13 +269,12 @@ struct arguments_struct {
 	char *dest_image;
   int verbose;
 	int dry_run;
-	int database_image_resolution;
-	int num_tiles;
-	int has_num_tiles;
+	int32_t database_image_resolution;
+	m2rezo src_image_resolution; // src_image_resolution
+	int has_src_image_resolution;
 	int max_load, max_jobs;
 	int unique;
 	int fast_unique;
-	int color_stddev_ratio;
 	int pixel_per_tile;
 	int duplicate_reduction;
 	int symlink_cache;
@@ -284,6 +285,7 @@ struct arguments_struct {
 	m2elem element_number;
 	int has_element_identifier;
 	char *src_image;
+	char *index_filelist;
 	int quiet;
 	m2name element_filename;
 	int phash_distance;

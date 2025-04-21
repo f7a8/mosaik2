@@ -88,11 +88,9 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	memset(args,0,sizeof(mosaik2_arguments));
 
 	args->database_image_resolution = 16;
-	args->color_stddev_ratio = 100;
 	args->pixel_per_tile = 200;
 	args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_DEFAULT;
-	args->has_num_tiles = 0;
-	args->element_number = 1;
+	args->has_src_image_resolution = 0;
 	args->has_element_identifier = 0;
 	args->element_filename = NULL;
 	args->element_number = 0;
@@ -147,7 +145,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->exclude_count = options_used[OPTION_E_HI];
 	args->exclude_area = (char **)m_calloc(args->exclude_count, sizeof(char *));
 
-	int e=0;
+	int exclude_index=0;
 	optind=1; // reset getopt
 	while((opt = getopt(argc, argv, all_options)) != -1 ) {
 		switch(opt) {
@@ -155,11 +153,11 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 								modes_used[MODE_JOIN]++;
 								break;
 			case 'D':
-								if(strncmp("manhattan", optarg, strlen(optarg)) == 0) {
+								if(strcmp("manhattan", optarg) == 0) {
 									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN;
-								} else if(strncmp("euclidian", optarg, strlen(optarg)) == 0) {
+								} else if(strcmp("euclidian", optarg) == 0) {
 									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN;
-								} else if(strncmp("chebyshev", optarg, strlen(optarg)) == 0) {
+								} else if(strcmp("chebyshev", optarg) == 0) {
 									args->color_distance = MOSAIK2_ARGS_COLOR_DISTANCE_CHEBYSHEV;
 								} else {
 									print_usage(); exit(EXIT_FAILURE);
@@ -170,17 +168,23 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			immediatly when -h option is parsed. Same with -v. But I think, thats common sense. */
 			case 'e':
 				if(is_number(optarg)) {
-					args->element_number = atoll(optarg);
-					args->has_element_identifier = 1; // ELEMENT_NUMBER
+					long long element_number = atoll(optarg);
+					if(element_number<1 || element_number>UINT32_MAX) { 
+						// user input 1 means index 0 => lowest value allowed
+						fprintf(stderr, "element number out of range\n"); 
+						exit(EXIT_FAILURE);
+					}
+					args->element_number = (m2elem)element_number;
+					args->has_element_identifier = ELEMENT_NUMBER; // ELEMENT_NUMBER
 				} else {
 					args->element_filename = argv[optind-1];
-					args->has_element_identifier = 2; //ELEMENT_FILENAME;
+					args->has_element_identifier = ELEMENT_FILENAME; //ELEMENT_FILENAME;
 				}
 				break; //no modes_used because it appears in several modes
 			case 'E':
-				args->exclude_area[e] = argv[optind-1];
+				args->exclude_area[exclude_index] = argv[optind-1];
 				//fprintf(stderr, "argparser %i:[%s]\n", e, args->exclude_area[e] );
-				e++;
+				exclude_index++;
 				modes_used[MODE_GATHERING]++;
 				break;
 			case 'h': print_usage(); print_help(); exit(EXIT_SUCCESS); break;
@@ -204,18 +208,31 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 				  break;
 			case 'q': args->quiet = 1;
 				  break; // no modes_used because it appears int several modes
-			case 'r': args->database_image_resolution = atoi(optarg);
-								modes_used[MODE_INIT]++;
-								break;
-			case 'R': args->color_stddev_ratio = atoi(optarg);
-								modes_used[MODE_GATHERING]++;
-								break;
+			case 'r':
+				if(is_number(optarg)) {
+					int32_t database_image_resolution = atoi(optarg);
+					check_resolution(database_image_resolution);
+					args->database_image_resolution=(m2rezo)database_image_resolution;// no modes_used because it appears in serveral modes
+				} else {
+					fprintf(stderr, "-r must be a postivie number\n");
+					exit(EXIT_FAILURE);
+				} 
+				modes_used[MODE_INIT]++;
+				break;
 			case 's': args->symlink_cache = 1;
 								modes_used[MODE_JOIN]++;
 								break;
-			case 't': args->num_tiles = atoi(optarg);// no modes_used because it appears in serveral modes
-				args->has_num_tiles = 1;
-								break;
+			case 't': 
+				if(is_number(optarg)) {
+					int32_t src_image_resolution = atoi(optarg);
+					check_resolution(src_image_resolution);
+					args->src_image_resolution=(m2rezo)src_image_resolution;// no modes_used because it appears in serveral modes
+					args->has_src_image_resolution=1; 
+				} else {
+					fprintf(stderr, "-t must be a positive number\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
 			case 'u': args->unique = 1;
 								modes_used[MODE_GATHERING]++;
 								break;
@@ -239,7 +256,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	args->mode = argv[optind];
 	int mode = -1;
 	for(int i=0;i<MODE_COUNT;i++) {
-		if(strncmp(args->mode, modes[i], strlen(modes[i]))==0) {
+		if(strncmp(args->mode, modes[i], strlen(args->mode))==0) {
 			mode=i; break;
 		}
 	}
@@ -265,13 +282,13 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
-	if(args->has_num_tiles == 1 && !( mode == MODE_GATHERING || mode == MODE_CROP || mode == MODE_INFO ) ) {
+	if(args->has_src_image_resolution == 1 && !( mode == MODE_GATHERING || mode == MODE_CROP || mode == MODE_INFO ) ) {
 		print_usage();
 		exit(EXIT_FAILURE);
 	}
-	if(args->has_num_tiles == 0 && mode == MODE_GATHERING ) {
-		args->num_tiles = 20;
-	} else if( args->has_num_tiles == 0 && mode == MODE_CROP ) {
+	if(args->has_src_image_resolution == 0 && mode == MODE_GATHERING ) {
+		args->src_image_resolution = 20;
+	} else if( args->has_src_image_resolution == 0 && mode == MODE_CROP ) {
 		// no default value!
 		print_usage();
 		exit(EXIT_FAILURE);
@@ -285,8 +302,8 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 	int marg = argc-optind;
 	int invalid = 
 		 (mode == MODE_INIT       && marg != 2)
-	|| (mode == MODE_INDEX      && marg != 2)
-	|| (mode == MODE_GATHERING  && marg != 3)
+	|| (mode == MODE_INDEX      && marg != 3)
+	|| (mode == MODE_GATHERING  && marg != 4)
 	|| (mode == MODE_JOIN       && marg < 3)
 	|| (mode == MODE_DUPLICATES && (marg < 2 || marg > 3))
 	|| (mode == MODE_INVALID    && marg != 2)
@@ -298,21 +315,75 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	int _is_dir=0;
+	int _is_src_file=0;
+	int _is_dest_file=0;
+	int c[3]={0};
 
 	switch(mode) {
 		case MODE_INIT: 
 			args->mosaik2db = argv[optind+1]; 
 			break;
 		case MODE_INDEX:
-			args->mosaik2db = argv[optind+1];
+			if(dir_exists(argv[optind+1])) {
+				args->mosaik2db = argv[optind+1];
+				args->index_filelist = argv[optind+2];
+			} else {
+				args->index_filelist = argv[optind+1];
+				args->mosaik2db = argv[optind+2];
+			}
 			break;
 		case MODE_GATHERING: 
-			args->dest_image = argv[optind+1];
-			args->mosaik2db = argv[optind+2];
+			
 			if(args->unique>0 && args->fast_unique>0) {
 				print_usage();
 				exit(EXIT_FAILURE);
 			}
+
+			for(int i=1;i<=3;i++) {
+				if(M2DEBUG)fprintf(stderr, "  %i %s:\n",i, argv[ optind+i ] );
+				if(dir_exists(argv[ optind+i ])){
+					if(M2DEBUG)fprintf(stderr, "dir_exists ");
+					c[0]++;
+					_is_dir=i;
+				}
+				if(is_src_file(argv[optind+i])) {
+					if(M2DEBUG)fprintf(stderr, "is_src_file ");
+					c[1]++;
+					_is_src_file = i;
+				}
+				if(is_dest_file(argv[optind+i])){
+					if(M2DEBUG)fprintf(stderr, "is_dest_file ");
+					c[2]++;
+					_is_dest_file = i;
+				}
+					if(M2DEBUG)fprintf(stderr, "\n");
+			}
+			if(M2DEBUG)fprintf(stderr, "\n");
+
+			if(c[0]==0)
+				fprintf(stderr, "No mosaik2db specified.\n");
+			else if(c[0]>1)
+				fprintf(stderr, "Multiple mosaik2db specified.\n");
+			else if(c[1] ==0 ) {
+				fprintf(stderr, "No existing src-file specified.\n");
+			}else if(c[1]>1) {
+				fprintf(stderr, "Multiple src-file specified.\n");
+			} else if(c[2]==0) {
+				fprintf(stderr, "No dest-file specified.\n");
+			} else if(c[2]>1) {
+				fprintf(stderr, "Cannot distinguish between src-file and dest-file. Please use another (new) dest_file.\n");
+			}
+		
+			if(c[0] != 1 || c[1]!=1 || c[2]!=1 ) {
+				print_usage();
+				exit(EXIT_FAILURE);
+			}
+			//check_resolution
+			args->mosaik2db = argv[optind+_is_dir];
+			args->src_image = argv[optind+_is_src_file];
+			args->dest_image = argv[optind+_is_dest_file];
+
 			break;
 		case MODE_JOIN:
 			args->dest_image = argv[optind+1];
@@ -336,8 +407,8 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			}
 			break;
 		case MODE_INFO:
-			if(marg==3) { // if src_image is specified -t num_tiles is required
-				if( ! args->has_num_tiles ) {
+			if(marg==3) { // if src_image is specified -t src_image_resolution is required
+				if( ! args->has_src_image_resolution ) {
 					print_usage();
 					exit(EXIT_FAILURE);
 				}
@@ -366,17 +437,22 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
 			fprintf(stderr,"mosaik2dbs[%i] = %s\n", i, args->mosaik2dbs[i]);
 		}
 		fprintf (stderr,"dest-image = %s\n", args->dest_image);
-		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\ndatabase_image_resolution = %i\nmax_load = %i\nmax_jobs = %i\nunique = %s\nfast-unique = %s\ncolor_stddev_ratio = %i\npixel_per_tile = %i\nphash duplicate = %i\nreduction = %s\nsymlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\ncolor-distance = %s\nnum_tiles = %i\n",
+		fprintf (stderr,"src-image = %s\n", args->src_image);
+		fprintf (stderr,"options:\nverbose = %s\nquiet = %s\ndry-run = %s\n"
+		"database_image_resolution = %i\nsrc_image_resolution = %i\nmax_load = %i\n"
+		"max_jobs = %i\nunique = %s\nfast-unique = %s\n"
+		"pixel_per_tile = %i\nphash duplicate = %i\nreduction = %s\n"
+		"symlink_cache = %s\nignore_old_invalids = %s\nno_hash_cmp = %s\n"
+		"color-distance = %s\n",
               args->verbose ? "yes" : "no",
               args->quiet ? "yes" : "no",
-
               args->dry_run ? "yes" : "no",
               args->database_image_resolution,
+              args->src_image_resolution,
               args->max_load,
               args->max_jobs,
               args->unique ? "yes" : "no",
               args->fast_unique ? "yes" : "no",
-              args->color_stddev_ratio,
               args->pixel_per_tile,
               args->phash_distance,
               args->duplicate_reduction ? "yes" : "no",
@@ -384,8 +460,7 @@ void get_mosaik2_arguments(mosaik2_arguments *args, int argc, char **argv) {
               args->ignore_old_invalids ? "yes" : "no",
               args->no_hash_cmp ? "yes" : "no",
               args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_MANHATTAN ? "manhattan" :
-            		  args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev",
-              args->num_tiles);
+            		  args->color_distance == MOSAIK2_ARGS_COLOR_DISTANCE_EUCLIDIAN ? "euclidian" : "chevychev");
 		fprintf(stderr, "exclude_area = ");
 		if(args->exclude_count==0) {
 			fprintf(stderr, "no\n");
@@ -441,33 +516,21 @@ void print_help() {
 }
 
 int is_number(char *string) {
-
 	int is_digit = 1;
-	int j=0;
-	size_t len = strlen(string);
-	while(j<len && is_digit == 1){
-		//fprintf(stderr, "j:%i c:%c:%i (%i %i) => ", j , string[j], string[j], '0', '9');
-	 	if(string[j] <=57 && string[j] >=48) {
-			//fprintf(stderr, "is digit\n");
+	for(size_t i=0,len=strlen(string);i<len&&is_digit;i++) {
+	 	if(string[i] <=57 && string[i] >=48) {
 			is_digit = 1;
 		} else {
-			return 0;
-			//fprintf(stderr, "no digit\n");
-	    		is_digit = 0;
+			is_digit = 0;
 		}
-	  	j++;
 	}
-	//fprintf(stderr, "RETURN VALUE is_digit:%i\n", is_digit);
 	return is_digit;
 }
 
-
 void cleanup(mosaik2_arguments *args) {
-	if( args->has_element_identifier == 2) {
-		free( args->element_filename );
-	}
+	
 	if( args->exclude_count>0) {
-		free(args->exclude_area);
+		m_free((void **)&args->exclude_area);
 	}
 
 }

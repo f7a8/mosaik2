@@ -13,7 +13,9 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	mosaik2_database md;
 	mosaik2_database_init(&md, mosaik2_database_name);
 	mosaik2_database_check(&md);
-	int database_image_resolution = mosaik2_database_read_image_resolution(&md); // standard value should be 16
+	mosaik2_database_lock_writer(&md);
+
+	m2rezo database_image_resolution = mosaik2_database_read_image_resolution(&md); // standard value should be 16
 
 	if (args->has_element_identifier == ELEMENT_FILENAME ) {
 		int val = mosaik2_database_find_element_number(&md, args->element_filename, &element_number);
@@ -46,8 +48,8 @@ int mosaik2_crop(mosaik2_arguments *args) {
 	//then common image formats could be 16x22 or 22x16
 	//now preventing tile offset could be to high
 
-	unsigned char tileoffset_x = args->num_tiles;/* because only one offset is submitted, one must be 0  */
-	unsigned char tileoffset_y = args->num_tiles;
+	m2rezo tileoffset_x = args->src_image_resolution;/* because only one offset is submitted, one must be 0  */
+	m2rezo tileoffset_y = args->src_image_resolution;
 
 	if( tiledim_x == database_image_resolution )
 		tileoffset_x = 0; // no scrolling possible

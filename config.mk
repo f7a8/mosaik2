@@ -4,8 +4,10 @@ VERSION ?= ${shell git describe --dirty --tags}
 app ?= 0
 curl ?= 1
 phash ?= 1
-debug ?= 0
 exif ?= 1
+debug ?= 0
+avx ?= 1
+
 
 # Prefix for all installed files
 PREFIX ?= /usr/local
@@ -21,12 +23,12 @@ bin_dir = ${main_dir}/bin
 doc_dir = ${main_dir}/share/doc/feh
 example_dir = ${main_dir}/share/doc/feh/examples
 
-# default CFLAGS
-CFLAGS ?= -O3 -march=native -mtune=native
-CFLAGS += -Wall
+# default CFLAGS -ffast-math
+CFLAGS ?= -O3 -march=native -mtune=native 
+CFLAGS += -Wall -Wextra -Wshadow -pthread -Wdeprecated-declarations
 
 ifeq (${debug},1)
-	CFLAGS += -DDEBUG -O0 -g
+	CFLAGS += -DM2DBG -O0 -g 
 	MAN_DEBUG = This is a debug build.
 else
 	MAN_DEBUG = .
@@ -54,6 +56,13 @@ ifeq (${phash},1)
 	MAN_PHASH = enabled
 else
 	MAN_PHASH = disabled
+endif
+
+ifeq (${avx},1)
+	CFLAGS += -DHAVE_AVX -mavx 
+	MAN_AVX = enabled
+else
+	MAN_AVX = disabled
 endif
 
 MAN_DATE ?= ${shell date '+%B %d, %Y'}

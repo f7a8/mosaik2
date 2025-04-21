@@ -11,7 +11,7 @@
 //TODO very inefficient, better search the external sorted hashnumber
 
 int check_filehashes_index(mosaik2_database *md);
-void build_filehashes_index(mosaik2_database *md);
+void build_filehashes_index(mosaik2_database *md, mosaik2_arguments *args);
 int qsort_(const void*, const void*);
 
 const int FILEHASHES_INDEX_VALID = 1;
@@ -46,19 +46,26 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		exit(EXIT_FAILURE);
 	}
 
+	if(dry_run) {
+		mosaik2_database_lock_reader(&md0);
+		mosaik2_database_lock_reader(&md1);
+	} else {
+		mosaik2_database_lock_reader(&md1); 
+	}
+
 	if(check_filehashes_index(&md0) == FILEHASHES_INDEX_INVALID) {
-		build_filehashes_index(&md0);
+		build_filehashes_index(&md0, args);
 	}
 	if(check_filehashes_index(&md1) == FILEHASHES_INDEX_INVALID) {
-		build_filehashes_index(&md1);
+		build_filehashes_index(&md1, args);
 	}
 
 #ifdef HAVE_PHASH
 	if(args->has_phash_distance && mosaik2_database_phashes_check(&md0) == PHASHES_INVALID ) {
-		mosaik2_database_phashes_build(&md0);
+		mosaik2_database_phashes_build(&md0, args);
 	}
 	if(args->has_phash_distance && mosaik2_database_phashes_check(&md1) == PHASHES_INVALID ) {
-		mosaik2_database_phashes_build(&md1);
+		mosaik2_database_phashes_build(&md1, args);
 	}
 #endif
 	int debug=0;
@@ -67,16 +74,26 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	m2file filehashes_file1       = m_fopen(md1.filehashes_filename, "rb");
 	m2file filehashes_index_file0 = m_fopen(md0.filehashes_index_filename, "rb");
 	m2file filehashes_index_file1 = m_fopen(md1.filehashes_index_filename, "rb");
-	m2file duplicates_file0       = m_fopen(md0.duplicates_filename, args->has_phash_distance ? "r+" : "r");
-	m2file duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
-	m2file filenames_index_file   = m_fopen(md1.filenames_index_filename, "r");
-	m2file filenames_file         = m_fopen(md1.filenames_filename, "r");
+	m2file filenames_index_file0   = m_fopen(md0.filenames_index_filename, "r");
+	m2file filenames_index_file1   = m_fopen(md1.filenames_index_filename, "r");
+	m2file filenames_file0         = m_fopen(md0.filenames_filename, "r");
+	m2file filenames_file1         = m_fopen(md1.filenames_filename, "r");
 #ifdef HAVE_PHASH
 	m2file phash_file0            = m_fopen(md0.phash_filename, "r");
 	m2file phash_file1            = m_fopen(md1.phash_filename, "r");
 #endif
+	m2file duplicates_file0       = m_fopen(md0.duplicates_filename, args->has_phash_distance ? "r+" : "r");
+	m2file duplicates_file1       = m_fopen(md1.duplicates_filename, "r+");//normal writing without truncating or appending
+	m2file invalid_file0       = m_fopen(md0.invalid_filename, "r");
+	m2file invalid_file1       = m_fopen(md1.invalid_filename, "r");
 
 	int compare_same_file=is_same_file(md0.filehashes_filename, md1.filehashes_filename);
+
+	if(compare_same_file) {
+		unset_file_buf(duplicates_file0);
+		unset_file_buf(duplicates_file1);
+	}
+
 	// DRY RUN operates the same way, data is written to a temporary copy of duplicates file from md1
 	if(dry_run==1) {
 		size_t bytes;
@@ -110,13 +127,15 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	} // dry_run end
 
 
-	int dataset_len = MD5_DIGEST_LENGTH + sizeof(size_t);	
+	int dataset_len = md0.filehashes_index_sizeof;// MD5_DIGEST_LENGTH + sizeof(size_t);	
+	m2elem element_count0 = mosaik2_database_read_element_count(&md0);
+	m2elem element_count1 = mosaik2_database_read_element_count(&md1);
 	unsigned char f0[dataset_len]; // current hash to compare with rest
 	unsigned char f1[dataset_len]; // contains part of the rest
 	
 	size_t size_read_h0, size_read_h1;
-	uint8_t duplicates_data0=0,duplicates_data1=0;
-	uint32_t i0=0, j0=0;
+	uint8_t duplicates_data0=0,duplicates_data1=0,invalid_data0=0, invalid_data1=0;
+	m2elem i0=0, j0=0;
 
 	/* idea:
 	 * filehashes.idx are openend from two mosaik2 databases (m0 and m1), also their duplicates.bin files.
@@ -137,22 +156,34 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	// it the next element in the filehashes.idx file (sorted) the same hash like the current one?
 	// mark the next one as duplicate.
 
-	uint32_t duplicates_count=0;
+	m2elem duplicates_count=0;
+	m2size quoted_filename_length = MAX_FILENAME_LEN*2+2;
 			
-	for(i0=0,j0=0;(( size_read_h0 = fread(f0, dataset_len, 1, filehashes_index_file0)) == 1);i0++){
+	for(i0=0,j0=0;(( size_read_h0 = fread(f0, dataset_len, 1, filehashes_index_file0)) == 1) /*&& i0 < element_count-2*/;i0++){
 
+		//do not compare files, which are marked as invalid
+		read_file_entry(invalid_file0, &invalid_data0, md0.invalid_sizeof, i0*md0.invalid_sizeof);
+		if( invalid_data0 != INVALID_NONE ) {
+			continue;
+		}
 
 		if(compare_same_file) { 
 			// in the same file the compare partner needs to be off by one
-			m_fseeko(filehashes_index_file1, ftello(filehashes_index_file0), SEEK_SET);
-			m_fseeko(duplicates_file1, ftello(filehashes_index_file0), SEEK_SET);
+			m_fseeko(filehashes_index_file1, m_ftello(filehashes_index_file0), SEEK_SET);
+			m_fseeko(duplicates_file1, m_ftello(filehashes_index_file0), SEEK_SET);
 		}
 
 
-		for(;(( size_read_h1 = fread(f1, dataset_len, 1, filehashes_index_file1)) == 1);j0++) {
+		for(;(( size_read_h1 = fread(f1, dataset_len, 1, filehashes_index_file1)) == 1) /*&& i0 < element_count-1*/;j0++) {
 			
 
-			//compare both md5 digests
+			//do not compare files, which are marked as invalid
+			read_file_entry(invalid_file1, &invalid_data1, md1.invalid_sizeof, j0*md1.invalid_sizeof);
+			if( invalid_data1 != INVALID_NONE ) {
+				continue;
+			}
+
+			//compare only both md5 digests
 			int qsort = qsort_(f0, f1);
 			if(qsort < 0) {
 				// match partner is lower than orignal? try next match partner
@@ -165,6 +196,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 			} else { // oh, they are equal!
 
 				//f0 or f1 already marked as duplicate?
+				
 			
 				size_t dup_offset0;
 				memcpy(&dup_offset0, f0+MD5_DIGEST_LENGTH, sizeof(size_t));
@@ -175,7 +207,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				if(duplicates_data0==1) {
 					if(debug)fprintf(stdout,"#filehash0 0#%li is already marked as duplicate, ignore it\n", dup_offset0);
 					continue;
-				}		
+				}
 
 				size_t dup_offset1;
 				memcpy(&dup_offset1, f1+MD5_DIGEST_LENGTH, sizeof(size_t));
@@ -183,7 +215,7 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				m_fseeko(duplicates_file1, dup_offset1, SEEK_SET);
 				m_fread(&duplicates_data1,1,duplicates_file1);
 
-				if(duplicates_data1==1) {
+				if(duplicates_data1==IS_DUPLICATE) {
 					if(debug)fprintf(stderr,"#filehash1 1#%li is already marked as duplicate, ignore it\n", dup_offset1);
 					continue;
 				}
@@ -191,21 +223,42 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 				m_fseeko(duplicates_file1, dup_offset1, SEEK_SET);
 				duplicates_data1=IS_DUPLICATE;
 				m_fwrite(&duplicates_data1, 1, duplicates_file1);
-
-				m2name filename =  mosaik2_database_read_element_filename(&md1,dup_offset1+1,filenames_index_file);
-				printf("%s\n", filename);
-				free(filename);
+				//fprintf(stderr, "in duplicates_file1 written at %li this value %i\n", dup_offset1, duplicates_data1);
+				
+				if(duplicates_count==0 && args->verbose) {
+					printf("\nimage_which_stays,image_marked_as_duplicate,count_bits,cost_0,cost_1\n");
+				}
+				//fprintf(stderr, "i0: %u, j0: %u, element_count:%u\n", i0,j0,element_count);
+				//fprintf(stderr, "dup_offset1: %lu, dup_offset1+1: %lu\n",  dup_offset1,dup_offset1+1);
+				char quoted_filename[quoted_filename_length];
+				if(args->verbose) {
+					m2name filename = mosaik2_database_read_element_filename(&md0,dup_offset0,filenames_index_file0,filenames_file0);
+					quote_string(filename, quoted_filename_length, quoted_filename);
+					printf("%s,", quoted_filename);
+					m_free((void **)&filename);
+					filename = mosaik2_database_read_element_filename(&md1,dup_offset1,filenames_index_file1,filenames_file1);
+					quote_string(filename, quoted_filename_length, quoted_filename);
+					printf("%s,,,\n", quoted_filename);
+					m_free((void **)&filename);
+				} else {
+					m2name filename = mosaik2_database_read_element_filename(&md1,dup_offset1,filenames_index_file1,filenames_file1);
+					quote_string(filename, quoted_filename_length, quoted_filename);
+					printf("%s,,,\n", quoted_filename);
+					m_free((void **)&filename);
+				}
 				duplicates_count++;
-			} // else block ends
+			} // oh, they are equal! else block ends
 		}
 	}
+	m_fflush(duplicates_file1);
+	
 
 #ifdef HAVE_PHASH
 	if(args->has_phash_distance) {
 
 		mosaik2_database_read_histogram(&md0);
 		mosaik2_database_read_histogram(&md1);
-
+		
 		m_fseeko(duplicates_file0, 0, SEEK_SET);
 		m_fseeko(duplicates_file1, 0, SEEK_SET);
 		m_fseeko(phash_file0, 0, SEEK_SET);
@@ -214,42 +267,87 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 		unsigned char phash_buf0[md0.phash_sizeof], phash_buf1[md1.phash_sizeof];
 		memset(phash_buf0, 0, sizeof(unsigned long long));
 		memset(phash_buf1, 0, sizeof(unsigned long long));
-		unsigned long long phash0=0, phash1=0;
-		int phash_val0=0, phash_val1=0;
+		m2phash phash0, phash1;
 
-		for(i0 = 0;(( size_read_h0 = fread(&duplicates_data0, md0.duplicates_sizeof, 1, duplicates_file0)) == 1);i0++) {
+		for(i0 = 0;i0<element_count0;i0++) {
+			
+			read_file_entry(duplicates_file0, &duplicates_data0, sizeof(duplicates_data0), i0*sizeof(duplicates_data0));
+			
+			//fprintf(stderr, "for(i:%i duplicate0 value %i\n",i0,duplicates_data0);
+			
 			if( duplicates_data0 != IS_NO_DUPLICATE ) {
-				//	fprintf(stderr, "i0 %i is marked as duplicate\n",i0);
+				//fprintf(stderr, "CONTINUE1   duplicates_data0 != IS_NO_DUPLICATE\n");
+				//fprintf(stderr, "i:%i is marked as duplicate:%i\n",i0,IS_NO_DUPLICATE);
 				continue;
 			}
 
-			// in case of phash... load those data
-			read_file_entry(phash_file0, &phash0, sizeof(unsigned long long), i0*md0.phash_sizeof); //read single values from a single database file.
-			read_file_entry(phash_file0, &phash_val0, sizeof(int), i0*md0.phash_sizeof+sizeof(unsigned long long)); //read single values from a single database file.
+			//do not compare files, which are marked as invalid
+			read_file_entry(invalid_file0, &invalid_data0, md0.invalid_sizeof, i0*md0.invalid_sizeof);
+			if( invalid_data0 != INVALID_NONE ) {
+				continue;
+			}
 
-			m_fseeko(duplicates_file1,0,SEEK_SET);
-			for(j0=0;((size_read_h1=fread(&duplicates_data1, md1.duplicates_sizeof, 1, duplicates_file1)) == 1);j0++) {
-//fprintf(stderr, ".");
-				if(i0 == j0 && compare_same_file)
+
+			//fprintf(stderr, "READ PHASH0 at %i\n",i0*md1.phash_sizeof);
+			// in case of phash... load those data
+			read_file_entry(phash_file0, &phash0, md0.phash_sizeof, i0*md0.phash_sizeof);
+
+			//m_fseeko(duplicates_file1,0,SEEK_SET);
+			
+			if(compare_same_file)
+				j0=i0+1;
+			else
+				j0 = 0;
+			for(;j0<element_count1;j0++) {
+				read_file_entry(duplicates_file1, &duplicates_data1, sizeof(duplicates_data1), j0*sizeof(duplicates_data1));
+
+				if(i0 == j0 && compare_same_file) {
 					continue;
+				}
+					
 				if(duplicates_data1 != IS_NO_DUPLICATE) {
-				//	fprintf(stderr, "i0 (%i) j0 %i is marked as duplicate\n",i0, j0);
 					continue;
 				}
 
-				read_file_entry(phash_file1, &phash1, sizeof(unsigned long long), j0*md1.phash_sizeof); //read single values from a single database file.
-				read_file_entry(phash_file1, &phash_val1, sizeof(int), j0*md1.phash_sizeof+sizeof(unsigned long long)); //read single values from a single database file.
+				//do not compare files, which are marked as invalid
+				read_file_entry(invalid_file1, &invalid_data1, md1.invalid_sizeof, j0*md1.invalid_sizeof);
+				if( invalid_data1 != INVALID_NONE ) {
+					continue;
+				}
+
+
+				//fprintf(stderr, "  i:%i j:%i  duplicate0:%i  duplicate1:%i\n",i0, j0, duplicates_data0, duplicates_data1);
+
+
+				//fprintf(stderr, "READ PHASH1  at %i for %i\n",j0*md1.phash_sizeof,md1.phash_sizeof);
+				read_file_entry(phash_file1, &phash1, md1.phash_sizeof, j0*md1.phash_sizeof); //read single values from a single database file.
 				
+				/*m2name filename = mosaik2_database_read_element_filename(&md0,i0,filenames_index_file0,filenames_file0);
+				printf(" ==> %i : %i bits  %s -> ", phash0.val, phash1.val, filename);
+				m_free((void**)&filename);
+				filename = mosaik2_database_read_element_filename(&md1,j0,filenames_index_file1,filenames_file1);
+				printf("%s\n", filename);
+				m_free((void**)&filename);*/
+
 				// check if original hash function calls did return 0 to show that they computed a valid hash
-				if( phash_val0 == 0 && phash_val1 == 0 ) {
+				if( phash0.val == 0 && phash1.val == 0 ) {
 					// if two hash phash0 and phash1 are XORed, the resulting number of setted bits 
-					unsigned long long phash = phash0 ^ phash1;
-					int count_bits = __builtin_popcountll(phash);
+					phash my_phash = phash0.hash ^ phash1.hash;
+					int count_bits = __builtin_popcountll(my_phash);
+
+					/*m2name filename = mosaik2_database_read_element_filename(&md0,i0,filenames_index_file0,filenames_file0);
+					printf(" ==> %i bits  %s -> ", count_bits, filename);
+					m_free((void**)&filename);
+					filename = mosaik2_database_read_element_filename(&md1,j0,filenames_index_file1,filenames_file1);
+					printf("%s\n", filename);
+					m_free((void**)&filename);*/
 					//fprintf(stderr, "count_bits %4i %4i:%20llu %20llu | 0:", i0,j0, phash0, phash1);
-						//fprintf(stderr, " count %2i \n", count_bits);
+					//fprintf(stderr, " count %2i \n", count_bits);
 					
-								
 					if(count_bits <= args->phash_distance) {
+						if(duplicates_count==0 && args->verbose) {
+							printf("\nimage_which_stays,image_marked_as_duplicate,count_bits,cost_0,cost_1\n");
+						}
 						duplicates_count++;
 
 						// to read an entire mosaik2_database_element seems to be a bit overhead.
@@ -258,48 +356,88 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 						mosaik2_database_element mde0, mde1;
 						memset(&mde0, 0, sizeof(mde0));
 						memset(&mde1, 0, sizeof(mde1));
+						//fprintf(stderr, "mosaik2_database_read_element\n");
 						mosaik2_database_read_element(&md0, &mde0, i0);
 						mosaik2_database_read_element(&md1, &mde1, j0);
 
 						float costs0 = mosaik2_database_costs(&md0, &mde0);
 						float costs1 = mosaik2_database_costs(&md1, &mde1);
 				
+						char mde0qfilename[quoted_filename_length];
+						char mde1qfilename[quoted_filename_length];
+
+						quote_string(mde0.filename, quoted_filename_length, mde0qfilename);
+						quote_string(mde1.filename, quoted_filename_length, mde1qfilename);
+
+						//printf(":%s,%s,%i,%f,%f\n", mde0.filename, mde1.filename, count_bits, costs0, costs1);
 						if(costs0<=costs1) {
-							if(args->verbose)
-								printf("%s,%s,%i,%f,%f\n", mde0.filename, mde1.filename, count_bits, costs0, costs1);
-							else
-								printf("%s\n", mde0.filename);
+
+							printf("%s,%s,%i,%f,%f,%llx,%llx\n", mde1qfilename, mde0qfilename, count_bits, costs1, costs0, phash1.hash, phash0.hash);
+							//printf("duplicate:%s\n",mde0.filename);
+						
+							//TODO should only be in dest db
+							//if(args->verbose)
+							//	printf("%s,%s,%i,%f,%f\n", mde1.filename, mde0.filename, count_bits, costs1, costs0);
+							//else
+							//	printf("%s\n", mde0.filename);
+							//m2off m2off0 = m_ftello(duplicates_file0);
 							m_fseeko(duplicates_file0, i0, SEEK_SET);
 							duplicates_data0=IS_PHASH_DUPLICATE;
 							m_fwrite(&duplicates_data0, 1, duplicates_file0);
 							m_fflush(duplicates_file0);
+							//m2off m2off1 = m_ftello(duplicates_file0);
+							
+							//printf("write %i at %i in duplicates_file0 (ftello:%li ,%li\n", duplicates_data0, i0, m2off0, m2off1);
 						} else {
-							if(args->verbose)
-								printf("%s,%s,%i,%f,%f\n", mde1.filename, mde0.filename, count_bits, costs1, costs0);
-							else
-								printf("%s\n", mde0.filename);
+						
+							printf("%s,%s,%i,%f,%f,%llx,%llx\n", mde0qfilename, mde1qfilename, count_bits, costs0, costs1, phash0.hash, phash1.hash);
+							//if(args->verbose)
+							//printf("else %s,%s,%i,%f,%f\n", mde1.filename, mde0.filename,  count_bits, costs1,costs0);
+							//printf("duplicate:%s\n",mde1.filename);
+							//else
+							//	printf("%s\n", mde1.filename);
+							//m2off m2off0 = m_ftello(duplicates_file1);
 							m_fseeko(duplicates_file1, j0, SEEK_SET);
 							duplicates_data1=IS_PHASH_DUPLICATE;
 							m_fwrite(&duplicates_data1, 1, duplicates_file1);
 							m_fflush(duplicates_file1);
+							//m2off m2off1 = m_ftello(duplicates_file1);
+							//printf("write %i at %i in duplicates_file1 (ftello:%li ,%li)\n", duplicates_data1, j0,m2off0, m2off1);
 						}
 
-						free(mde0.filename);
-						free(mde1.filename);
-						//no other duplicates check here neccessary
-						continue;
+						
+						/*for(int i=0;i<element_count0;i++) {
+							m2data d;
+							read_file_entry(duplicates_file0, &d, sizeof(d), i*sizeof(d)); //read single values from a single database file.
+							printf("%i ", d);
+						}printf(" << 0\n");
+
+						for(int i=0;i<element_count1;i++) {
+							m2data d;
+							read_file_entry(duplicates_file1, &d, sizeof(d), i*sizeof(d)); //read single values from a single database file.
+							printf("%i ", d);
+						}printf(" << 1\n");*/
+
+						m_free((void **)&mde0.filename);
+						m_free((void **)&mde1.filename);
+
+						if(costs0<=costs1) {
+							//printf("BREAK\n" );
+							break;
+						}
+					} else {
+						// images are not close enough
 					}
 				}
 			}
+			//fprintf(stderr, "j0 ende, i:%i\n",i0);
 		}
+		//fprintf(stderr, "i0 ende, i:%i\n",i0);
 	}
 #endif
 
 	if(duplicates_count>0 && dry_run ==0) {
-		m2file lastmodified_file = m_fopen(md0.lastmodified_filename, "w");
-		time_t now = time(NULL);
-		m_fwrite(&now, md0.lastmodified_sizeof, lastmodified_file);
-		m_fclose(lastmodified_file);
+		mosaik2_database_touch_lastmodified(&md0);
 	}
 
 	m_fflush(stdout);
@@ -313,8 +451,10 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
 	m_fclose(filehashes_file1);
 	m_fclose(filehashes_index_file0);
 	m_fclose(filehashes_index_file1);
-	m_fclose(filenames_file);
-	m_fclose(filenames_index_file);
+	m_fclose(filenames_file0);
+	m_fclose(filenames_file1);
+	m_fclose(filenames_index_file0);
+	m_fclose(filenames_index_file1);
 #ifdef HAVE_PHASH
 	m_fclose(phash_file0);
 	m_fclose(phash_file1);
@@ -332,9 +472,10 @@ int mosaik2_duplicates(mosaik2_arguments *args) {
  * and write them in the right order (again with help from qsort_) in the destination file 
  * filehashes_index_filename. Tmpfiles are removed after close automatically by using tmpfile() function.
  */
-void build_filehashes_index(mosaik2_database *md) {
-	//if(debug)fprintf(stderr, "build filehashes index\n");
+void build_filehashes_index(mosaik2_database *md, mosaik2_arguments *args) {
+	if(args->verbose)fprintf(stderr, "(re)build filehashes index\n");
 
+	//overwrite existing with "w"
 	m2file filehashes_index_file = m_fopen(md->filehashes_index_filename, "w");
 
 	struct sysinfo info;
@@ -342,34 +483,34 @@ void build_filehashes_index(mosaik2_database *md) {
 
 	double freeram = info.freeram * 0.9; // use 90 % of free ram
 	if(freeram<MD5_DIGEST_LENGTH*100) {
-		fprintf(stderr,"free ram is too low\n");
+		fprintf(stderr,"build_filehashes_index: error, free ram is too low\n");
 		exit(EXIT_FAILURE);
 	}
-	int dataset_len = MD5_DIGEST_LENGTH + sizeof(size_t);
+	int dataset_len = md->filehashes_index_sizeof;//MD5_DIGEST_LENGTH + sizeof(size_t);
 	m2elem nmemb = mosaik2_database_read_element_count(md);
-	int loop_size = ceil(nmemb * (dataset_len) / freeram);
+	m2elem loop_size = ceil(nmemb * (dataset_len) / freeram);
 	uint32_t chunk_nmemb[loop_size];
-	for(int i=0;i<loop_size;i++) {
+	for(m2elem i=0;i<loop_size;i++) {
 		chunk_nmemb[i] = (nmemb / loop_size);
 	}
 	chunk_nmemb[0] += nmemb - chunk_nmemb[0] * loop_size; // add the difference from average chunk_nmemb to nmemb to the first
-	for(int i=0;i<loop_size;i++) {
+	for(m2elem i=0;i<loop_size;i++) {
 		//if(debug)fprintf(stderr, "nmemb:%i chunk_nmemb:%i\n", nmemb, chunk_nmemb[i]);
 	}
 	
 	unsigned char *buf = m_malloc(chunk_nmemb[0] * (dataset_len));
 
 	m2file tfiles[loop_size];
-	for(int i=0;i<loop_size;i++) {
+	for(m2elem i=0;i<loop_size;i++) {
 		tfiles[i] = tmpfile();
 		if(tfiles[i]==NULL) {
-			fprintf(stderr, "could not create tempfile for external sort\n");
+			fprintf(stderr, "build_filehashes_index: error, could not create tempfile for external sort\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	m2file filehashes_file = m_fopen(md->filehashes_filename, "r");
-	for(size_t i=0;i<loop_size;i++) {
+	for(m2elem i=0;i<loop_size;i++) {
 		m_fread(buf, MD5_DIGEST_LENGTH*chunk_nmemb[i], filehashes_file);
 
 		//all hashes were read as a blob, now after every hash the position in the file has to be injected
@@ -391,6 +532,7 @@ void build_filehashes_index(mosaik2_database *md) {
 		m_fseeko(tfiles[i], 0, SEEK_SET);
 	}
 
+	m_free((void **)&buf);
 	m_fclose(filehashes_file);
 
 
@@ -405,11 +547,11 @@ void build_filehashes_index(mosaik2_database *md) {
 	uint8_t any_eof=0;
 	uint8_t eof[loop_size];//marks if a tempfile has readed eof
 	memset(eof,0,loop_size);
-	int eof_count=0;
+	m2elem eof_count=0;
 
-	int smallest_index;
+	m2elem smallest_index;
 
-	for(int j=0;j<loop_size;j++) {
+	for(m2elem j=0;j<loop_size;j++) {
 	//	rewind(tfiles[j]);
 		int elems = fread(&last_data[j*dataset_len], dataset_len, 1, tfiles[j]);
 		eof[j] = elems == 0;
@@ -436,7 +578,7 @@ void build_filehashes_index(mosaik2_database *md) {
 			//gets tricky here
 
 			//search the smallest index
-			int j=0;
+			m2elem j=0;
 			for(;j<loop_size && eof[j] == 1;j++);
 			smallest_index=j;
 			//j shows on the first index, that has not ended
@@ -476,7 +618,7 @@ void build_filehashes_index(mosaik2_database *md) {
 		}
 	}
 
-	for(int i=0;i<loop_size;i++) {
+	for(m2elem i=0;i<loop_size;i++) {
 		m_fclose(tfiles[i]);// will be unlinked anyway, here no error handling
 	}
 
@@ -484,20 +626,20 @@ void build_filehashes_index(mosaik2_database *md) {
 }
 
 /*
- * compares the last modified timestamps of one mosaik2 database directory
+ * compares the last indexed timestamps of one mosaik2 database directory
  * if the file .lastmodifed has newer changes than the filehashes.idx FILEHASHES_INDEX_INVALID
  * is returnd, FILEHASHES_INDEX_VALID otherwise.
  */
 int check_filehashes_index(mosaik2_database *md) {
-	struct stat lastmodified_file, filehashes_index_file;
+	struct stat lastindexed_file, filehashes_index_file;
 
-	m_stat(md->lastmodified_filename, &lastmodified_file);
+	m_stat(md->lastindexed_filename, &lastindexed_file);
 	m_stat(md->filehashes_index_filename,&filehashes_index_file);
 
-	if( filehashes_index_file.st_ctim.tv_sec > lastmodified_file.st_ctim.tv_sec ||
-			( filehashes_index_file.st_ctim.tv_sec == lastmodified_file.st_ctim.tv_sec &&
-				filehashes_index_file.st_ctim.tv_nsec > lastmodified_file.st_ctim.tv_nsec )) {
-		//filehashes index was created after last modified timestamp of that mosaik2_database => still fine
+	if( filehashes_index_file.st_ctim.tv_sec > lastindexed_file.st_ctim.tv_sec ||
+			( filehashes_index_file.st_ctim.tv_sec == lastindexed_file.st_ctim.tv_sec &&
+				filehashes_index_file.st_ctim.tv_nsec > lastindexed_file.st_ctim.tv_nsec )) {
+		//filehashes index was created after last indexed timestamp of that mosaik2_database => still fine
 		return FILEHASHES_INDEX_VALID;
 
 	}

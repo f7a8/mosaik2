@@ -18,11 +18,8 @@ mosaik2 -- creates real photo mosaics. ready for large data sets.
               the dest-image (default 200)
   -P DIST     Phash-Similarity-Distance: values between 1 and 32
   -r PIXEL    Database-image-resolution in PIXEL (default 16)
-  -R PERCENT  Ratio between color matching and color
-              standard devation (default 100 means only color
-              matching only, 0 uses only stddev informations)
   -s          Symlinks instead of file copies
-  -t NUM      Use NUM image tiles (default 20)
+  -t NUM      Source-image-resolution (default 20)
   -u          Allow images only once (unique)
   -U          Allow images only once (fast-unique)
   -y          Dry run: does not change the database

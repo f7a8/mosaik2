@@ -42,7 +42,7 @@ void create_mosaik2_database_file_val(m2name filename, void *ptr, size_t len, in
 int mosaik2_init(mosaik2_arguments *args) {
 
 	m2name mosaik2_database_name = args->mosaik2db;
-	int database_image_resolution = args->database_image_resolution;
+	m2rezo database_image_resolution = 0;
 	time_t n = time(NULL);
 	int mdfv = MOSAIK2_DATABASE_FORMAT_VERSION;
 
@@ -50,9 +50,10 @@ int mosaik2_init(mosaik2_arguments *args) {
 	mosaik2_database md;
 	mosaik2_database_init(&md, mosaik2_database_name);
 
-	check_resolution(database_image_resolution);
+	check_resolution(args->database_image_resolution);
+	database_image_resolution = (m2rezo)args->database_image_resolution;
 
-	if( mkdir(mosaik2_database_name, S_IRWXU | S_IRGRP | S_IROTH ) != 0) {
+	if( mkdir(mosaik2_database_name, 0777 ) != 0) {
 		fprintf(stderr,"mosaik2 database directory (%s) could not be created: %s\n", mosaik2_database_name, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -68,12 +69,12 @@ int mosaik2_init(mosaik2_arguments *args) {
 	create_mosaik2_database_file(md.imagedims_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tiledims_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.imagecolors_filename, 1, args->verbose);
-	create_mosaik2_database_file(md.imagestddev_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.image_index_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.invalid_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.duplicates_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.database_image_resolution_filename, 1, args->verbose);
-	create_mosaik2_database_file(md.lock_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.lock_database_filename, 1, args->verbose);
+	create_mosaik2_database_file(md.lock_index_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastmodified_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.tileoffsets_filename, 1, args->verbose);
 	create_mosaik2_database_file(md.lastindexed_filename, 1, args->verbose);
