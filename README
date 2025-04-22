@@ -28,24 +28,24 @@ Build
 
 USAGE
 
-I.   find ~/Pictures -type f -iregex '.*\.jpe?g$' -size +10000c -size -100000000c > first_mosaik2.file_list
+I.   find ~/Pictures -type f -iregex '.*\.jpe?g$' -size +10000c -size -100000000c >  source.filelist
 II.  mosaik2 init first_mosaik2_db
-III. mosaik2 index first_mosaik2_db < first_mosaik2.file_list
-IV.  mosaik2 gathering my_first_mosaik2.jpeg first_mosaik2_db < source_image.jpeg
-V.   mosaik2 join my_first_mosaik2.jpeg first_mosaik2_db
+III. mosaik2 index source.filelist first_mosaik2_db
+IV.  mosaik2 gathering dest_image.jpg source_image.jpg first_mosaik2_db
+V.   mosaik2 join dest_image.jpg first_mosaik2_db
 
 
 
 Usage Description
 I.   create a text file with filenames
-II.  initialize a mosaik2 database named first_mosaik2. You can create multiple
+II.  initialize a mosaik2 database named "first_mosaik2_db". You can create multiple
      mosaik2 databases to handle a large volume of images by processing them in
      parallel.
-III. The index process scans all images provided from "first_mosaik2.file_list"
-     to the mosaik2 database "first_mosaic". Those informations, like tiny
+III. The index process scans all images provided from "source.filelist"
+     to the mosaik2 database "first_mosaik2_db". Those informations, like tiny
      thumbnails, are needed to compute the final mosaic.
-     "first_mosaik2", all files from the "first_mosaik2.file_list" are indexed.
-IV.  The provided motive image "source_image.jpeg" is used to find find best 
+     "first_mosaik2_db", all files from the "source.filelist" are indexed.
+IV.  The provided motive image "source_image.jpg" is used to find find best 
      matching candidates.
 V.   The results of (multiple) gatherings are merged here and the final
      candidate images are loaded to the final mosaic image together.
